@@ -8,4 +8,7 @@ Picterra Python API Client
 ==========================
 [![Build](https://travis-ci.org/Picterra/picterra-python.svg?branch=master)](https://travis-ci.org/Picterra/picterra-python.svg?branch=master)
 
+
+**This is currently experimental and subject to breaking changes**
+
 See the `examples` folder for examples
