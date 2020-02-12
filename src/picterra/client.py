@@ -20,5 +20,23 @@ class APIClient():
         return urljoin(self.base_url, path)
 
     def rasters_list(self):
+        """
+        Returns the list of rasters stored in the account
+
+        Returns: A list of rasters dictionaries
+
+            ```
+                {
+                    'id': '42',
+                    'status': 'ready',
+                    'name': 'raster1'
+                },
+                {
+                    'id': '43',
+                    'status': 'ready',
+                    'name': 'raster2'
+                }
+            ```
+        """
         resp = self.sess.get(self._api_url('rasters/'))
         return resp.json()
