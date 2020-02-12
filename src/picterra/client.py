@@ -9,8 +9,8 @@ from urllib.parse import urljoin
 logger = logging.getLogger()
 
 
-class UploadFailedException(Exception):
-    """Exception that is raised if an upload fails"""
+class APIError(Exception):
+    """Generic API error exception"""
     pass
 
 
@@ -59,7 +59,7 @@ class APIClient():
         resp = self.sess.get(self._api_url('rasters/'))
         return resp.json()
 
-    def rasters_set_detection_areas_from_file(self, raster_id, filename):
+    def raster_set_detection_areas_from_file(self, raster_id, filename):
         """
         This is an experimental feature
 
@@ -71,14 +71,14 @@ class APIClient():
                             of Polygon/MultiPolygon
 
         Raises:
-            UploadFailedException: There was an error uploading the file to cloud storage
+            APIError: There was an error uploading the file to cloud storage
         """
         warnings.warn("experimental feature")
 
         # Get upload URL
         resp = self.sess.post(self._api_url('rasters/%s/detection_areas/upload/file/' % raster_id))
         if not resp.ok:
-            raise UploadFailedException(resp.text)
+            raise APIError(resp.text)
         data = resp.json()
         upload_url = data['upload_url']
         upload_id = data['upload_id']
@@ -86,14 +86,14 @@ class APIClient():
         with open(filename, 'rb') as f:
             resp = requests.put(upload_url, data=f)
         if not resp.ok:
-            raise UploadFailedException()
+            raise APIError()
 
         # Commit upload
         resp = self.sess.post(
             self._api_url('rasters/%s/detection_areas/upload/%s/commit/' % (raster_id, upload_id))
         )
         if not resp.ok:
-            raise UploadFailedException(resp.text)
+            raise APIError(resp.text)
         poll_interval = resp.json()['poll_interval']
 
         # Wait for detection area to be associated with raster
@@ -109,7 +109,7 @@ class APIClient():
             if resp.json()['status'] == 'ready':
                 return True
             elif resp.json()['status'] == 'failed':
-                raise UploadFailedException(resp.text)
+                raise APIError(resp.text)
             else:
                 return False
         _poll_with_timeout(_is_ready, poll_interval)
