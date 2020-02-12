@@ -98,6 +98,23 @@ def add_mock_detector_run_responses(detector_id):
     responses.add(responses.GET, api_url('results/%s/' % result_id), json=data, status=200)
 
 
+def add_mock_download_result_response(result_id):
+    data = {
+        'result_url': 'http://storage.example.com/42.geojson'
+    }
+    responses.add(
+        responses.GET,
+        api_url('results/%s/' % result_id), json=data, status=201)
+
+    mock_content = '{"type":"FeatureCollection", "features":[]}'
+    responses.add(
+        responses.GET,
+        'http://storage.example.com/42.geojson',
+        body=mock_content
+    )
+    return mock_content
+
+
 @responses.activate
 def test_list_rasters():
     client = _client()
@@ -123,3 +140,13 @@ def test_run_detector():
 
     client = _client()
     client.run_detector(1, 2)
+
+
+@responses.activate
+def test_download_result_to_file():
+    expected_content = add_mock_download_result_response(101)
+
+    client = _client()
+    with tempfile.NamedTemporaryFile() as f:
+        client.download_result_to_file(101, f.name)
+        assert open(f.name).read() == expected_content

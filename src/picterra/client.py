@@ -123,7 +123,8 @@ class APIClient():
             raster_id (str): The id of the raster
 
         Returns:
-            result_id (str): The id of the result
+            result_id (str): The id of the result. You typically want to pass this
+                to `download_results_to_file`
         """
         resp = self.sess.post(
             self._api_url('detectors/%s/run/' % detector_id),
@@ -137,6 +138,7 @@ class APIClient():
         poll_interval = data['poll_interval']
 
         def _is_finished():
+            logger.info('checking detector status')
             resp = self.sess.get(
                 self._api_url('results/%s/' % result_id),
             )
@@ -145,3 +147,22 @@ class APIClient():
             return resp.json()['ready']
         _poll_with_timeout(_is_finished, poll_interval)
         return result_id
+
+    def download_result_to_file(self, result_id, filename):
+        """
+        Downloads a set of results to a local GeoJSON file
+
+        Args:
+            result_id (str): The id of the result to download
+            filename (str): The local filename where to save the results
+        """
+        resp = self.sess.get(
+            self._api_url('results/%s/' % result_id),
+        )
+        result_url = resp.json()['result_url']
+        with requests.get(result_url, stream=True) as r:
+            r.raise_for_status()
+            with open(filename, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
