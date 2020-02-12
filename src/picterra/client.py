@@ -113,3 +113,25 @@ class APIClient():
             else:
                 return False
         _poll_with_timeout(_is_ready, poll_interval)
+
+    def detector_run_on_raster(self, detector_id, raster_id):
+        resp = self.sess.post(
+            self._api_url('detectors/%s/run/' % detector_id),
+            data={
+                'raster_id': raster_id
+            }
+        )
+        assert resp.status_code == 201, resp.status_code
+        data = resp.json()
+        result_id = data['result_id']
+        poll_interval = data['poll_interval']
+
+        def _is_finished():
+            resp = self.sess.get(
+                self._api_url('results/%s/' % result_id),
+            )
+            if not resp.ok:
+                raise APIError(resp.text)
+            return resp.json()['ready']
+        _poll_with_timeout(_is_finished, poll_interval)
+        return result_id
