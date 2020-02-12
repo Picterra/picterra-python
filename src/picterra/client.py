@@ -1,10 +1,28 @@
 import os
+import time
 import requests
 import logging
+import warnings
 from urllib.parse import urljoin
 
 
 logger = logging.getLogger()
+
+
+class UploadFailedException(Exception):
+    """Exception that is raised if an upload fails"""
+    pass
+
+
+def _poll_with_timeout(fn, poll_interval, timeout_s=10 * 60):
+    timeout = time.time() + timeout_s
+    # Just sleep for a short while at first
+    time.sleep(poll_interval * 0.1)
+    while True:
+        if fn():
+            break
+        assert time.time() < timeout, 'Timed out'
+        time.sleep(poll_interval)
 
 
 class APIClient():
@@ -40,3 +58,58 @@ class APIClient():
         """
         resp = self.sess.get(self._api_url('rasters/'))
         return resp.json()
+
+    def rasters_set_detection_areas_from_file(self, raster_id, filename):
+        """
+        This is an experimental feature
+
+        Set detection areas from a GeoJSON file
+
+        Args:
+            raster_id (str): The id of the raster to which to assign the detection areas
+            filename (str): The filename of a GeoJSON file. This should contain a FeatureCollection
+                            of Polygon/MultiPolygon
+
+        Raises:
+            UploadFailedException: There was an error uploading the file to cloud storage
+        """
+        warnings.warn("experimental feature")
+
+        # Get upload URL
+        resp = self.sess.post(self._api_url('rasters/%s/detection_areas/upload/file/' % raster_id))
+        if not resp.ok:
+            raise UploadFailedException(resp.text)
+        data = resp.json()
+        upload_url = data['upload_url']
+        upload_id = data['upload_id']
+        # Upload to blobstore
+        with open(filename, 'rb') as f:
+            resp = requests.put(upload_url, data=f)
+        if not resp.ok:
+            raise UploadFailedException()
+
+        # Commit upload
+        resp = self.sess.post(
+            self._api_url('rasters/%s/detection_areas/upload/%s/commit/' % (raster_id, upload_id))
+        )
+        if not resp.ok:
+            raise UploadFailedException(resp.text)
+        poll_interval = resp.json()['poll_interval']
+
+        # Wait for detection area to be associated with raster
+        def _is_ready():
+            logger.info('checking upload status')
+            resp = self.sess.get(
+                self._api_url('rasters/%s/detection_areas/upload/%s/' % (raster_id, upload_id))
+            )
+            if not resp.ok:
+                logger.warning('failed to get detection area status - retrying')
+                return False
+
+            if resp.json()['status'] == 'ready':
+                return True
+            elif resp.json()['status'] == 'failed':
+                raise UploadFailedException(resp.text)
+            else:
+                return False
+        _poll_with_timeout(_is_ready, poll_interval)
