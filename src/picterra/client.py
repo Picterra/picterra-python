@@ -37,7 +37,7 @@ class APIClient():
     def _api_url(self, path):
         return urljoin(self.base_url, path)
 
-    def rasters_list(self):
+    def list_rasters(self):
         """
         Returns the list of rasters stored in the account
 
@@ -59,7 +59,7 @@ class APIClient():
         resp = self.sess.get(self._api_url('rasters/'))
         return resp.json()
 
-    def raster_set_detection_areas_from_file(self, raster_id, filename):
+    def set_raster_detection_areas_from_file(self, raster_id, filename):
         """
         This is an experimental feature
 
@@ -114,7 +114,17 @@ class APIClient():
                 return False
         _poll_with_timeout(_is_ready, poll_interval)
 
-    def detector_run_on_raster(self, detector_id, raster_id):
+    def run_detector(self, detector_id, raster_id):
+        """
+        Runs a detector on a raster
+
+        Args:
+            detector_id (str): The id of the detector
+            raster_id (str): The id of the raster
+
+        Returns:
+            result_id (str): The id of the result
+        """
         resp = self.sess.post(
             self._api_url('detectors/%s/run/' % detector_id),
             data={

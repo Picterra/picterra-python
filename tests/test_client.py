@@ -99,27 +99,27 @@ def add_mock_detector_run_responses(detector_id):
 
 
 @responses.activate
-def test_rasters_list():
+def test_list_rasters():
     client = _client()
     add_mock_rasters_list_response()
-    rasters = client.rasters_list()
+    rasters = client.list_rasters()
     assert rasters[0]['name'] == 'raster1'
     assert rasters[1]['name'] == 'raster2'
 
 
 @responses.activate
-def test_rasters_set_detection_areas_from_file():
+def test_set_raster_detection_areas_from_file():
     add_mock_detection_areas_upload_responses(1)
 
     client = _client()
     # This just tests that this doesn't raise
     with tempfile.NamedTemporaryFile() as f:
-        client.raster_set_detection_areas_from_file(1, f.name)
+        client.set_raster_detection_areas_from_file(1, f.name)
 
 
 @responses.activate
-def test_detectors_run_on_raster():
+def test_run_detector():
     add_mock_detector_run_responses(1)
 
     client = _client()
-    client.detector_run_on_raster(1, 2)
+    client.run_detector(1, 2)
