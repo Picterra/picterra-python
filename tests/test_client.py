@@ -6,6 +6,8 @@ from urllib.parse import urljoin
 
 TEST_API_URL = 'http://example.com/public/api/v1/'
 
+TEST_POLL_INTERVAL = 0.1
+
 
 def _client():
     return APIClient(api_key='1234', base_url=TEST_API_URL)
@@ -47,7 +49,7 @@ def add_mock_detection_areas_upload_responses(raster_id):
 
     # Commit
     data = {
-        'poll_interval': 0.1,
+        'poll_interval': TEST_POLL_INTERVAL,
     }
     responses.add(
         responses.POST,
@@ -73,6 +75,29 @@ def add_mock_detection_areas_upload_responses(raster_id):
         json=data, status=200)
 
 
+def add_mock_detector_run_responses(detector_id):
+    result_id = 43
+    data = {
+        'result_id': result_id,
+        'poll_interval': TEST_POLL_INTERVAL
+    }
+    responses.add(
+        responses.POST,
+        api_url('detectors/%s/run/' % detector_id), json=data, status=201)
+
+    # First status check
+    data = {
+        'ready': False
+    }
+    responses.add(responses.GET, api_url('results/%s/' % result_id), json=data, status=200)
+
+    # Second status check
+    data = {
+        'ready': True
+    }
+    responses.add(responses.GET, api_url('results/%s/' % result_id), json=data, status=200)
+
+
 @responses.activate
 def test_rasters_list():
     client = _client()
@@ -91,3 +116,10 @@ def test_rasters_set_detection_areas_from_file():
     with tempfile.NamedTemporaryFile() as f:
         client.raster_set_detection_areas_from_file(1, f.name)
 
+
+@responses.activate
+def test_detectors_run_on_raster():
+    add_mock_detector_run_responses(1)
+
+    client = _client()
+    client.detector_run_on_raster(1, 2)
