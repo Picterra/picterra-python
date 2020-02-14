@@ -33,6 +33,52 @@ def add_mock_rasters_list_response():
     responses.add(responses.GET, api_url('rasters/'), json=data, status=200)
 
 
+def add_mock_raster_upload_responses():
+    raster_id = 42
+    # Upload initiation
+    data = {
+        'upload_url': 'http://storage.example.com',
+        'raster_id': raster_id
+    }
+    responses.add(
+        responses.POST,
+        api_url('rasters/upload/file/'), json=data, status=200)
+
+    # Storage PUT
+    responses.add(responses.PUT, 'http://storage.example.com', status=200)
+
+    # Commit
+    data = {
+        'poll_interval': TEST_POLL_INTERVAL,
+    }
+    responses.add(
+        responses.POST,
+        api_url('rasters/%s/commit/' % raster_id),
+        json=data, status=200)
+
+    # Status, first check
+    data = {
+        'id': raster_id,
+        'name': 'raster1',
+        'status': 'processing'
+    }
+    responses.add(
+        responses.GET,
+        api_url('rasters/%s/' % raster_id),
+        json=data, status=200)
+
+    # Status, second check
+    data = {
+        'id': raster_id,
+        'name': 'raster1',
+        'status': 'ready'
+    }
+    responses.add(
+        responses.GET,
+        api_url('rasters/%s/' % raster_id),
+        json=data, status=200)
+
+
 def add_mock_detection_areas_upload_responses(raster_id):
     upload_id = 42
     # Upload initiation
@@ -113,6 +159,15 @@ def add_mock_download_result_response(result_id):
         body=mock_content
     )
     return mock_content
+
+
+@responses.activate
+def test_upload_raster():
+    client = _client()
+    add_mock_raster_upload_responses()
+    # This just tests that this doesn't raise
+    with tempfile.NamedTemporaryFile() as f:
+        client.upload_raster(f.name, name='test 1')
 
 
 @responses.activate
