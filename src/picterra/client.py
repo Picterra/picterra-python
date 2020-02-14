@@ -14,14 +14,12 @@ class APIError(Exception):
     pass
 
 
-def _poll_with_timeout(fn, poll_interval, timeout_s=10 * 60):
-    timeout = time.time() + timeout_s
+def _poll_at_interval(fn, poll_interval):
     # Just sleep for a short while at first
     time.sleep(poll_interval * 0.1)
     while True:
         if fn():
             break
-        assert time.time() < timeout, 'Timed out'
         time.sleep(poll_interval)
 
 
@@ -36,6 +34,57 @@ class APIClient():
 
     def _api_url(self, path):
         return urljoin(self.base_url, path)
+
+    def upload_raster(self, filename, name):
+        """
+        Upload a raster to picterra.
+
+        Args:
+            filename (str): Local filename of raster to upload
+            name (str): A human-readable name for this raster
+
+        Returns:
+            raster_id (str): The id of the uploaded raster
+        """
+        resp = self.sess.post(
+            self._api_url('rasters/upload/file/'),
+            data={
+                'name': name
+            })
+        if not resp.ok:
+            raise APIError(resp.text)
+        data = resp.json()
+        upload_url = data["upload_url"]
+        raster_id = data["raster_id"]
+
+        with open(filename, 'rb') as f:
+            resp = requests.put(upload_url, data=f)
+        if not resp.ok:
+            raise APIError()
+
+        resp = self.sess.post(self._api_url('rasters/%s/commit/' % raster_id))
+        if not resp.ok:
+            raise APIError()
+        poll_interval = resp.json()['poll_interval']
+
+        # Wait for raster to be processed
+        def _is_ready():
+            logger.info('checking upload status')
+            resp = self.sess.get(
+                self._api_url('rasters/%s/' % raster_id)
+            )
+            if not resp.ok:
+                logger.warning('failed to get raster status - retrying')
+                return False
+
+            if resp.json()['status'] == 'ready':
+                return True
+            elif resp.json()['status'] == 'failed':
+                raise APIError(resp.text)
+            else:
+                return False
+        _poll_at_interval(_is_ready, poll_interval)
+        return raster_id
 
     def list_rasters(self):
         """
@@ -112,7 +161,7 @@ class APIClient():
                 raise APIError(resp.text)
             else:
                 return False
-        _poll_with_timeout(_is_ready, poll_interval)
+        _poll_at_interval(_is_ready, poll_interval)
 
     def run_detector(self, detector_id, raster_id):
         """
@@ -145,7 +194,7 @@ class APIClient():
             if not resp.ok:
                 raise APIError(resp.text)
             return resp.json()['ready']
-        _poll_with_timeout(_is_finished, poll_interval)
+        _poll_at_interval(_is_finished, poll_interval)
         return result_id
 
     def download_result_to_file(self, result_id, filename):
