@@ -24,9 +24,21 @@ def _poll_at_interval(fn, poll_interval):
 
 
 class APIClient():
-    def __init__(self, api_key, base_url=None):
+    def __init__(self, api_key=None, base_url=None):
+        """
+        Args:
+            api_key: Your picterra api_key. If None, will be obtained through the PICTERRA_API_KEY
+                     environment variable
+            base_url: URL of the Picterra server to target. Leave it to None
+        """
         if base_url is None:
             base_url = os.environ.get('PICTERRA_BASE_URL', 'https://app.picterra.ch/public/api/v1/')
+        if api_key is None:
+            if 'PICTERRA_API_KEY' not in os.environ:
+                raise APIError('api_key is None and PICTERRA_API_KEY environment ' +
+                               'variable is not defined')
+            api_key = os.environ['PICTERRA_API_KEY']
+
         logger.info('using base_url=%s', base_url)
         self.base_url = base_url
         self.sess = requests.Session()
