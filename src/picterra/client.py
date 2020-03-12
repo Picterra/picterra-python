@@ -72,11 +72,11 @@ class APIClient():
         with open(filename, 'rb') as f:
             resp = requests.put(upload_url, data=f)
         if not resp.ok:
-            raise APIError()
+            raise APIError(resp.text)
 
         resp = self.sess.post(self._api_url('rasters/%s/commit/' % raster_id))
         if not resp.ok:
-            raise APIError()
+            raise APIError(resp.text)
         poll_interval = resp.json()['poll_interval']
 
         # Wait for raster to be processed
@@ -147,7 +147,7 @@ class APIClient():
         with open(filename, 'rb') as f:
             resp = requests.put(upload_url, data=f)
         if not resp.ok:
-            raise APIError()
+            raise APIError(resp.text)
 
         # Commit upload
         resp = self.sess.post(
