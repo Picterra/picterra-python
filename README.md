@@ -13,6 +13,12 @@
 
 See the `examples` folder for examples
 
+## Installation
+
+```
+pip install git+https://github.com/Picterra/picterra-python.git
+```
+
 ## Example usage
 
 ### Setting detection areas and detecting on a raster
