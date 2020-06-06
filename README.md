@@ -6,7 +6,7 @@
 
 # Picterra Python API Client
 
-![Tests](https://github.com/Picterra/picterra-python/workflows/lint%20and%20tests/badge.svg)
+![Tests](https://github.com/Picterra/picterra-python/workflows/lint%20and%20tests/badge.svg?branch=master)
 
 
 **This is currently experimental and subject to breaking changes**
