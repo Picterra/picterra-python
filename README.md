@@ -6,7 +6,7 @@
 
 # Picterra Python API Client
 
-[![Build](https://travis-ci.org/Picterra/picterra-python.svg?branch=master)](https://travis-ci.org/Picterra/picterra-python.svg?branch=master)
+![Tests](https://github.com/Picterra/picterra-python/workflows/lint%20and%20tests/badge.svg)
 
 
 **This is currently experimental and subject to breaking changes**
