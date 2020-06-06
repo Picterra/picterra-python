@@ -1,4 +1,9 @@
+.DS_Store
+.cache
 .vscode
 *.egg-info
 .eggs
 __pycache__
+build
+dist
+examples/result.geojson
