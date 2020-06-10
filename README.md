@@ -40,3 +40,8 @@ pic.set_raster_detection_areas_from_file(raster, 'detection_areas.geojson')
 result_id = pic.run_detector(detector, raster)
 pic.download_result_to_file(result_id, 'result.geojson')
 ```
+
+
+### Getting results back in pixel coordinates
+
+[Example notebook](examples/nongeo_imagery.ipynb)
