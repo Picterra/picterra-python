@@ -47,6 +47,25 @@ class APIClient():
     def _api_url(self, path):
         return urljoin(self.base_url, path)
 
+    def _wait_until_operation_completes(self, operation):
+        operation_id = operation['operation_id']
+        poll_interval = operation['poll_interval']
+        time.sleep(poll_interval * 0.1)
+        while True:
+            logger.info('polling operation id %s' % operation_id)
+            resp = self.sess.get(
+                self._api_url('operations/%s/' % operation_id),
+            )
+            if not resp.ok:
+                raise APIError(resp.text)
+            status = resp.json()['status']
+            logger.info('status=%s' % status)
+            if status == 'success':
+                break
+            if status == 'failed':
+                raise APIError('Operation %s failed' % operation_id)
+            time.sleep(poll_interval)
+
     def upload_raster(self, filename, name):
         """
         Upload a raster to picterra.
@@ -77,25 +96,7 @@ class APIClient():
         resp = self.sess.post(self._api_url('rasters/%s/commit/' % raster_id))
         if not resp.ok:
             raise APIError(resp.text)
-        poll_interval = resp.json()['poll_interval']
-
-        # Wait for raster to be processed
-        def _is_ready():
-            logger.info('checking upload status')
-            resp = self.sess.get(
-                self._api_url('rasters/%s/' % raster_id)
-            )
-            if not resp.ok:
-                logger.warning('failed to get raster status - retrying')
-                return False
-
-            if resp.json()['status'] == 'ready':
-                return True
-            elif resp.json()['status'] == 'failed':
-                raise APIError(resp.text)
-            else:
-                return False
-        _poll_at_interval(_is_ready, poll_interval)
+        self._wait_until_operation_completes(resp.json())
         return raster_id
 
     def list_rasters(self):
@@ -155,25 +156,7 @@ class APIClient():
         )
         if not resp.ok:
             raise APIError(resp.text)
-        poll_interval = resp.json()['poll_interval']
-
-        # Wait for detection area to be associated with raster
-        def _is_ready():
-            logger.info('checking upload status')
-            resp = self.sess.get(
-                self._api_url('rasters/%s/detection_areas/upload/%s/' % (raster_id, upload_id))
-            )
-            if not resp.ok:
-                logger.warning('failed to get detection area status - retrying')
-                return False
-
-            if resp.json()['status'] == 'ready':
-                return True
-            elif resp.json()['status'] == 'failed':
-                raise APIError(resp.text)
-            else:
-                return False
-        _poll_at_interval(_is_ready, poll_interval)
+        self._wait_until_operation_completes(resp.json())
 
     def add_raster_to_detector(self, raster_id: str, detector_id: str) -> str:
         """
@@ -281,3 +264,46 @@ class APIClient():
                 for chunk in r.iter_content(chunk_size=8192):
                     if chunk:  # filter out keep-alive new chunks
                         f.write(chunk)
+
+    def set_annotations(self, detector_id, raster_id, annotation_type, annotations):
+        """
+        Replaces the annotations of type 'annotation_type' with 'annotations', for the
+        given raster-detector pair.
+
+        Args:
+            detector_id (str): The id of the detector
+            raster_id (str): The id of the raster
+            annotation_type (str): One of (outlines, training_area, testing_area, validation_area)
+            annotations (dict): GeoJSON representation of the features to upload
+        """
+        # Get an upload url
+        create_upload_resp = self.sess.post(
+            self._api_url(
+                'detectors/%s/training_rasters/%s/%s/upload/bulk/'
+                % (detector_id, raster_id, annotation_type)
+            )
+        )
+        if not create_upload_resp.ok:
+            raise APIError(create_upload_resp.text)
+
+        upload = create_upload_resp.json()
+        upload_url = upload['upload_url']
+        upload_id = upload['upload_id']
+
+        # Upload data
+        upload_resp = requests.put(upload_url, json=annotations)
+        if not upload_resp.ok:
+            raise APIError(upload_resp.text)
+
+        # Commit upload
+        commit_upload_resp = self.sess.post(
+            self._api_url(
+                'detectors/%s/training_rasters/%s/%s/upload/bulk/%s/commit/'
+                % (detector_id, raster_id, annotation_type, upload_id)
+            )
+        )
+        if not commit_upload_resp.ok:
+            raise APIError(commit_upload_resp.text)
+
+        # Poll for operation completion
+        self._wait_until_operation_completes(commit_upload_resp.json())
