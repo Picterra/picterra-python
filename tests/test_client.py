@@ -33,6 +33,10 @@ def add_mock_rasters_list_response():
     responses.add(responses.GET, api_url('rasters/'), json=data, status=200)
 
 
+def add_mock_detector_creation_response():
+    responses.add(responses.POST, api_url('detectors/'), json={'id': 'foobar'}, status=201)
+
+
 def add_mock_raster_upload_responses():
     raster_id = 42
     # Upload initiation
@@ -177,6 +181,14 @@ def test_list_rasters():
     rasters = client.list_rasters()
     assert rasters[0]['name'] == 'raster1'
     assert rasters[1]['name'] == 'raster2'
+
+
+@responses.activate
+def test_detector_creation():
+    client = _client()
+    add_mock_detector_creation_response()
+    detector = client.create_detector()
+    assert detector == 'foobar'
 
 
 @responses.activate

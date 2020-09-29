@@ -175,6 +175,60 @@ class APIClient():
                 return False
         _poll_at_interval(_is_ready, poll_interval)
 
+    def add_raster_to_detector(self, raster_id: str, detector_id: str) -> str:
+        """
+        Associate a raster to a detector
+
+        This a **beta** function, subject to change.
+
+        Args:
+            detector_id (str): The id of the detector
+            raster_id (str): The id of the raster
+
+        Raises:
+            APIError: There was an error uploading the file to cloud storage
+        """
+        resp = self.sess.post(
+            self._api_url('detectors/%s/training_rasters/' % detector_id),
+            data={
+                'raster_id': raster_id
+            }
+        )
+        if not resp.status_code == 201:
+            raise APIError(resp.text)
+
+    def create_detector(self, name: str = '', type: str = 'count') -> str:
+        """
+        Associate a raster to a detector
+
+        This a **beta** function, subject to change.
+
+        Args:
+            name: Name of the detector
+            type: The type of the detector (on of 'count', 'segmentation')
+
+        Returns:
+            detector_id (str): The id of the detector
+
+        Raises:
+            APIError: There was an error while creating the detector
+        """
+        type = type.lower()
+        valid_types = ('count', 'segmentation')
+        if type not in valid_types:
+            raise ValueError(
+                'Invalid type "%s", choose one of %s.' % (type, ', '.join(valid_types)))
+        body_data = {'type': type}
+        if name:
+            body_data['name'] = name
+        resp = self.sess.post(
+            self._api_url('detectors/'),
+            data=body_data
+        )
+        if not resp.status_code == 201:
+            raise APIError(resp.text)
+        return resp.json()['id']
+
     def run_detector(self, detector_id, raster_id):
         """
         Runs a detector on a raster

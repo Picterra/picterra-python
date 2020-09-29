@@ -41,6 +41,24 @@ result_id = pic.run_detector(detector, raster)
 pic.download_result_to_file(result_id, 'result.geojson')
 ```
 
+### Training API (beta)
+
+**Please note the above endpoints are still in beta and thus may be subject to change**
+
+#### Create a detector and add rasters to it
+
+```python
+from picterra import APIClient
+
+pic = APIClient()
+detector = pic.create_detector('my_car_counting_detector', 'count')
+raster1 = pic.upload_raster('<filename1>', 'training_raster_1')
+raster2 = pic.upload_raster('<filename2>', 'training_raster_2')
+pic.add_raster_to_detector(raster1, detector)
+pic.add_raster_to_detector(raster2, detector)
+
+
+```
 
 ### Getting results back in pixel coordinates
 
