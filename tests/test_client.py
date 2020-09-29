@@ -37,6 +37,52 @@ def add_mock_detector_creation_response():
     responses.add(responses.POST, api_url('detectors/'), json={'id': 'foobar'}, status=201)
 
 
+def add_mock_operations_responses(status):
+    operation_id = 21
+    data = {
+        'type': 'mock_operation_type',
+        'status': status
+    }
+    responses.add(
+        responses.GET, 
+        api_url('operations/%s/' % operation_id),
+        json=data, status=200
+    )
+
+
+def add_mock_annotations_responses(detector_id, raster_id):
+    upload_id = 32
+    operation_id = 21
+
+    responses.add(responses.PUT, 'http://storage.example.com', status=200)
+    
+    for annotation_type in ('outline', 'training_area', 'testing_area', 'validation_area'):
+        responses.add(
+            responses.POST,
+            api_url(
+                'detectors/%s/training_rasters/%s/%s/upload/bulk/'
+                % (detector_id, raster_id, annotation_type)
+            ),
+            json={
+                'upload_url': 'http://storage.example.com',
+                'upload_id': upload_id
+            },
+            status=201
+        )
+        responses.add(
+            responses.POST,
+            api_url(
+                'detectors/%s/training_rasters/%s/%s/upload/bulk/%s/commit/'
+                % (detector_id, raster_id, annotation_type, upload_id)
+            ),
+            json={
+                'operation_id': operation_id,
+                'poll_interval': TEST_POLL_INTERVAL
+            },
+            status=201
+        )
+
+
 def add_mock_raster_upload_responses():
     raster_id = 42
     # Upload initiation
@@ -54,6 +100,7 @@ def add_mock_raster_upload_responses():
     # Commit
     data = {
         'poll_interval': TEST_POLL_INTERVAL,
+        'operation_id': 21
     }
     responses.add(
         responses.POST,
@@ -85,6 +132,7 @@ def add_mock_raster_upload_responses():
 
 def add_mock_detection_areas_upload_responses(raster_id):
     upload_id = 42
+    
     # Upload initiation
     data = {
         'upload_url': 'http://storage.example.com',
@@ -100,6 +148,7 @@ def add_mock_detection_areas_upload_responses(raster_id):
     # Commit
     data = {
         'poll_interval': TEST_POLL_INTERVAL,
+        'operation_id': 21
     }
     responses.add(
         responses.POST,
@@ -169,6 +218,7 @@ def add_mock_download_result_response(result_id):
 def test_upload_raster():
     client = _client()
     add_mock_raster_upload_responses()
+    add_mock_operations_responses('success')
     # This just tests that this doesn't raise
     with tempfile.NamedTemporaryFile() as f:
         client.upload_raster(f.name, name='test 1')
@@ -194,6 +244,7 @@ def test_detector_creation():
 @responses.activate
 def test_set_raster_detection_areas_from_file():
     add_mock_detection_areas_upload_responses(1)
+    add_mock_operations_responses('success')
 
     client = _client()
     # This just tests that this doesn't raise
@@ -217,3 +268,14 @@ def test_download_result_to_file():
     with tempfile.NamedTemporaryFile() as f:
         client.download_result_to_file(101, f.name)
         assert open(f.name).read() == expected_content
+
+
+@responses.activate
+def test_upload_annotations():
+    add_mock_annotations_responses(1, 2)
+    add_mock_operations_responses('pending')
+    add_mock_operations_responses('running')
+    add_mock_operations_responses('success')
+
+    client = _client()
+    client.set_annotations(1, 2, 'outline', {})
