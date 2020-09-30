@@ -15,6 +15,7 @@ class APIError(Exception):
 
 
 class APIClient():
+    """Main client class for the Picterra API"""
     def __init__(self, api_key=None, base_url=None):
         """
         Args:
@@ -93,11 +94,13 @@ class APIClient():
 
     def list_rasters(self):
         """
-        Returns the list of rasters stored in the account
+        Returns:
+            A list of rasters dictionaries
 
-        Returns: A list of rasters dictionaries
+        Example:
 
-            ```
+            ::
+
                 {
                     'id': '42',
                     'status': 'ready',
@@ -108,7 +111,7 @@ class APIClient():
                     'status': 'ready',
                     'name': 'raster2'
                 }
-            ```
+
         """
         resp = self.sess.get(self._api_url('rasters/'))
         return resp.json()
