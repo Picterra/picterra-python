@@ -3,10 +3,12 @@
 .vscode
 .venv
 *.egg-info
+docs/_build
 .eggs
 .ipynb_checkpoints
 .pytest_cache
 __pycache__
-build
+venv
+.vscode
 dist
 examples/result.geojson
