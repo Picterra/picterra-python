@@ -307,3 +307,13 @@ class APIClient():
 
         # Poll for operation completion
         self._wait_until_operation_completes(commit_upload_resp.json())
+
+    def train_detector(self, detector_id):
+        """
+        Start the training of a detector
+
+        Args:
+            detector_id (str): The id of the detector
+        """
+        resp = self.sess.post(self._api_url('detectors/%s/train/' % detector_id))
+        assert resp.status_code == 201, resp.status_code
