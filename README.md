@@ -63,3 +63,7 @@ pic.add_raster_to_detector(raster2, detector)
 ### Getting results back in pixel coordinates
 
 [Example notebook](examples/nongeo_imagery.ipynb)
+
+
+## Development
+In order to test locally, run `python setup.py test`
