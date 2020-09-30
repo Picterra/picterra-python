@@ -1,8 +1,8 @@
 import tempfile
 import responses
+import pytest
 from picterra import APIClient
 from urllib.parse import urljoin
-
 
 TEST_API_URL = 'http://example.com/public/api/v1/'
 
@@ -286,6 +286,8 @@ def test_upload_annotations():
     add_mock_operations_responses('success')
 
     client = _client()
+    with pytest.raises(ValueError):
+        client.set_annotations(1, 2, 'foobar', {})
     client.set_annotations(1, 2, 'outline', {})
 
 
