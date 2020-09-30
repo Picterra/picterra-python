@@ -8,6 +8,8 @@ TEST_API_URL = 'http://example.com/public/api/v1/'
 
 TEST_POLL_INTERVAL = 0.1
 
+OPERATION_ID = 21
+
 
 def _client():
     return APIClient(api_key='1234', base_url=TEST_API_URL)
@@ -41,26 +43,27 @@ def add_mock_detector_train_responses(detector_id):
     responses.add(
         responses.POST,
         api_url('detectors/%s/train/' % detector_id),
-        json={'id': 'foobar'},
+        json={
+            'operation_id': OPERATION_ID,
+            'poll_interval': TEST_POLL_INTERVAL
+        },
         status=201)
 
 
 def add_mock_operations_responses(status):
-    operation_id = 21
     data = {
         'type': 'mock_operation_type',
         'status': status
     }
     responses.add(
         responses.GET, 
-        api_url('operations/%s/' % operation_id),
+        api_url('operations/%s/' % OPERATION_ID),
         json=data, status=200
     )
 
 
 def add_mock_annotations_responses(detector_id, raster_id):
     upload_id = 32
-    operation_id = 21
 
     responses.add(responses.PUT, 'http://storage.example.com', status=200)
     
@@ -84,7 +87,7 @@ def add_mock_annotations_responses(detector_id, raster_id):
                 % (detector_id, raster_id, annotation_type, upload_id)
             ),
             json={
-                'operation_id': operation_id,
+                'operation_id': OPERATION_ID,
                 'poll_interval': TEST_POLL_INTERVAL
             },
             status=201
@@ -108,7 +111,7 @@ def add_mock_raster_upload_responses():
     # Commit
     data = {
         'poll_interval': TEST_POLL_INTERVAL,
-        'operation_id': 21
+        'operation_id': OPERATION_ID
     }
     responses.add(
         responses.POST,
@@ -156,7 +159,7 @@ def add_mock_detection_areas_upload_responses(raster_id):
     # Commit
     data = {
         'poll_interval': TEST_POLL_INTERVAL,
-        'operation_id': 21
+        'operation_id': OPERATION_ID
     }
     responses.add(
         responses.POST,
@@ -281,7 +284,7 @@ def test_download_result_to_file():
 @responses.activate
 def test_upload_annotations():
     add_mock_annotations_responses(1, 2)
-    add_mock_operations_responses('pending')
+    add_mock_operations_responses('running')
     add_mock_operations_responses('running')
     add_mock_operations_responses('success')
 
@@ -294,5 +297,8 @@ def test_upload_annotations():
 @responses.activate
 def test_train_detector():
     add_mock_detector_train_responses(1)
+    add_mock_operations_responses('running')
+    add_mock_operations_responses('running')
+    add_mock_operations_responses('success')
     client = _client()
     client.train_detector(1)

@@ -322,3 +322,4 @@ class APIClient():
         """
         resp = self.sess.post(self._api_url('detectors/%s/train/' % detector_id))
         assert resp.status_code == 201, resp.status_code
+        self._wait_until_operation_completes(resp.json())
