@@ -273,9 +273,14 @@ class APIClient():
         Args:
             detector_id (str): The id of the detector
             raster_id (str): The id of the raster
-            annotation_type (str): One of (outlines, training_area, testing_area, validation_area)
+            annotation_type (str): One of (outline, training_area, testing_area, validation_area)
             annotations (dict): GeoJSON representation of the features to upload
         """
+        annotation_type = annotation_type.lower()
+        valid_annotations = ('outline', 'training_area', 'testing_area', 'validation_area')
+        if annotation_type not in valid_annotations:
+            raise ValueError('Invalid annotation type "%s"; allowed values are: %s.' % (
+                annotation_type, ', '.join(valid_annotations)))
         # Get an upload url
         create_upload_resp = self.sess.post(
             self._api_url(
