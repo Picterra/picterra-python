@@ -37,6 +37,14 @@ def add_mock_detector_creation_response():
     responses.add(responses.POST, api_url('detectors/'), json={'id': 'foobar'}, status=201)
 
 
+def add_mock_detector_train_responses(detector_id):
+    responses.add(
+        responses.POST,
+        api_url('detectors/%s/train/' % detector_id),
+        json={'id': 'foobar'},
+        status=201)
+
+
 def add_mock_operations_responses(status):
     operation_id = 21
     data = {
@@ -279,3 +287,10 @@ def test_upload_annotations():
 
     client = _client()
     client.set_annotations(1, 2, 'outline', {})
+
+
+@responses.activate
+def test_train_detector():
+    add_mock_detector_train_responses(1)
+    client = _client()
+    client.train_detector(1)
