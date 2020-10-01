@@ -14,15 +14,6 @@ class APIError(Exception):
     pass
 
 
-def _poll_at_interval(fn, poll_interval):
-    # Just sleep for a short while at first
-    time.sleep(poll_interval * 0.1)
-    while True:
-        if fn():
-            break
-        time.sleep(poll_interval)
-
-
 class APIClient():
     def __init__(self, api_key=None, base_url=None):
         """
@@ -50,6 +41,7 @@ class APIClient():
     def _wait_until_operation_completes(self, operation):
         operation_id = operation['operation_id']
         poll_interval = operation['poll_interval']
+        # Just sleep for a short while the first time
         time.sleep(poll_interval * 0.1)
         while True:
             logger.info('polling operation id %s' % operation_id)
@@ -233,17 +225,8 @@ class APIClient():
         assert resp.status_code == 201, resp.status_code
         data = resp.json()
         result_id = data['result_id']
-        poll_interval = data['poll_interval']
 
-        def _is_finished():
-            logger.info('checking detector status')
-            resp = self.sess.get(
-                self._api_url('results/%s/' % result_id),
-            )
-            if not resp.ok:
-                raise APIError(resp.text)
-            return resp.json()['ready']
-        _poll_at_interval(_is_finished, poll_interval)
+        self._wait_until_operation_completes(resp.json())
         return result_id
 
     def download_result_to_file(self, result_id, filename):
