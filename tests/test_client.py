@@ -66,7 +66,7 @@ def add_mock_annotations_responses(detector_id, raster_id):
     upload_id = 32
 
     responses.add(responses.PUT, 'http://storage.example.com', status=200)
-    
+
     for annotation_type in ('outline', 'training_area', 'testing_area', 'validation_area'):
         responses.add(
             responses.POST,
@@ -143,7 +143,7 @@ def add_mock_raster_upload_responses():
 
 def add_mock_detection_areas_upload_responses(raster_id):
     upload_id = 42
-    
+
     # Upload initiation
     data = {
         'upload_url': 'http://storage.example.com',
@@ -189,7 +189,8 @@ def add_mock_detector_run_responses(detector_id):
     result_id = 43
     data = {
         'result_id': result_id,
-        'poll_interval': TEST_POLL_INTERVAL
+        'poll_interval': TEST_POLL_INTERVAL,
+        'operation_id': OPERATION_ID
     }
     responses.add(
         responses.POST,
@@ -266,6 +267,7 @@ def test_set_raster_detection_areas_from_file():
 @responses.activate
 def test_run_detector():
     add_mock_detector_run_responses(1)
+    add_mock_operations_responses('success')
 
     client = _client()
     client.run_detector(1, 2)
