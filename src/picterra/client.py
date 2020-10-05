@@ -116,6 +116,21 @@ class APIClient():
         resp = self.sess.get(self._api_url('rasters/'))
         return resp.json()
 
+    def delete_raster(self, raster_id):
+        """
+        Deletes a given raster by its identifier
+
+        Args:
+            raster_id (str): The id of the raster to delete
+
+        Raises:
+            APIError: There was an error while trying to delete the raster
+        """
+
+        resp = self.sess.delete(self._api_url('rasters/%s/' % raster_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+
     def set_raster_detection_areas_from_file(self, raster_id, filename):
         """
         This is an experimental feature

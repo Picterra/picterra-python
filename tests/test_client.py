@@ -226,6 +226,12 @@ def add_mock_download_result_response(result_id):
     return mock_content
 
 
+def add_mock_delete_raster_response(raster_id):
+    responses.add(
+        responses.DELETE,
+        api_url('rasters/%s/' % raster_id), status=204)
+
+
 @responses.activate
 def test_upload_raster():
     client = _client()
@@ -234,6 +240,14 @@ def test_upload_raster():
     # This just tests that this doesn't raise
     with tempfile.NamedTemporaryFile() as f:
         client.upload_raster(f.name, name='test 1')
+
+
+@responses.activate
+def test_delete_raster():
+    RASTER_ID = 'foobar'
+    client = _client()
+    add_mock_delete_raster_response(RASTER_ID)
+    client.delete_raster(RASTER_ID)
 
 
 @responses.activate
