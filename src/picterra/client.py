@@ -59,22 +59,30 @@ class APIClient():
                 raise APIError('Operation %s failed' % operation_id)
             time.sleep(poll_interval)
 
-    def upload_raster(self, filename, name):
+    def upload_raster(self, filename, name, folder_id=None):
         """
         Upload a raster to picterra.
 
         Args:
             filename (str): Local filename of raster to upload
             name (str): A human-readable name for this raster
+            folder_id (optional, str): Id of the folder this raster
+                belongs to.
 
         Returns:
             raster_id (str): The id of the uploaded raster
         """
+        data = {
+            'name': name
+        }
+        if folder_id is not None:
+            data.update({
+                'folder_id': folder_id
+            })
         resp = self.sess.post(
             self._api_url('rasters/upload/file/'),
-            data={
-                'name': name
-            })
+            data
+        )
         if not resp.ok:
             raise APIError(resp.text)
         data = resp.json()

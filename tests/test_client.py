@@ -239,7 +239,7 @@ def test_upload_raster():
     add_mock_operations_responses('success')
     # This just tests that this doesn't raise
     with tempfile.NamedTemporaryFile() as f:
-        client.upload_raster(f.name, name='test 1')
+        client.upload_raster(f.name, name='test 1', folder_id='0')
 
 
 @responses.activate
