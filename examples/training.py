@@ -1,11 +1,8 @@
 import json
 from picterra import APIClient
 
-# Put your API key either:
-# * replacing '1234'
-# * not putting arguments to APIClient but setting the PICTERRA_API_KEY environment variable 
-client = APIClient(api_key='1234')
-
+# Set the PICTERRA_API_KEY environment variable to define your API key
+client = APIClient()
 
 # Create a new detector (its type is 'count' by default)
 detector_id = client.create_detector('My first detector')
