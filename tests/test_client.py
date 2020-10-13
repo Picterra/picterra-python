@@ -4,7 +4,7 @@ import pytest
 from picterra import APIClient
 from urllib.parse import urljoin
 
-TEST_API_URL = 'http://example.com/public/api/v1/'
+TEST_API_URL = 'http://example.com/public/api/v2/'
 
 TEST_POLL_INTERVAL = 0.1
 
@@ -20,19 +20,22 @@ def api_url(path):
 
 
 def add_mock_rasters_list_response():
-    data = [
-        {
-            'id': '42',
-            'status': 'ready',
-            'name': 'raster1'
-        },
-        {
-            'id': '43',
-            'status': 'ready',
-            'name': 'raster2'
-        },
-    ]
-    responses.add(responses.GET, api_url('rasters/'), json=data, status=200)
+    data1 = {
+        "count": 4, "next": api_url('rasters/?page_number=2'), "previous": None, "page_size": 2,
+        "results": [
+            {"id": "40", "status": "ready", "name": "raster1"},
+            {"id": "41", "status": "ready", "name": "raster2"}
+        ]
+    }
+    data2 = {
+        "count": 4, "next": None, "previous": None, "page_size": 2,
+        "results": [
+            {"id": "42", "status": "ready", "name": "raster3"},
+            {"id": "43", "status": "ready", "name": "raster4"}
+        ]
+    }
+    responses.add(responses.GET, api_url('rasters/?page_number=1'), json=data1, status=200)
+    responses.add(responses.GET, api_url('rasters/?page_number=2'), json=data2, status=200)
 
 
 def add_mock_detector_creation_response():

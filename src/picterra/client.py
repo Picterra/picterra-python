@@ -2,7 +2,6 @@ import os
 import time
 import requests
 import logging
-import warnings
 from urllib.parse import urljoin
 
 
@@ -24,7 +23,7 @@ class APIClient():
             base_url: URL of the Picterra server to target. Leave it to None
         """
         if base_url is None:
-            base_url = os.environ.get('PICTERRA_BASE_URL', 'https://app.picterra.ch/public/api/v1/')
+            base_url = os.environ.get('PICTERRA_BASE_URL', 'https://app.picterra.ch/public/api/v2/')
         if api_key is None:
             if 'PICTERRA_API_KEY' not in os.environ:
                 raise APIError('api_key is None and PICTERRA_API_KEY environment ' +
@@ -45,7 +44,7 @@ class APIClient():
         # Just sleep for a short while the first time
         time.sleep(poll_interval * 0.1)
         while True:
-            logger.info('polling operation id %s' % operation_id)
+            logger.info('Polling operation id %s' % operation_id)
             resp = self.sess.get(
                 self._api_url('operations/%s/' % operation_id),
             )
@@ -90,8 +89,10 @@ class APIClient():
         raster_id = data["raster_id"]
 
         with open(filename, 'rb') as f:
+            logger.debug('Opening raster file %s' % filename)
             resp = requests.put(upload_url, data=f)
         if not resp.ok:
+            logger.error('Error when uploading to blobstore %s' % upload_url)
             raise APIError(resp.text)
 
         resp = self.sess.post(self._api_url('rasters/%s/commit/' % raster_id))
@@ -121,8 +122,17 @@ class APIClient():
                 }
 
         """
-        resp = self.sess.get(self._api_url('rasters/'))
-        return resp.json()
+        url = self._api_url('rasters/?page_number=1')
+        data = []
+        while url:
+            logger.debug('Paginating through rasters list at page %s' % url)
+            resp = self.sess.get(url)
+            r = resp.json()
+            url = r['next']
+            count = r['count']
+            data += r['results']
+        assert len(data) == count
+        return data
 
     def delete_raster(self, raster_id):
         """
@@ -153,8 +163,6 @@ class APIClient():
         Raises:
             APIError: There was an error uploading the file to cloud storage
         """
-        warnings.warn("experimental feature")
-
         # Get upload URL
         resp = self.sess.post(self._api_url('rasters/%s/detection_areas/upload/file/' % raster_id))
         if not resp.ok:
@@ -267,9 +275,11 @@ class APIClient():
             self._api_url('results/%s/' % result_id),
         )
         result_url = resp.json()['result_url']
+        logger.debug('Trying to download result %s..' % result_url)
         with requests.get(result_url, stream=True) as r:
             r.raise_for_status()
             with open(filename, 'wb') as f:
+                logger.debug('Trying to save result to file %s..' % filename)
                 for chunk in r.iter_content(chunk_size=8192):
                     if chunk:  # filter out keep-alive new chunks
                         f.write(chunk)
@@ -307,6 +317,8 @@ class APIClient():
         # Upload data
         upload_resp = requests.put(upload_url, json=annotations)
         if not upload_resp.ok:
+            logger.error('Error when sending annotation upload %s to blobstore at url %s' % (
+                upload_id, upload_url))
             raise APIError(upload_resp.text)
 
         # Commit upload
