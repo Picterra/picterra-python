@@ -30,7 +30,7 @@ Training
 
   **Please note the below endpoints are still in beta and thus may be subject to change**
 
-.. literalinclude:: ../examples/upload_and_detect.py
+.. literalinclude:: ../examples/training.py
 
 More examples
 =============
