@@ -29,7 +29,7 @@ def validate_detector_args(detection_type: str, output_type: str, training_steps
                     output_type, ', '.join(valid_types))
             )
     if training_steps:
-        valid_training_steps = [500, 40_000]
+        valid_training_steps = [500, 40000]
         if not (valid_training_steps[0] <= training_steps <= valid_training_steps[1]):
             raise ValueError(
                 'Steps value %d should be in [%s, %s].' % (
@@ -266,10 +266,13 @@ class APIClient():
             detection_type.lower(), output_type.lower(), int(training_steps))
         # Validate args
         validate_detector_args(detection_type, output_type, training_steps)
-        # Call API
-        body_data = {}
-        for i in ('name', 'detection_type', 'output_type', 'training_steps'):
-            body_data[i] = locals()[i]
+        # Build request body
+        body_data = {'configuration': {}}
+        if name:
+            body_data['name'] = name
+        for i in ('detection_type', 'output_type', 'training_steps'):
+            body_data['configuration'][i] = locals()[i]
+        # Call API and check response
         resp = self.sess.post(
             self._api_url('detectors/'),
             data=body_data
@@ -289,21 +292,63 @@ class APIClient():
 
                 {
                     'id': '42',
-                    'detection_type': 'count',
                     'name': 'cow detector',
-                    'output_type': 'bbox',
-                    'training_steps': 787
+                    'configuration': {
+                        'detection_type': 'count',
+                        'output_type': 'bbox',
+                        'training_steps': 787
+                    }
                 },
                 {
                     'id': '43',
-                    'detection_type': 'segmentation',
                     'name': 'test5',
-                    'output_type': 'polygon',
-                    'training_steps': 500
+                    'configuration': {
+                        'detection_type': 'segmentation',
+                        'output_type': 'polygon',
+                        'training_steps': 500
+                    }
                 }
 
         """
         return self._paginate_through_list('detectors')
+
+    def edit_detector(
+        self, detector_id: str,
+        name: str = '', detection_type: str = '', output_type: str = '', training_steps: int = 0
+    ):
+        """
+        Edit a detector
+
+        This a **beta** function, subject to change.
+
+        Args:
+            detector_id: identifier of the detector
+            name: Name of the detector
+            detection_type: The type of the detector (one of 'count', 'segmentation')
+            output_type: The output type of the detector (one of 'polygon', 'bbox')
+            training_steps: The training steps the detector (int in [500, 40000])
+
+        Raises:
+            APIError: There was an error while editing the detector
+        """
+        detection_type, output_type, training_steps = (
+            detection_type.lower(), output_type.lower(), int(training_steps))
+        # Validate args
+        validate_detector_args(detection_type, output_type, training_steps)
+        # Build request body
+        body_data = {'configuration': {}}
+        if name:
+            body_data['name'] = name
+        for i in ('detection_type', 'output_type', 'training_steps'):
+            if locals()[i]:
+                body_data['configuration'][i] = locals()[i]
+        # Call API and check response
+        resp = self.sess.put(
+            self._api_url('detectors/%s/' % detector_id),
+            data=body_data
+        )
+        if not resp.status_code == 204:
+            raise APIError(resp.text)
 
     def run_detector(self, detector_id: str, raster_id: str) -> str:
         """

@@ -57,14 +57,20 @@ def add_mock_detectors_list_response():
     responses.add(responses.GET, api_url('detectors/?page_number=2'), json=data2, status=200)
 
 
-def add_mock_detector_creation_response():
-    responses.add(responses.POST, api_url('detectors/'), json={'id': 'foobar'}, status=201)
 def add_mock_detector_creation_response(**kwargs):
-    match = [responses.json_params_matcher(kwargs)] if kwargs else []
+    match = [responses.json_params_matcher({"configuration": kwargs})] if kwargs else []
     responses.add(
         responses.POST, api_url('detectors/'),
         json={'id': 'foobar'}, status=201,
         match=match)
+
+
+def add_mock_detector_edit_response(d_id, **kwargs):
+    match = [responses.json_params_matcher({"configuration": kwargs})] if kwargs else []
+    responses.add(
+        responses.PUT, api_url('detectors/%s/' % d_id), status=204,
+        match=match
+    )
 
 
 def add_mock_detector_train_responses(detector_id):
@@ -324,6 +330,32 @@ def test_list_detectors():
     detectors = client.list_detectors()
     assert detectors[0]['name'] == 'detector1'
     assert detectors[1]['name'] == 'detector2'
+
+
+@responses.activate
+def test_detector_edit():
+    client = _client()
+    detector_id = 'foobar'
+    bad_args = [
+        {'detection_type': 'spam'}, {'output_type': 'spam'}, {'training_steps': 10**6}
+    ]
+    good_args = [
+        {'detection_type': 'segmentation'}, {'output_type': 'bbox'}, {'training_steps': 10**3}
+    ]
+    for bad_arg in bad_args:
+        with pytest.raises(ValueError) as e:
+            client.edit_detector(detector_id, **bad_arg)
+            assert bad_arg in e
+    with pytest.raises(ValueError):
+        client.edit_detector(detector_id, **dict(p for d in bad_args for p in d.items()))
+    add_mock_detector_edit_response(detector_id)
+    client.edit_detector(detector_id)
+    for good_arg in good_args:
+        add_mock_detector_edit_response(detector_id, **good_arg)
+        client.edit_detector(detector_id, **good_arg)
+    merge = dict(p for d in good_args for p in d.items())
+    add_mock_detector_edit_response(detector_id, **merge)
+    client.edit_detector(detector_id, **merge)
 
 
 @responses.activate
