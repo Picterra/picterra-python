@@ -59,6 +59,12 @@ def add_mock_detectors_list_response():
 
 def add_mock_detector_creation_response():
     responses.add(responses.POST, api_url('detectors/'), json={'id': 'foobar'}, status=201)
+def add_mock_detector_creation_response(**kwargs):
+    match = [responses.json_params_matcher(kwargs)] if kwargs else []
+    responses.add(
+        responses.POST, api_url('detectors/'),
+        json={'id': 'foobar'}, status=201,
+        match=match)
 
 
 def add_mock_detector_train_responses(detector_id):
@@ -288,9 +294,27 @@ def test_list_rasters():
 @responses.activate
 def test_detector_creation():
     client = _client()
+    bad_args = [
+        {'detection_type': 'spam'}, {'output_type': 'spam'}, {'training_steps': 10**6}
+    ]
+    good_args = [
+        {'detection_type': 'segmentation'}, {'output_type': 'bbox'}, {'training_steps': 10**3}
+    ]
+    for bad_arg in bad_args:
+        with pytest.raises(ValueError) as e:
+            client.create_detector(**bad_arg)
+            assert bad_arg in e
+    with pytest.raises(ValueError):
+        client.create_detector(**dict(p for d in bad_args for p in d.items()))
     add_mock_detector_creation_response()
-    detector = client.create_detector()
-    assert detector == 'foobar'
+    client.create_detector()
+    for good_arg in good_args:
+        add_mock_detector_creation_response(**good_arg)
+        client.create_detector(**good_arg)
+    merge = dict(p for d in good_args for p in d.items())
+    add_mock_detector_creation_response(**merge)
+    detector_id = client.create_detector(**merge)
+    assert detector_id == 'foobar'
 
 
 @responses.activate
