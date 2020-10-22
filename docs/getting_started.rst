@@ -32,6 +32,12 @@ Training
 
 .. literalinclude:: ../examples/training.py
 
+Detections in image coordinates
+===============================
+
+If you want to use Picterra with images that are not georeferenced and want to get the detector
+outputs in (x, y) coordinates, have a look at our `nongeo_imagery notebook <https://github.com/Picterra/picterra-python/blob/master/examples/nongeo_imagery.ipynb>`_ .
+
 More examples
 =============
 
