@@ -13,6 +13,30 @@ class APIError(Exception):
     pass
 
 
+def validate_detector_args(detection_type: str, output_type: str, training_steps: int):
+    if detection_type:
+        valid_types = ('count', 'segmentation')
+        if detection_type not in valid_types:
+            raise ValueError(
+                'Invalid detection type "%s", choose one of %s.' % (
+                    detection_type, ', '.join(valid_types))
+            )
+    if output_type:
+        valid_types = ('polygon', 'bbox')
+        if output_type not in valid_types:
+            raise ValueError(
+                'Invalid output type "%s", choose one of %s.' % (
+                    output_type, ', '.join(valid_types))
+            )
+    if training_steps:
+        valid_training_steps = [500, 40_000]
+        if not (valid_training_steps[0] <= training_steps <= valid_training_steps[1]):
+            raise ValueError(
+                'Steps value %d should be in [%s, %s].' % (
+                    training_steps, valid_training_steps[0], valid_training_steps[1])
+            )
+
+
 class APIClient():
     """Main client class for the Picterra API"""
     def __init__(self, api_key=None, base_url=None):
@@ -217,15 +241,20 @@ class APIClient():
         if not resp.status_code == 201:
             raise APIError(resp.text)
 
-    def create_detector(self, name: str = '', type: str = 'count') -> str:
+    def create_detector(
+        self, name: str = '', detection_type: str = 'count',
+        output_type: str = 'polygon', training_steps: int = 500
+    ) -> str:
         """
-        Associate a raster to a detector
+        Creates a new detector
 
         This a **beta** function, subject to change.
 
         Args:
             name: Name of the detector
-            type: The type of the detector (on of 'count', 'segmentation')
+            detection_type: Type of the detector (one of 'count', 'segmentation')
+            output_type: Output type of the detector (one of 'polygon', 'bbox')
+            training_steps: Training steps the detector (integer between 500 & 40000)
 
         Returns:
             detector_id (str): The id of the detector
@@ -233,14 +262,14 @@ class APIClient():
         Raises:
             APIError: There was an error while creating the detector
         """
-        type = type.lower()
-        valid_types = ('count', 'segmentation')
-        if type not in valid_types:
-            raise ValueError(
-                'Invalid type "%s", choose one of %s.' % (type, ', '.join(valid_types)))
-        body_data = {'type': type}
-        if name:
-            body_data['name'] = name
+        detection_type, output_type, training_steps = (
+            detection_type.lower(), output_type.lower(), int(training_steps))
+        # Validate args
+        validate_detector_args(detection_type, output_type, training_steps)
+        # Call API
+        body_data = {}
+        for i in ('name', 'detection_type', 'output_type', 'training_steps'):
+            body_data[i] = locals()[i]
         resp = self.sess.post(
             self._api_url('detectors/'),
             data=body_data
