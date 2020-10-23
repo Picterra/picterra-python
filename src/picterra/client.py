@@ -58,6 +58,19 @@ class APIClient():
                 raise APIError('Operation %s failed' % operation_id)
             time.sleep(poll_interval)
 
+    def _paginate_through_list(self, resource_endpoint: str):
+        url = self._api_url('%s/?page_number=1' % resource_endpoint)
+        data = []
+        while url:
+            logger.debug('Paginating through %s list at page %s' % (resource_endpoint, url))
+            resp = self.sess.get(url)
+            r = resp.json()
+            url = r['next']
+            count = r['count']
+            data += r['results']
+        assert len(data) == count
+        return data
+
     def upload_raster(self, filename, name, folder_id=None):
         """
         Upload a raster to picterra.
@@ -122,17 +135,7 @@ class APIClient():
                 }
 
         """
-        url = self._api_url('rasters/?page_number=1')
-        data = []
-        while url:
-            logger.debug('Paginating through rasters list at page %s' % url)
-            resp = self.sess.get(url)
-            r = resp.json()
-            url = r['next']
-            count = r['count']
-            data += r['results']
-        assert len(data) == count
-        return data
+        return self._paginate_through_list('rasters')
 
     def delete_raster(self, raster_id):
         """
@@ -237,6 +240,33 @@ class APIClient():
         if not resp.status_code == 201:
             raise APIError(resp.text)
         return resp.json()['id']
+
+    def list_detectors(self):
+        """
+        Returns:
+            A list of detectors dictionaries
+
+        Example:
+
+            ::
+
+                {
+                    'id': '42',
+                    'detection_type': 'count',
+                    'name': 'cow detector',
+                    'output_type': 'bbox',
+                    'training_steps': 787
+                },
+                {
+                    'id': '43',
+                    'detection_type': 'segmentation',
+                    'name': 'test5',
+                    'output_type': 'polygon',
+                    'training_steps': 500
+                }
+
+        """
+        return self._paginate_through_list('detectors')
 
     def run_detector(self, detector_id, raster_id):
         """
