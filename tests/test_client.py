@@ -38,6 +38,25 @@ def add_mock_rasters_list_response():
     responses.add(responses.GET, api_url('rasters/?page_number=2'), json=data2, status=200)
 
 
+def add_mock_detectors_list_response():
+    data1 = {
+        "count": 4, "next": api_url('detectors/?page_number=2'), "previous": None, "page_size": 2,
+        "results": [
+            {"id": "40", "type": "count", "name": "detector1"},
+            {"id": "41", "type": "count", "name": "detector2"}
+        ]
+    }
+    data2 = {
+        "count": 4, "next": None, "previous": api_url('detectors/?page_number=1'), "page_size": 2,
+        "results": [
+            {"id": "42", "type": "count", "name": "detector3"},
+            {"id": "43", "type": "count", "name": "detector4"}
+        ]
+    }
+    responses.add(responses.GET, api_url('detectors/?page_number=1'), json=data1, status=200)
+    responses.add(responses.GET, api_url('detectors/?page_number=2'), json=data2, status=200)
+
+
 def add_mock_detector_creation_response():
     responses.add(responses.POST, api_url('detectors/'), json={'id': 'foobar'}, status=201)
 
@@ -268,6 +287,15 @@ def test_detector_creation():
     add_mock_detector_creation_response()
     detector = client.create_detector()
     assert detector == 'foobar'
+
+
+@responses.activate
+def test_list_detectors():
+    client = _client()
+    add_mock_detectors_list_response()
+    detectors = client.list_detectors()
+    assert detectors[0]['name'] == 'detector1'
+    assert detectors[1]['name'] == 'detector2'
 
 
 @responses.activate
