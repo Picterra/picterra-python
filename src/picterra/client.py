@@ -219,7 +219,7 @@ class APIClient():
             raise APIError(resp.text)
         self._wait_until_operation_completes(resp.json())
 
-    def add_raster_to_detector(self, raster_id: str, detector_id: str) -> str:
+    def add_raster_to_detector(self, raster_id: str, detector_id: str):
         """
         Associate a raster to a detector
 

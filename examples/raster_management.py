@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from picterra import APIClient
 
 # Set the PICTERRA_API_KEY environment variable to define your API key
