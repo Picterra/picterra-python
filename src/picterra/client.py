@@ -38,9 +38,9 @@ class APIClient():
     def _api_url(self, path):
         return urljoin(self.base_url, path)
 
-    def _wait_until_operation_completes(self, operation):
-        operation_id = operation['operation_id']
-        poll_interval = operation['poll_interval']
+    def _wait_until_operation_completes(self, operation_response):
+        operation_id = operation_response['operation_id']
+        poll_interval = operation_response['poll_interval']
         # Just sleep for a short while the first time
         time.sleep(poll_interval * 0.1)
         while True:
@@ -64,6 +64,8 @@ class APIClient():
         while url:
             logger.debug('Paginating through %s list at page %s' % (resource_endpoint, url))
             resp = self.sess.get(url)
+            if not resp.ok:
+                raise APIError(resp.text)
             r = resp.json()
             url = r['next']
             count = r['count']
@@ -268,7 +270,7 @@ class APIClient():
         """
         return self._paginate_through_list('detectors')
 
-    def run_detector(self, detector_id, raster_id):
+    def run_detector(self, detector_id: str, raster_id: str) -> str:
         """
         Runs a detector on a raster
 
@@ -287,13 +289,11 @@ class APIClient():
             }
         )
         assert resp.status_code == 201, resp.status_code
-        data = resp.json()
-        result_id = data['result_id']
+        operation_response = resp.json()
+        self._wait_until_operation_completes(operation_response)
+        return operation_response['operation_id']
 
-        self._wait_until_operation_completes(resp.json())
-        return result_id
-
-    def download_result_to_file(self, result_id, filename):
+    def download_result_to_file(self, operation_id, filename):
         """
         Downloads a set of results to a local GeoJSON file
 
@@ -302,9 +302,9 @@ class APIClient():
             filename (str): The local filename where to save the results
         """
         resp = self.sess.get(
-            self._api_url('results/%s/' % result_id),
+            self._api_url('operations/%s/' % operation_id),
         )
-        result_url = resp.json()['result_url']
+        result_url = resp.json()['results']['url']
         logger.debug('Trying to download result %s..' % result_url)
         with requests.get(result_url, stream=True) as r:
             r.raise_for_status()
