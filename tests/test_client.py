@@ -208,9 +208,8 @@ def add_mock_detection_areas_upload_responses(raster_id):
 
 
 def add_mock_detector_run_responses(detector_id):
-    result_id = 43
+    op_id = 43
     data = {
-        'result_id': result_id,
         'poll_interval': TEST_POLL_INTERVAL,
         'operation_id': OPERATION_ID
     }
@@ -220,24 +219,24 @@ def add_mock_detector_run_responses(detector_id):
 
     # First status check
     data = {
-        'ready': False
+        'status': 'running'
     }
-    responses.add(responses.GET, api_url('results/%s/' % result_id), json=data, status=200)
+    responses.add(responses.GET, api_url('operations/%s/' % op_id), json=data, status=200)
 
     # Second status check
     data = {
-        'ready': True
+        'status': 'success'
     }
-    responses.add(responses.GET, api_url('results/%s/' % result_id), json=data, status=200)
+    responses.add(responses.GET, api_url('results/%s/' % op_id), json=data, status=200)
 
 
-def add_mock_download_result_response(result_id):
+def add_mock_download_result_response(op_id):
     data = {
-        'result_url': 'http://storage.example.com/42.geojson'
+        'results': {'url': 'http://storage.example.com/42.geojson'}
     }
     responses.add(
         responses.GET,
-        api_url('results/%s/' % result_id), json=data, status=201)
+        api_url('operations/%s/' % op_id), json=data, status=201)
 
     mock_content = '{"type":"FeatureCollection", "features":[]}'
     responses.add(
