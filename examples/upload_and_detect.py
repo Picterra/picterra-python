@@ -9,7 +9,12 @@ folder_id = '63207fe9-32b8-410f-a72d-00803cca7bf3'
 # Set the PICTERRA_API_KEY environment variable to define your API key
 client = APIClient()
 print('Uploading raster...')
-raster_id = client.upload_raster('data/raster1.tif', name='a nice raster', folder_id=folder_id)
+raster_id = client.upload_raster(
+    'data/raster1.tif',
+    name='a nice raster',
+    folder_id=folder_id,
+    captured_at='2020-01-01T12:34:45.789Z'
+)
 print('Upload finished, starting detector...')
 result_id = client.run_detector(detector_id, raster_id)
 client.download_result_to_file(result_id, 'result.geojson')
