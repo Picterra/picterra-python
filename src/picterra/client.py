@@ -71,7 +71,7 @@ class APIClient():
         assert len(data) == count
         return data
 
-    def upload_raster(self, filename, name, folder_id=None):
+    def upload_raster(self, filename, name, folder_id=None, captured_at=None):
         """
         Upload a raster to picterra.
 
@@ -80,6 +80,8 @@ class APIClient():
             name (str): A human-readable name for this raster
             folder_id (optional, str): Id of the folder this raster
                 belongs to.
+            captured_at (optional, str): ISO-8601 date and time at which
+                this raster was captured.
 
         Returns:
             raster_id (str): The id of the uploaded raster
@@ -90,6 +92,10 @@ class APIClient():
         if folder_id is not None:
             data.update({
                 'folder_id': folder_id
+            })
+        if captured_at is not None:
+            data.update({
+                'captured_at': captured_at
             })
         resp = self.sess.post(
             self._api_url('rasters/upload/file/'),
