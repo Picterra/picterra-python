@@ -2,7 +2,7 @@ import os
 import time
 import requests
 import logging
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlencode
 
 
 logger = logging.getLogger()
@@ -59,8 +59,13 @@ class APIClient():
         self.sess = requests.Session()
         self.sess.headers.update({'X-Api-Key': api_key})
 
-    def _api_url(self, path):
-        return urljoin(self.base_url, path)
+    def _api_url(self, path, params=None):
+        base_url = urljoin(self.base_url, path)
+        if not params:
+            return base_url
+        else:
+            qstr = urlencode(params)
+            return "%s?%s" % (base_url, qstr)
 
     def _wait_until_operation_completes(self, operation_response):
         operation_id = operation_response['operation_id']
@@ -82,22 +87,23 @@ class APIClient():
                 raise APIError('Operation %s failed' % operation_id)
             time.sleep(poll_interval)
 
-    def _paginate_through_list(self, resource_endpoint: str):
-        url = self._api_url('%s/?page_number=1' % resource_endpoint)
+    def _paginate_through_list(self, resource_endpoint: str, params=None):
+        if params is None:
+            params = {}
+        params['page_number'] = 1
         data = []
+        url = self._api_url('%s/' % resource_endpoint, params=params)
         while url:
-            logger.debug('Paginating through %s list at page %s' % (resource_endpoint, url))
+            logger.debug('Fetching page url=%s', url)
             resp = self.sess.get(url)
             if not resp.ok:
                 raise APIError(resp.text)
             r = resp.json()
             url = r['next']
-            count = r['count']
             data += r['results']
-        assert len(data) == count
         return data
 
-    def upload_raster(self, filename, name, folder_id=None, captured_at=None):
+    def upload_raster(self, filename: str, name: str, folder_id=None, captured_at=None):
         """
         Upload a raster to picterra.
 
@@ -106,8 +112,9 @@ class APIClient():
             name (str): A human-readable name for this raster
             folder_id (optional, str): Id of the folder this raster
                 belongs to.
-            captured_at (optional, str): ISO-8601 date and time at which
-                this raster was captured.
+            captured_at (optional, str): ISO-8601 date and time at which this
+                raster was captured, YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z];
+                e.g. "2020-01-01T12:34:56.789Z"
 
         Returns:
             raster_id (str): The id of the uploaded raster
@@ -146,8 +153,13 @@ class APIClient():
         self._wait_until_operation_completes(resp.json())
         return raster_id
 
-    def list_rasters(self):
+    def list_rasters(self, folder_id=None):
         """
+        List of rasters metadata
+
+        Args:
+            folder_id (str, optional): The id of the folder to search rasters in
+
         Returns:
             A list of rasters dictionaries
 
@@ -158,16 +170,19 @@ class APIClient():
                 {
                     'id': '42',
                     'status': 'ready',
-                    'name': 'raster1'
+                    'name': 'raster1',
+                    'folder_id': 'abc'
                 },
                 {
                     'id': '43',
                     'status': 'ready',
-                    'name': 'raster2'
+                    'name': 'raster2',
+                    'folder_id': 'def'
                 }
 
         """
-        return self._paginate_through_list('rasters')
+        params = {'folder': folder_id} if folder_id else {}
+        return self._paginate_through_list('rasters', params)
 
     def delete_raster(self, raster_id):
         """

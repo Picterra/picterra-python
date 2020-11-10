@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 def parse_args(args):
     # create the top-level parser
-    parser = argparse.ArgumentParser(prog='picterra', epilog='© Picterra 2020')
+    parser = argparse.ArgumentParser(
+        prog='picterra', description='Picterra API wrapper CLI tool', epilog='© Picterra 2020')
 
     # Parser for version and verbosity
     parser.add_argument('--version', action='version', version='1.0.0')
@@ -29,7 +30,7 @@ def parse_args(args):
     # create the parser for the subcommands
     subparsers = parser.add_subparsers(dest='command')
 
-    # create the parser for the "list" command
+    # Create the parser for the "list" command
     list_parser = subparsers.add_parser('list', help="List resources")
     list_subparsers = list_parser.add_subparsers(dest='list')
     # List rasters
@@ -37,6 +38,9 @@ def parse_args(args):
         'rasters', help="List user's rasters")
     list_rasters_parser.add_argument(
         "--output", help="Type of output", type=str, choices=['json', 'ids_only'], default='json')
+    list_rasters_parser.add_argument(
+        "--folder", help="Id of the folder/project whose rasters we want to list",
+        type=str, required=False)
     # List detectors
     list_subparsers.add_parser(
         'detectors', help="List user's detectors")
@@ -117,7 +121,7 @@ def parse_args(args):
     if options.command == 'list':
         if options.list == 'rasters':
             client = APIClient()
-            rasters = client.list_rasters()
+            rasters = client.list_rasters(options.folder)
             if options.output == 'ids_only':
                 for r in rasters:
                     print(r['id'])

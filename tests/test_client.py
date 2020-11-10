@@ -21,7 +21,7 @@ def api_url(path):
 
 def add_mock_rasters_list_response():
     data1 = {
-        "count": 4, "next": api_url('rasters/?page_number=2'), "previous": None, "page_size": 2,
+        "count": 4, "next": api_url('rasters/?page_number=2'), "previous": api_url('rasters/?page_number=1'), "page_size": 2,
         "results": [
             {"id": "40", "status": "ready", "name": "raster1"},
             {"id": "41", "status": "ready", "name": "raster2"}
@@ -36,6 +36,16 @@ def add_mock_rasters_list_response():
     }
     responses.add(responses.GET, api_url('rasters/?page_number=1'), json=data1, status=200)
     responses.add(responses.GET, api_url('rasters/?page_number=2'), json=data2, status=200)
+
+
+def add_mock_rasters_in_folder_list_response(folder_id):
+    data = {
+        "count": 1, "next": None, "previous": None, "page_size": 2,
+        "results": [
+            {"id": "77", "status": "ready", "name": "raster_in_folder1", "folder_id": folder_id},
+        ]
+    }
+    responses.add(responses.GET, api_url('rasters/?page_number=1&folder=%s' % folder_id), json=data, status=200)
 
 
 def add_mock_detectors_list_response():
@@ -290,11 +300,19 @@ def test_delete_raster():
 
 @responses.activate
 def test_list_rasters():
+    """Test the list of rasters, both generic and specifying the folder"""
     client = _client()
+    # Generic
     add_mock_rasters_list_response()
     rasters = client.list_rasters()
     assert rasters[0]['name'] == 'raster1'
-    assert rasters[1]['name'] == 'raster2'
+    assert rasters[2]['name'] == 'raster3'
+    # Folder list
+    add_mock_rasters_in_folder_list_response('foobar')
+    rasters = client.list_rasters('foobar')
+    assert rasters[0]['name'] == 'raster_in_folder1'
+    assert rasters[0]['folder_id'] == 'foobar'
+
 
 
 @responses.activate
