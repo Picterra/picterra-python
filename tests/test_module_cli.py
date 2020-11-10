@@ -8,6 +8,10 @@ from unittest.mock import MagicMock, patch, mock_open
 
 from picterra.__main__ import parse_args, APIClient
 
+def _fake__init__(s):
+    s.base_url = 'www.example.com'
+    s.api_key = 'foobar'
+
 def test_parser_arg_errors(capsys):
     # SystemExit does not inherit from Exception
     with pytest.raises(BaseException):
@@ -19,35 +23,38 @@ def test_parser_arg_errors(capsys):
 
 def test_rasters_list(monkeypatch):
     # Setup
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_rasterlist = MagicMock(return_value=['foo', 'bar'])
-    mock_rasterlist.called is False
+    assert mock_rasterlist.called is False
     monkeypatch.setattr(APIClient, 'list_rasters', mock_rasterlist)
     parse_args(['list', 'rasters'])
-    mock_rasterlist.called is True
-
+    assert mock_rasterlist.called is True
+    mock_rasterlist.reset_mock()
+    assert mock_rasterlist.called is False
+    parse_args(['list', 'rasters', '--folder', 'foobar'])
+    mock_rasterlist.assert_called_with('foobar')
 
 def test_rasters_list_output_format(monkeypatch, capsys):
     # Setup
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_rasterlist = MagicMock(return_value=[{'id': 4, 'name': 'foo'}, {'id': 5, 'name': 'bar'}])
-    mock_rasterlist.called is False
+    assert mock_rasterlist.called is False
     monkeypatch.setattr(APIClient, 'list_rasters', mock_rasterlist)
     # JSON
     for a in ['list', 'rasters'], ['list', 'rasters', '--output', 'json']:
         parse_args(a)
-        assert capsys.readouterr().out.replace("\n", "") == '[{"id": 4, "name": "foo"}, {"id": 5, "name": "bar"}]'
-        mock_rasterlist.called is True
+        assert json.loads(capsys.readouterr().out.replace("\n", "")) == json.loads('[{"id": 4, "name": "foo"}, {"id": 5, "name": "bar"}]')
+        assert mock_rasterlist.called is True
         mock_rasterlist.reset_mock()
-        mock_rasterlist.called is False
+        assert mock_rasterlist.called is False
     # IDs only
     parse_args(['list', 'rasters', '--output', 'ids_only'])
-    mock_rasterlist.called is True
+    assert mock_rasterlist.called is True
     assert capsys.readouterr().out.replace("\n", "", 2) == '45'
 
 
 def test_detectors_list(monkeypatch):
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_detectorslist = MagicMock(return_value=['foo', 'bar'])
     mock_detectorslist.called is False
     monkeypatch.setattr(APIClient, 'list_detectors', mock_detectorslist)
@@ -55,7 +62,7 @@ def test_detectors_list(monkeypatch):
     mock_detectorslist.called is True
 
 def test_prediction(monkeypatch, capsys):
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_run, mock_download = MagicMock(return_value='foobar'), MagicMock()
     monkeypatch.setattr(APIClient, 'run_detector', mock_run)
     monkeypatch.setattr(APIClient, 'download_result_to_file', mock_download)
@@ -75,7 +82,7 @@ def test_prediction(monkeypatch, capsys):
     assert (mock_run.called and mock_download.called) is True
 
 def test_train(monkeypatch, capsys):
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_train = MagicMock()
     monkeypatch.setattr(APIClient, 'train_detector', mock_train)
     with pytest.raises(BaseException):
@@ -89,7 +96,7 @@ def test_train(monkeypatch, capsys):
 
 
 def test_create_detector(monkeypatch, capsys):
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_create_detector, mock_add_raster = MagicMock(return_value='spam'), MagicMock()
     monkeypatch.setattr(APIClient, 'create_detector', mock_create_detector)
     monkeypatch.setattr(APIClient, 'add_raster_to_detector', mock_add_raster)
@@ -111,7 +118,7 @@ def test_create_detector(monkeypatch, capsys):
 
 
 def test_create_raster(monkeypatch, capsys):
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_create_raster, mock_add_raster = MagicMock(return_value='spam'), MagicMock()
     monkeypatch.setattr(APIClient, 'upload_raster', mock_create_raster)
     monkeypatch.setattr(APIClient, 'add_raster_to_detector', mock_add_raster)
@@ -139,7 +146,7 @@ def test_create_raster(monkeypatch, capsys):
 
 
 def test_create_annotation(monkeypatch, capsys):
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_set_annotations = MagicMock()
     monkeypatch.setattr(APIClient, 'set_annotations', mock_set_annotations)
     assert mock_set_annotations.called is False
@@ -159,7 +166,7 @@ def test_create_annotation(monkeypatch, capsys):
 
 
 def test_create_detectionarea(monkeypatch, capsys):
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_set_detectionarea = MagicMock()
     monkeypatch.setattr(
         APIClient, 'set_raster_detection_areas_from_file', mock_set_detectionarea)
@@ -177,7 +184,7 @@ def test_create_detectionarea(monkeypatch, capsys):
 
 
 def test_delete_raster(monkeypatch, capsys):
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_delete = MagicMock()
     monkeypatch.setattr(APIClient, 'delete_raster', mock_delete)
     assert mock_delete.called is False
