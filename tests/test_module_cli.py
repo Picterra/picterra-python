@@ -2,6 +2,7 @@ import pytest
 import subprocess
 import os
 import argparse
+import json
 from urllib.parse import urljoin
 from unittest.mock import MagicMock, patch, mock_open
 
@@ -17,12 +18,32 @@ def test_parser_arg_errors(capsys):
 
 
 def test_rasters_list(monkeypatch):
+    # Setup
     monkeypatch.setattr(APIClient, '__init__', lambda s: None)
     mock_rasterlist = MagicMock(return_value=['foo', 'bar'])
     mock_rasterlist.called is False
     monkeypatch.setattr(APIClient, 'list_rasters', mock_rasterlist)
     parse_args(['list', 'rasters'])
     mock_rasterlist.called is True
+
+
+def test_rasters_list_output_format(monkeypatch, capsys):
+    # Setup
+    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    mock_rasterlist = MagicMock(return_value=[{'id': 4, 'name': 'foo'}, {'id': 5, 'name': 'bar'}])
+    mock_rasterlist.called is False
+    monkeypatch.setattr(APIClient, 'list_rasters', mock_rasterlist)
+    # JSON
+    for a in ['list', 'rasters'], ['list', 'rasters', '--output', 'json']:
+        parse_args(a)
+        assert capsys.readouterr().out.replace("\n", "") == '[{"id": 4, "name": "foo"}, {"id": 5, "name": "bar"}]'
+        mock_rasterlist.called is True
+        mock_rasterlist.reset_mock()
+        mock_rasterlist.called is False
+    # IDs only
+    parse_args(['list', 'rasters', '--output', 'ids_only'])
+    mock_rasterlist.called is True
+    assert capsys.readouterr().out.replace("\n", "", 2) == '45'
 
 
 def test_detectors_list(monkeypatch):
