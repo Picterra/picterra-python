@@ -3,7 +3,7 @@ This file allows to run the module as a script
 
 If adding commands, please follow this conventions for positional (required) args:
 
-python -m picterra <COMMAND> [<SUBCOMMAND/RESOURCE>] INPUT_FILE RASTER DETECTOR OUTPUT_FILE
+python -m picterra <COMMAND> [<SUBCOMMAND>] INPUT_FILE RASTER DETECTOR OUTPUT_FILE
 """
 
 
@@ -11,7 +11,6 @@ import argparse
 import logging
 import json
 import sys
-import pprint
 
 from .client import APIClient, APIError
 
@@ -32,9 +31,15 @@ def parse_args(args):
 
     # create the parser for the "list" command
     list_parser = subparsers.add_parser('list', help="List resources")
-    list_parser.add_argument(
-        'resource', help="List either detectors or rasters in your account",
-        type=str, choices=['rasters', 'detectors'])
+    list_subparsers = list_parser.add_subparsers(dest='list')
+    # List rasters
+    list_rasters_parser = list_subparsers.add_parser(
+        'rasters', help="List user's rasters")
+    list_rasters_parser.add_argument(
+        "--output", help="Type of output", type=str, choices=['json', 'ids_only'], default='json')
+    # List detectors
+    list_subparsers.add_parser(
+        'detectors', help="List user's detectors")
 
     # create the parser for the "detect" command
     detect_parser = subparsers.add_parser('detect', help="Predict on a raster with a detector")
@@ -110,12 +115,17 @@ def parse_args(args):
     if options.v:
         logging.basicConfig(level=logging.DEBUG)
     if options.command == 'list':
-        if options.resource == 'rasters':
+        if options.list == 'rasters':
             client = APIClient()
-            pprint.pprint(client.list_rasters())
-        elif options.resource == 'detectors':
+            rasters = client.list_rasters()
+            if options.output == 'ids_only':
+                for r in rasters:
+                    print(r['id'])
+            else:  # default json
+                print(json.dumps(rasters))
+        elif options.list == 'detectors':
             client = APIClient()
-            pprint.pprint(client.list_detectors())
+            print(json.dumps(client.list_detectors()))
     elif options.command == 'train':
         client = APIClient()
         logger.info('Training %s ..' % options.detector)
