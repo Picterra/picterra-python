@@ -125,7 +125,7 @@ class APIClient():
             })
         resp = self.sess.post(
             self._api_url('rasters/upload/file/'),
-            data
+            json=data
         )
         if not resp.ok:
             raise APIError(resp.text)
@@ -234,9 +234,7 @@ class APIClient():
         """
         resp = self.sess.post(
             self._api_url('detectors/%s/training_rasters/' % detector_id),
-            data={
-                'raster_id': raster_id
-            }
+            json={'raster_id': raster_id}
         )
         if not resp.status_code == 201:
             raise APIError(resp.text)
@@ -275,7 +273,7 @@ class APIClient():
         # Call API and check response
         resp = self.sess.post(
             self._api_url('detectors/'),
-            data=body_data
+            json=body_data
         )
         if not resp.status_code == 201:
             raise APIError(resp.text)
@@ -364,9 +362,7 @@ class APIClient():
         """
         resp = self.sess.post(
             self._api_url('detectors/%s/run/' % detector_id),
-            data={
-                'raster_id': raster_id
-            }
+            json={'raster_id': raster_id}
         )
         assert resp.status_code == 201, resp.status_code
         operation_response = resp.json()
