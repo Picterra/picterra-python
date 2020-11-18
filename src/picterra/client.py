@@ -9,6 +9,8 @@ from requests.packages.urllib3.util.retry import Retry
 
 logger = logging.getLogger()
 
+CHUNK_SIZE_BYTES = 8192  # 8 KiB
+
 
 class APIError(Exception):
     """Generic API error exception"""
@@ -474,9 +476,36 @@ class APIClient():
             r.raise_for_status()
             with open(filename, 'wb') as f:
                 logger.debug('Trying to save result to file %s..' % filename)
-                for chunk in r.iter_content(chunk_size=8192):
+                for chunk in r.iter_content(chunk_size=CHUNK_SIZE_BYTES):
                     if chunk:  # filter out keep-alive new chunks
                         f.write(chunk)
+
+    def download_operation_results_to_file(self, operation_id, filename):
+        """
+        Downloads the results URL to a local GeoJSON file
+
+        Args:
+            result_id (str): The id of the result to download
+            filename (str): The local filename where to save the results
+        """
+        data = self.get_operation_results_url(operation_id)
+        with open(filename, 'w') as f:
+            f.write(data)
+
+    def get_operation_results_url(self, operation_id: str) -> str:
+        """
+        Get the URL  of a set of results
+
+        This a **beta** function, subject to change.
+
+        Args:
+            result_id (str): The id of the result
+        """
+        resp = self.sess.get(
+            self._api_url('operations/%s/' % operation_id),
+        )
+        # This might raise KeyError for some operations
+        return resp.json()['results']['url']
 
     def set_annotations(self, detector_id, raster_id, annotation_type, annotations):
         """

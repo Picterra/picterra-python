@@ -2,11 +2,17 @@ import pytest
 import subprocess
 import os
 import argparse
+import responses
 import json
 from urllib.parse import urljoin
 from unittest.mock import MagicMock, patch, mock_open
 
 from picterra.__main__ import parse_args, APIClient
+from picterra import __main__
+
+
+def _mock_read_in_chunks(f):
+    return ['qui', 'noa']
 
 def _fake__init__(s):
     s.base_url = 'www.example.com'
@@ -63,23 +69,73 @@ def test_detectors_list(monkeypatch):
 
 def test_prediction(monkeypatch, capsys):
     monkeypatch.setattr(APIClient, '__init__', _fake__init__)
-    mock_run, mock_download = MagicMock(return_value='foobar'), MagicMock()
+    mock_run, mock_download_file, mock_download_url, mock_url = MagicMock(return_value='foobar'), MagicMock(),  MagicMock(), MagicMock(return_value='spam')
     monkeypatch.setattr(APIClient, 'run_detector', mock_run)
-    monkeypatch.setattr(APIClient, 'download_result_to_file', mock_download)
+    monkeypatch.setattr(APIClient, 'download_result_to_file', mock_download_file)
+    monkeypatch.setattr(APIClient, 'download_operation_results_to_file', mock_download_url)
+    monkeypatch.setattr(APIClient, 'get_operation_results_url', mock_url)
+    monkeypatch.setattr(__main__, '_read_in_chunks', _mock_read_in_chunks)
     with pytest.raises(BaseException):
         parse_args(['detect'])
     captured = capsys.readouterr()
     assert 'following arguments are required' in captured.err
     assert 'raster' in captured.err
-    assert (mock_run.called or mock_download.called) is False
+    assert (mock_run.called or mock_download_file.called or mock_url.called) is False
     with pytest.raises(BaseException):
         parse_args(['detect', 'my_raster_id'])
-    captured = capsys.readouterr()
     assert 'following arguments are required' in captured.err
     assert 'detector' in captured.err
-    assert (mock_run.called or mock_download.called) is False
-    parse_args(['detect', 'my_raster_id', 'my_detector_id', 'a_path'])
-    assert (mock_run.called and mock_download.called) is True
+    assert (mock_run.called or mock_download_file.called or mock_url.called) is False
+    # Base (print URL)
+    assert mock_download_url.called is False
+    parse_args(['detect', 'my_raster_id', 'my_detector_id'])
+    assert capsys.readouterr().out.replace('\n', '') == 'spam'
+    assert capsys.readouterr().err == ''
+    mock_run.reset_mock()
+    mock_download_file.reset_mock()
+    mock_url.reset_mock()
+    parse_args(['detect', 'my_raster_id', 'my_detector_id', '--output-type', 'url'])
+    assert capsys.readouterr().out.replace('\n', '') == 'spam'
+    assert capsys.readouterr().err == ''
+    mock_run.reset_mock()
+    mock_download_file.reset_mock()
+    mock_url.reset_mock()
+    # Print result data
+    assert mock_download_url.called is False
+    parse_args(['detect', 'my_raster_id', 'my_detector_id', '--output-type', 'geometries'])
+    assert capsys.readouterr().out == 'quinoa'
+    assert capsys.readouterr().err == ''
+    assert mock_run.called is True
+    assert mock_download_file.called is True
+    assert mock_download_url.called is False
+    mock_run.reset_mock()
+    mock_download_file.reset_mock()
+    mock_url.reset_mock()
+    # Write result URL to file
+    assert mock_download_url.called is False
+    mock_open = MagicMock()
+    with patch('builtins.open', new_callable=mock_open()):
+        parse_args(['detect', 'my_raster_id', 'my_detector_id', '--output-type', 'url', '--output-file', 'a_path'])
+    assert capsys.readouterr().out +  capsys.readouterr().err == ''
+    assert mock_download_url.called is True
+    assert mock_download_file.called is False
+    mock_download_url.assert_called_with('foobar', 'a_path')
+    mock_download_url.reset_mock()
+    with patch('builtins.open', new_callable=mock_open()):
+        parse_args(['detect', 'my_raster_id', 'my_detector_id', '--output-file', 'a_path'])
+    assert capsys.readouterr().out + capsys.readouterr().err == ''
+    assert mock_download_url.called is True
+    assert mock_download_file.called is False
+    mock_download_url.assert_called_with('foobar', 'a_path')
+    mock_download_url.reset_mock()
+    # Write result data to file
+    assert mock_download_file.called is False
+    with patch('builtins.open', new_callable=mock_open()):
+        parse_args(['detect', 'my_raster_id', 'my_detector_id', '--output-type', 'geometries', '--output-file', 'a_path'])
+        assert capsys.readouterr().out + capsys.readouterr().err == ''
+        assert mock_download_file.called is True
+        mock_download_file.assert_called_with('foobar', 'a_path')
+
 
 def test_train(monkeypatch, capsys):
     monkeypatch.setattr(APIClient, '__init__', _fake__init__)
