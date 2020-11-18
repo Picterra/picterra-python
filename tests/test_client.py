@@ -274,6 +274,27 @@ def add_mock_download_result_response(op_id):
     return mock_content
 
 
+def add_mock_url_result_response(op_id, url):
+    data = {
+        'results': {'url': url}
+    }
+    responses.add(
+        responses.GET,
+        api_url('operations/%s/' % op_id), json=data, status=201)
+
+
+
+def add_get_operation_results_url_response(op_id):
+    url = 'http://storage.example.com/42.geojson'
+    data = {
+        'results': {'url': url}
+    }
+    responses.add(
+        responses.GET,
+        api_url('operations/%s/' % op_id), json=data, status=201)
+    return url
+
+
 def add_mock_delete_raster_response(raster_id):
     responses.add(
         responses.DELETE,
@@ -437,7 +458,6 @@ def test_run_detector():
 @responses.activate
 def test_download_result_to_file():
     expected_content = add_mock_download_result_response(101)
-
     client = _client()
     with tempfile.NamedTemporaryFile() as f:
         client.download_result_to_file(101, f.name)

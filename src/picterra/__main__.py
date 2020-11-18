@@ -11,11 +11,21 @@ import argparse
 import logging
 import json
 import sys
+import os
 
-from .client import APIClient, APIError
+from .client import APIClient, APIError, CHUNK_SIZE_BYTES
 
 
 logger = logging.getLogger(__name__)
+
+
+def _read_in_chunks(file_object, chunk_size=CHUNK_SIZE_BYTES):
+    """Generator to read a file piece by piece."""
+    while True:
+        data = file_object.read(chunk_size)
+        if not data:
+            break
+        yield data
 
 
 def parse_args(args):
@@ -44,18 +54,27 @@ def parse_args(args):
     # List detectors
     list_subparsers.add_parser(
         'detectors', help="List user's detectors")
-
     # create the parser for the "detect" command
-    detect_parser = subparsers.add_parser('detect', help="Predict on a raster with a detector")
+    detect_parser = subparsers.add_parser(
+        'detect',
+        help=(
+            'Predict on a raster with a detector, either returning the result URL' +
+            ' or saving it to a local file'))
     detect_parser.add_argument("raster", help="ID of a raster", type=str)
     detect_parser.add_argument("detector", help="ID of a detector", type=str)
     detect_parser.add_argument(
-        "output_file", help="Path of the file were results will be saved", type=str)
-
+        "--output-type", help="How results are presented to the output",
+        type=str, choices=["url", "geometries"], default="url", required=False)
+    detect_parser.add_argument(
+        "--output-file", type=str, required=False,
+        help=(
+            "Path of the file in which the output should be saved. " +
+            "If this is not set, the output will be printed to stdout"
+        )
+    )
     # create the parser for the "train" command
     train_parser = subparsers.add_parser('train', help="Trains a detector")
     train_parser.add_argument("detector", help="ID of a detector", type=str)
-
     # create the parsers for the "create" command
     create_parser = subparsers.add_parser('create', help="Create resources")
     create_subparsers = create_parser.add_subparsers(dest='create')
@@ -146,9 +165,32 @@ def parse_args(args):
     elif options.command == 'detect':
         logger.info('Running %s on %s' % (options.detector, options.raster))
         logger.debug('Starting detection..')
-        result_id = client.run_detector(options.detector, options.raster)
-        client.download_result_to_file(result_id, options.output_file)
-        logger.debug('Detection finished, writing result to %s' % options.output_file)
+        operation_id = client.run_detector(options.detector, options.raster)
+        if options.output_type == 'geometries':   # outputting/saving result geometries
+            if options.output_file:
+                logger.debug('Detection finished, writing result to %s' % options.output_file)
+                client.download_result_to_file(operation_id, options.output_file)
+            else:
+                from tempfile import mkstemp
+                fd, path = mkstemp()
+                client.download_result_to_file(operation_id, path)
+                logger.debug('Detection finished, outputting result data')
+                with open(path) as f:
+                    for piece in _read_in_chunks(f):
+                        # return values
+                        print(piece, end='')
+                # cleanup
+                os.close(fd)
+                os.unlink(path)
+        else:  # URL
+            if options.output_file:
+                client.download_operation_results_to_file(operation_id, options.output_file)
+                logger.debug('Detection finished, writing result URL to %s' % options.output_file)
+            else:
+                url = client.get_operation_results_url(operation_id)
+                logger.debug('Detection finished, outputting result URL')
+                # return value
+                print(url)
     elif options.command == 'create':
         if options.create == 'detector':
             if not (500 <= options.training_steps <= 40000):
