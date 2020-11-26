@@ -109,11 +109,16 @@ def parse_args(args):
     delete_parser = subparsers.add_parser('delete', help="Delete resources")
     delete_subparsers = delete_parser.add_subparsers(dest='delete')
     # delete raster
-    delete_parser = delete_subparsers.add_parser('raster', help="Removes a raster")
-    delete_parser.add_argument("raster", help="ID of the raster to delete", type=str)
+    delete_raster_parser = delete_subparsers.add_parser('raster', help="Removes a raster")
+    delete_raster_parser.add_argument("raster", help="ID of the raster to delete", type=str)
     # delete detector
-    delete_parser = delete_subparsers.add_parser('detector', help="Removes a detector")
-    delete_parser.add_argument("detector", help="ID of the detector to delete", type=str)
+    delete_detector_parser = delete_subparsers.add_parser('detector', help="Removes a detector")
+    delete_detector_parser.add_argument("detector", help="ID of the detector to delete", type=str)
+    # delete detection areas
+    delete_detectionarea_parser = delete_subparsers.add_parser(
+        "detection_area", help="Removes the detection areas of raster, if any")
+    delete_detectionarea_parser.add_argument(
+        "raster", help="ID of the raster whose detection areas will be deleted", type=str)
 
     # parse input
     options = parser.parse_args(args)
@@ -201,6 +206,10 @@ def parse_args(args):
         elif options.delete == 'detector':
             client.delete_detector(options.detector)
             logger.info('Deleted detector whose id was %s' % options.detector)
+        elif options.delete == 'detection_area':
+            logger.debug('Removing detection area from raster %s..' % options.raster)
+            client.remove_raster_detection_areas(options.raster)
+            logger.info('Removed detection area for raster whose id is %s' % options.raster)
     return options
 
 

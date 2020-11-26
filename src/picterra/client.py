@@ -234,6 +234,22 @@ class APIClient():
             raise APIError(resp.text)
         self._wait_until_operation_completes(resp.json())
 
+    def remove_raster_detection_areas(self, raster_id: str):
+        """
+        This is an experimental feature
+
+        Remove the detection areas of a raster
+
+        Args:
+            raster_id (str): The id of the raster whose detection areas will be removed
+
+        Raises:
+            APIError: There was an error during the operation
+        """
+        resp = self.sess.delete(self._api_url('rasters/%s/detection_areas/' % raster_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+
     def add_raster_to_detector(self, raster_id: str, detector_id: str):
         """
         Associate a raster to a detector

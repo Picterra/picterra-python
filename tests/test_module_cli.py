@@ -199,7 +199,7 @@ def test_delete_raster(monkeypatch, capsys):
 
 
 def test_delete_detector(monkeypatch, capsys):
-    monkeypatch.setattr(APIClient, '__init__', lambda s: None)
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_delete = MagicMock()
     monkeypatch.setattr(APIClient, 'delete_detector', mock_delete)
     assert mock_delete.called is False
@@ -211,3 +211,18 @@ def test_delete_detector(monkeypatch, capsys):
     assert mock_delete.called is False
     parse_args(['delete', 'detector', 'my_detector'])
     mock_delete.assert_called_with('my_detector')
+
+
+def test_delete_detectionarea(monkeypatch, capsys):
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
+    mock_delete = MagicMock()
+    monkeypatch.setattr(APIClient, 'remove_raster_detection_areas', mock_delete)
+    assert mock_delete.called is False
+    with pytest.raises(BaseException):
+        parse_args(['delete', 'detection_area'])
+    captured = capsys.readouterr()
+    assert 'following arguments are required' in captured.err
+    assert 'raster' in captured.err
+    assert mock_delete.called is False
+    parse_args(['delete', 'detection_area', 'my_raster'])
+    mock_delete.assert_called_with('my_raster')

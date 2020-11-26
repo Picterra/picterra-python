@@ -274,6 +274,11 @@ def add_mock_delete_raster_response(raster_id):
         responses.DELETE,
         api_url('rasters/%s/' % raster_id), status=204)
 
+def add_mock_delete_detectionarea_response(raster_id):
+    responses.add(
+        responses.DELETE,
+        api_url('rasters/%s/detection_areas/' % raster_id), status=204)
+
 
 def add_mock_delete_detector_response(detector_id):
     responses.add(
@@ -302,6 +307,15 @@ def test_delete_raster():
     client = _client()
     add_mock_delete_raster_response(RASTER_ID)
     client.delete_raster(RASTER_ID)
+
+
+@responses.activate
+def test_delete_detectionarea():
+    RASTER_ID = 'foobar'
+    client = _client()
+    add_mock_delete_detectionarea_response(RASTER_ID)
+    client.remove_raster_detection_areas(RASTER_ID)
+    assert len(responses.calls) == 1
 
 
 @responses.activate
