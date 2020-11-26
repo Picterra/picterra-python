@@ -275,6 +275,12 @@ def add_mock_delete_raster_response(raster_id):
         api_url('rasters/%s/' % raster_id), status=204)
 
 
+def add_mock_delete_detector_response(detector_id):
+    responses.add(
+        responses.DELETE,
+        api_url('detectors/%s/' % detector_id), status=204)
+
+
 @responses.activate
 def test_upload_raster():
     client = _client()
@@ -348,6 +354,14 @@ def test_list_detectors():
     detectors = client.list_detectors()
     assert detectors[0]['name'] == 'detector1'
     assert detectors[1]['name'] == 'detector2'
+
+
+@responses.activate
+def test_delete_detector():
+    DETECTOR_ID = 'foobar'
+    client = _client()
+    add_mock_delete_detector_response(DETECTOR_ID)
+    client.delete_detector(DETECTOR_ID)
 
 
 @responses.activate

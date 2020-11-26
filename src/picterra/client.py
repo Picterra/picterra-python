@@ -363,6 +363,21 @@ class APIClient():
         if not resp.status_code == 204:
             raise APIError(resp.text)
 
+    def delete_detector(self, detector_id: str):
+        """
+        Deletes a given detector by its identifier
+
+        Args:
+            detector_id (str): The id of the detector to delete
+
+        Raises:
+            APIError: There was an error while trying to delete the detector
+        """
+
+        resp = self.sess.delete(self._api_url('detectors/%s/' % detector_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+
     def run_detector(self, detector_id: str, raster_id: str) -> str:
         """
         Runs a detector on a raster

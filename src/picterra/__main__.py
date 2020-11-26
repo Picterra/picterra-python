@@ -111,16 +111,22 @@ def parse_args(args):
     # delete raster
     delete_parser = delete_subparsers.add_parser('raster', help="Removes a raster")
     delete_parser.add_argument("raster", help="ID of the raster to delete", type=str)
+    # delete detector
+    delete_parser = delete_subparsers.add_parser('detector', help="Removes a detector")
+    delete_parser.add_argument("detector", help="ID of the detector to delete", type=str)
 
     # parse input
     options = parser.parse_args(args)
 
-    # Branching for non Action-related operations
+    # Verbosity increase (optional)
     if options.v:
         logging.basicConfig(level=logging.DEBUG)
+
+    # Create client and branch depending on command
+    if options.command:
+        client = APIClient()
     if options.command == 'list':
         if options.list == 'rasters':
-            client = APIClient()
             rasters = client.list_rasters(options.folder)
             if options.output == 'ids_only':
                 for r in rasters:
@@ -128,14 +134,11 @@ def parse_args(args):
             else:  # default json
                 print(json.dumps(rasters))
         elif options.list == 'detectors':
-            client = APIClient()
             print(json.dumps(client.list_detectors()))
     elif options.command == 'train':
-        client = APIClient()
         logger.info('Training %s ..' % options.detector)
         client.train_detector(options.detector)
     elif options.command == 'detect':
-        client = APIClient()
         logger.info('Running %s on %s' % (options.detector, options.raster))
         logger.debug('Starting detection..')
         result_id = client.run_detector(options.detector, options.raster)
@@ -147,7 +150,6 @@ def parse_args(args):
                 raise APIError("Training steps invalid value %d: must be in [%d, %d]" % (
                     options.training_steps, 500, 40000
                 ))
-            client = APIClient()
             logger.debug('Creating %s %sdetector with output %s and %d steps.' % (
                 options.detection_type,
                 ('\"%s\" ' % {options.name}) if options.name else '',
@@ -166,7 +168,6 @@ def parse_args(args):
             logger.info('Created new detector whose id is %s%s' % (detector_id, tmp))
             print(detector_id)  # return value
         elif options.create == 'raster':
-            client = APIClient()
             logger.debug('Starting creation %sraster from %s and uploading to %s..' % (
                 ('\"%s\" ' % options.name) if options.name else '',
                 options.path,
@@ -181,7 +182,6 @@ def parse_args(args):
             logger.info('Created new raster whose id is %s%s' % (raster_id, tmp))
             print(raster_id)  # return value
         elif options.create == 'annotation':
-            client = APIClient()
             logger.debug('Set new %s annotation on %s raster for %s detector from %s' % (
                 options.type, options.raster, options.detector, options.path))
             with open(options.path) as json_file:
@@ -190,16 +190,17 @@ def parse_args(args):
             logger.info('Set new %s annotation on %s raster for %s detector' % (
                 options.type, options.raster, options.detector))
         elif options.create == 'detection_area':
-            client = APIClient()
             logger.debug('Setting detection area on raster %s from %s..' % (
                 options.raster, options.path))
             client.set_raster_detection_areas_from_file(options.raster, options.path)
             logger.info('Created new detection area for raster whose id is %s' % options.raster)
     elif options.command == 'delete':
         if options.delete == 'raster':
-            client = APIClient()
             client.delete_raster(options.raster)
             logger.info('Deleted raster whose id was %s' % options.raster)
+        elif options.delete == 'detector':
+            client.delete_detector(options.detector)
+            logger.info('Deleted detector whose id was %s' % options.detector)
     return options
 
 
