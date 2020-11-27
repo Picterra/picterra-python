@@ -106,36 +106,33 @@ def add_mock_operations_responses(status):
     )
 
 
-def add_mock_annotations_responses(detector_id, raster_id):
+def add_mock_annotations_responses(detector_id, raster_id, annotation_type):
     upload_id = 32
-
     responses.add(responses.PUT, 'http://storage.example.com', status=200)
-
-    for annotation_type in ('outline', 'training_area', 'testing_area', 'validation_area'):
-        responses.add(
-            responses.POST,
-            api_url(
-                'detectors/%s/training_rasters/%s/%s/upload/bulk/'
-                % (detector_id, raster_id, annotation_type)
-            ),
-            json={
-                'upload_url': 'http://storage.example.com',
-                'upload_id': upload_id
-            },
-            status=201
-        )
-        responses.add(
-            responses.POST,
-            api_url(
-                'detectors/%s/training_rasters/%s/%s/upload/bulk/%s/commit/'
-                % (detector_id, raster_id, annotation_type, upload_id)
-            ),
-            json={
-                'operation_id': OPERATION_ID,
-                'poll_interval': TEST_POLL_INTERVAL
-            },
-            status=201
-        )
+    responses.add(
+        responses.POST,
+        api_url(
+            'detectors/%s/training_rasters/%s/%s/upload/bulk/'
+            % (detector_id, raster_id, annotation_type)
+        ),
+        json={
+            'upload_url': 'http://storage.example.com',
+            'upload_id': upload_id
+        },
+        status=201
+    )
+    responses.add(
+        responses.POST,
+        api_url(
+            'detectors/%s/training_rasters/%s/%s/upload/bulk/%s/commit/'
+            % (detector_id, raster_id, annotation_type, upload_id)
+        ),
+        json={
+            'operation_id': OPERATION_ID,
+            'poll_interval': TEST_POLL_INTERVAL
+        },
+        status=201
+    )
 
 
 def add_mock_raster_upload_responses():
@@ -299,6 +296,7 @@ def test_upload_raster():
             folder_id='0',
             captured_at='2020-01-10T12:34:56.789Z'
         )
+    assert len(responses.calls) == 4
 
 
 @responses.activate
@@ -307,6 +305,7 @@ def test_delete_raster():
     client = _client()
     add_mock_delete_raster_response(RASTER_ID)
     client.delete_raster(RASTER_ID)
+    assert len(responses.calls) == 1
 
 
 @responses.activate
@@ -376,6 +375,7 @@ def test_delete_detector():
     client = _client()
     add_mock_delete_detector_response(DETECTOR_ID)
     client.delete_detector(DETECTOR_ID)
+    assert len(responses.calls) == 1
 
 
 @responses.activate
@@ -402,6 +402,7 @@ def test_detector_edit():
     merge = dict(p for d in good_args for p in d.items())
     add_mock_detector_edit_response(detector_id, **merge)
     client.edit_detector(detector_id, **merge)
+    assert len(responses.calls) == 5
 
 
 @responses.activate
@@ -413,15 +414,16 @@ def test_set_raster_detection_areas_from_file():
     # This just tests that this doesn't raise
     with tempfile.NamedTemporaryFile() as f:
         client.set_raster_detection_areas_from_file(1, f.name)
+    assert len(responses.calls) == 4
 
 
 @responses.activate
 def test_run_detector():
     add_mock_detector_run_responses(1)
     add_mock_operations_responses('success')
-
     client = _client()
     client.run_detector(1, 2)
+    assert len(responses.calls) == 2
 
 
 @responses.activate
@@ -432,19 +434,21 @@ def test_download_result_to_file():
     with tempfile.NamedTemporaryFile() as f:
         client.download_result_to_file(101, f.name)
         assert open(f.name).read() == expected_content
+    assert len(responses.calls) == 2
 
 
 @responses.activate
-def test_upload_annotations():
-    add_mock_annotations_responses(1, 2)
+@pytest.mark.parametrize("annotation_type", ['outline', 'training_area', 'testing_area', 'validation_area'])
+def test_upload_annotations(annotation_type):
+    add_mock_annotations_responses(1, 2, annotation_type)
     add_mock_operations_responses('running')
     add_mock_operations_responses('running')
     add_mock_operations_responses('success')
-
     client = _client()
     with pytest.raises(ValueError):
         client.set_annotations(1, 2, 'foobar', {})
-    client.set_annotations(1, 2, 'outline', {})
+    client.set_annotations(1, 2, annotation_type, {})
+    assert len(responses.calls) == 6
 
 
 @responses.activate
@@ -455,3 +459,4 @@ def test_train_detector():
     add_mock_operations_responses('success')
     client = _client()
     client.train_detector(1)
+    assert len(responses.calls) == 4
