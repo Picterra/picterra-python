@@ -1,8 +1,14 @@
 import tempfile
 import responses
+import httpretty
 import pytest
-from picterra import APIClient
+import time
+import json
 from urllib.parse import urljoin
+from requests.exceptions import ConnectionError
+from picterra import APIClient
+from picterra.client import APIError
+
 
 TEST_API_URL = 'http://example.com/public/api/v2/'
 
@@ -11,8 +17,10 @@ TEST_POLL_INTERVAL = 0.1
 OPERATION_ID = 21
 
 
-def _client():
-    return APIClient(api_key='1234', base_url=TEST_API_URL)
+def _client(max_retries=0, timeout=1):
+    return APIClient(
+        api_key='1234', base_url=TEST_API_URL, max_retries=max_retries, timeout=timeout
+    )
 
 
 def api_url(path):
@@ -460,3 +468,57 @@ def test_train_detector():
     client = _client()
     client.train_detector(1)
     assert len(responses.calls) == 4
+
+# Cannot test Retry with responses, @see https://github.com/getsentry/responses/issues/135
+@httpretty.activate
+def test_backoff_success():
+    data = {'count': 0, 'next': None, 'previous': None, 'results': []}
+    httpretty.register_uri(
+        httpretty.GET,
+        api_url('rasters/'),
+        responses=[
+            httpretty.Response(body=None, status=429),
+            httpretty.Response(body=None, status=502),
+            httpretty.Response(body=json.dumps(data),status=200)
+        ]
+    )
+    client = _client(max_retries=2)
+    client.list_rasters()
+    assert len(httpretty.latest_requests()) == 3
+
+
+@httpretty.activate
+def test_backoff_failure():
+    httpretty.register_uri(
+        httpretty.GET,
+        api_url('rasters/'),
+        responses=[
+            httpretty.Response(body=None, status=429,),
+            httpretty.Response(body=None, status=502),
+            httpretty.Response(body=None, status=502)
+        ]
+    )
+    client = _client(max_retries=1)
+    with pytest.raises(ConnectionError):
+        client.list_rasters()
+    assert len(httpretty.latest_requests()) == 2
+
+@httpretty.activate
+def test_timeout():
+
+    def request_callback(request, uri, response_headers):
+        time.sleep(2)
+        return [200, response_headers, json.dumps([])]
+    httpretty.register_uri(
+        httpretty.GET, api_url('rasters/'),
+        body=request_callback
+    )
+    timeout = 1
+    client = _client(timeout=timeout)
+    with pytest.raises(ConnectionError) as e:
+        client.list_rasters()
+    full_error = str(e.value)
+    assert 'MaxRetryError' not in full_error
+    assert 'timeout' in full_error
+    assert 'read timeout=%d' % timeout in full_error
+    assert len(httpretty.latest_requests()) == 1

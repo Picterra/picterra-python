@@ -3,6 +3,8 @@ import time
 import requests
 import logging
 from urllib.parse import urljoin, urlencode
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 
 logger = logging.getLogger()
@@ -11,6 +13,19 @@ logger = logging.getLogger()
 class APIError(Exception):
     """Generic API error exception"""
     pass
+
+
+class _RequestsSession(requests.Session):
+    """
+    Override requests session to to implement a global session timeout
+    """
+    def __init__(self, *args, **kwargs):
+        self.timeout = kwargs.pop('timeout')
+        super().__init__(*args, **kwargs)
+
+    def request(self, *args, **kwargs):
+        kwargs.setdefault('timeout', self.timeout)
+        return super().request(*args, **kwargs)
 
 
 def validate_detector_args(detection_type: str, output_type: str, training_steps: int):
@@ -39,12 +54,19 @@ def validate_detector_args(detection_type: str, output_type: str, training_steps
 
 class APIClient():
     """Main client class for the Picterra API"""
-    def __init__(self, api_key=None, base_url=None):
+    def __init__(
+        self, api_key: str = '', base_url: str = '',
+        timeout: int = 30, max_retries: int = 3, backoff_factor: int = 10
+    ):
         """
         Args:
             api_key: Your picterra api_key. If None, will be obtained through the PICTERRA_API_KEY
                      environment variable
             base_url: URL of the Picterra server to target. Leave it to None
+            timeout: number of seconds before the request times out
+            max_retries: max attempts when ecountering gateway issues or throttles; see
+                         retry_strategy comment below
+            backoff_factor: factor used nin the backoff algorithm; see retry_strategy comment below
         """
         if base_url is None:
             base_url = os.environ.get('PICTERRA_BASE_URL', 'https://app.picterra.ch/public/api/v2/')
@@ -53,10 +75,29 @@ class APIClient():
                 raise APIError('api_key is None and PICTERRA_API_KEY environment ' +
                                'variable is not defined')
             api_key = os.environ['PICTERRA_API_KEY']
-
-        logger.info('using base_url=%s', base_url)
+        logger.info(
+            'Using base_url=%s; %d max retries, %d backoff and %s timeout.',
+            base_url, max_retries, backoff_factor, timeout
+        )
         self.base_url = base_url
-        self.sess = requests.Session()
+        # Create the session with a default timeout (30 sec), that we can then
+        # override on a per-endpoint basis (will be disabled for file uploads and downloads)
+        self.sess = _RequestsSession(timeout=timeout)
+        # Retry: we set the HTTP codes for our throttle ($29) plus possible gateway problems (50*),
+        # and for polling methods (GET), as non-idempotent ones should be addressed via idempotency
+        # key mechanism; given the algorithm is {<backoff_factor> * (2 **<retries-1>}, and we
+        # default to 30s for polling and max 30 req/min, the default 5-10-20 sequence should
+        # provide enough room for recovery
+        retry_strategy = Retry(
+            total=max_retries,
+            status_forcelist=[429, 502, 503, 504],
+            backoff_factor=backoff_factor,
+            method_whitelist=["GET"]
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.sess.mount("https://", adapter)
+        self.sess.mount("http://", adapter)
+        # Authentication
         self.sess.headers.update({'X-Api-Key': api_key})
 
     def _api_url(self, path, params=None):
@@ -142,6 +183,8 @@ class APIClient():
 
         with open(filename, 'rb') as f:
             logger.debug('Opening raster file %s' % filename)
+            # Given we do not use self.sess the timeout is disabled (requests default), and this
+            # is good as file upload can take a long time
             resp = requests.put(upload_url, data=f)
         if not resp.ok:
             logger.error('Error when uploading to blobstore %s' % upload_url)
@@ -428,6 +471,8 @@ class APIClient():
         )
         result_url = resp.json()['results']['url']
         logger.debug('Trying to download result %s..' % result_url)
+        # Given we do not use self.sess the timeout is disabled (requests default), and this
+        # is good as file download can take a long time
         with requests.get(result_url, stream=True) as r:
             r.raise_for_status()
             with open(filename, 'wb') as f:
@@ -466,8 +511,10 @@ class APIClient():
         upload_url = upload['upload_url']
         upload_id = upload['upload_id']
 
-        # Upload data
-        upload_resp = requests.put(upload_url, json=annotations)
+        # Given we do not use self.sess the timeout is disabled (requests default), and this
+        # is good as file upload can take a long time
+        upload_resp = requests.put(
+            upload_url, json=annotations)
         if not upload_resp.ok:
             logger.error('Error when sending annotation upload %s to blobstore at url %s' % (
                 upload_id, upload_url))
