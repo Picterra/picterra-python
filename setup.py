@@ -20,5 +20,6 @@ setup(
         'pytest',
         'flake8',
         'responses',
+        'httpretty'
     ],
 )
