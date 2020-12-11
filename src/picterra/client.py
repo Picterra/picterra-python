@@ -55,7 +55,7 @@ def validate_detector_args(detection_type: str, output_type: str, training_steps
 class APIClient():
     """Main client class for the Picterra API"""
     def __init__(
-        self, api_key: str = '', base_url: str = '',
+        self, api_key: str = None, base_url: str = None,
         timeout: int = 30, max_retries: int = 3, backoff_factor: int = 10
     ):
         """
