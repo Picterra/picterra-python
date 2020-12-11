@@ -17,9 +17,9 @@ TEST_POLL_INTERVAL = 0.1
 OPERATION_ID = 21
 
 
-def _client(max_retries=0, timeout=1):
+def _client(max_retries=0, timeout=1, **kwargs):
     return APIClient(
-        api_key='1234', base_url=TEST_API_URL, max_retries=max_retries, timeout=timeout
+        api_key='1234', base_url=TEST_API_URL, max_retries=max_retries, timeout=timeout, **kwargs
     )
 
 
@@ -482,7 +482,7 @@ def test_backoff_success():
             httpretty.Response(body=json.dumps(data),status=200)
         ]
     )
-    client = _client(max_retries=2)
+    client = _client(max_retries=2, backoff_factor=0.1)
     client.list_rasters()
     assert len(httpretty.latest_requests()) == 3
 
