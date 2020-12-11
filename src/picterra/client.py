@@ -334,8 +334,6 @@ class APIClient():
         Raises:
             APIError: There was an error while creating the detector
         """
-        detection_type, output_type, training_steps = (
-            detection_type.lower(), output_type.lower(), int(training_steps))
         # Validate args
         validate_detector_args(detection_type, output_type, training_steps)
         # Build request body
@@ -386,7 +384,8 @@ class APIClient():
 
     def edit_detector(
         self, detector_id: str,
-        name: str = '', detection_type: str = '', output_type: str = '', training_steps: int = 0
+        name: str = None, detection_type: str = None, output_type: str = None,
+        training_steps: int = None
     ):
         """
         Edit a detector
@@ -403,8 +402,6 @@ class APIClient():
         Raises:
             APIError: There was an error while editing the detector
         """
-        detection_type, output_type, training_steps = (
-            detection_type.lower(), output_type.lower(), int(training_steps))
         # Validate args
         validate_detector_args(detection_type, output_type, training_steps)
         # Build request body
