@@ -1,4 +1,5 @@
 #!/bin/bash
+# -*- coding: utf-8 -*-
 #
 # Usage:
 #  * export PICTERRA_API_KEY="your-api-key"

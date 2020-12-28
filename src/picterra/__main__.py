@@ -14,9 +14,12 @@ import sys
 import os
 
 from .client import APIClient, APIError, CHUNK_SIZE_BYTES
+from pkg_resources import get_distribution
 
 
 logger = logging.getLogger(__name__)
+
+__version__ = get_distribution('picterra').version
 
 
 def _read_in_chunks(file_object, chunk_size=CHUNK_SIZE_BYTES):
@@ -34,7 +37,7 @@ def parse_args(args):
         prog='picterra', description='Picterra API wrapper CLI tool', epilog='© Picterra 2020')
 
     # Parser for version and verbosity
-    parser.add_argument('--version', action='version', version='1.0.0')
+    parser.add_argument('--version', action='version', version=__version__)
     parser.add_argument("-v", help="set output verbosity", action="store_true")
 
     # create the parser for the subcommands
