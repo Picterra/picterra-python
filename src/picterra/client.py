@@ -125,7 +125,8 @@ class APIClient():
             qstr = urlencode(params)
             return "%s?%s" % (base_url, qstr)
 
-    def _wait_until_operation_completes(self, operation_response):
+    def _wait_until_operation_completes(self, operation_response: dict) -> dict:
+        """Polls an operation an returns its data"""
         operation_id = operation_response['operation_id']
         poll_interval = operation_response['poll_interval']
         # Just sleep for a short while the first time
@@ -144,6 +145,7 @@ class APIClient():
             if status == 'failed':
                 raise APIError('Operation %s failed' % operation_id)
             time.sleep(poll_interval)
+        return resp.json()
 
     def _paginate_through_list(self, resource_endpoint: str, params=None):
         if params is None:

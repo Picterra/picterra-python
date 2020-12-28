@@ -107,6 +107,10 @@ def add_mock_operations_responses(status):
         'type': 'mock_operation_type',
         'status': status
     }
+    if status == 'success':
+        data.update({
+            'metadata': {'raster_id': 'foo', 'detector_id': 'bar', 'folder_id': 'spam'}
+        })
     responses.add(
         responses.GET, 
         api_url('operations/%s/' % OPERATION_ID),
