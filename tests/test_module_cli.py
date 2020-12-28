@@ -173,7 +173,7 @@ def test_create_detector(monkeypatch, capsys):
     mock_add_raster.assert_called_with('foo', 'spam')
 
 
-def test_create_raster(monkeypatch, capsys):
+def test_create_raster__from_file(monkeypatch, capsys):
     monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_create_raster, mock_add_raster = MagicMock(return_value='spam'), MagicMock()
     mock_raster_datetime_name = MagicMock(return_value='foobar')
@@ -183,22 +183,85 @@ def test_create_raster(monkeypatch, capsys):
     assert mock_create_raster.called is False
     assert mock_add_raster.called is False
     with pytest.raises(BaseException):
-        parse_args(['create', 'raster'])
+        parse_args(['create', 'raster', 'file'])
     captured = capsys.readouterr()
     assert 'following arguments are required' in captured.err
     assert 'path' in captured.err
     assert mock_create_raster.called is False
     assert mock_add_raster.called is False
-    parse_args(['create', 'raster', 'my_path_to_tiff'])
+    parse_args(['create', 'raster', 'file', 'my_path_to_tiff'])
     mock_create_raster.assert_called_with('my_path_to_tiff', 'foobar', None)
     assert mock_add_raster.called is False
     mock_create_raster.reset_mock()
     mock_add_raster.reset_mock()
     parse_args([
-        'create', 'raster', 'my_path_to_tiff', '--name', 'beacon', '--folder', 'eggs',
+        'create', 'raster', 'file', 'my_path_to_tiff', '--name', 'beacon', '--folder', 'eggs',
         '--detector', 'a', 'b', 'c'
     ])
     mock_create_raster.assert_called_with('my_path_to_tiff', 'beacon', 'eggs')
+    assert mock_add_raster.call_count == 3
+    mock_add_raster.assert_called_with('spam', 'c')
+
+
+def test_create_raster__from_remote(monkeypatch, capsys):
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
+    mock_create_raster, mock_add_raster = MagicMock(return_value='spam'), MagicMock()
+    monkeypatch.setattr(APIClient, 'upload_remote_raster', mock_create_raster)
+    monkeypatch.setattr(APIClient, 'add_raster_to_detector', mock_add_raster)
+    assert (mock_create_raster.called or mock_add_raster.called) is False
+    # Errors
+    with pytest.raises(BaseException):
+        parse_args(['create', 'raster', 'remote'])
+    captured = capsys.readouterr()
+    assert 'following arguments are required' in captured.err
+    assert 'resolution' in captured.err
+    assert (mock_create_raster.called or mock_add_raster.called) is False
+    for bad_coords in ('5.0,50.0,6.0', '5.0,50.0,6.0,60.0,88.0'):
+        with pytest.raises(BaseException):
+            parse_args([
+            'create', 'raster', 'remote',
+            'xyz', 'https://xyz.example.org', '0.25', bad_coords
+            ])
+        assert '4 coordinates' in  capsys.readouterr().err
+        assert (mock_create_raster.called or mock_add_raster.called) is False
+    for bad_coords in ('5.0,50.0,6.0,99.0', '225.0,50.0,6.0,60.0'):
+        with pytest.raises(BaseException):
+            parse_args([
+            'create', 'raster', 'remote',
+            'xyz', 'https://xyz.example.org', '0.25', bad_coords
+            ])
+        assert 'valid' in  capsys.readouterr().err
+        assert (mock_create_raster.called or mock_add_raster.called) is False
+    for bad_coords in ('5.0,50.0,6.0,40.0', '8.0,50.0,6.0,60.0'):
+        with pytest.raises(BaseException):
+            parse_args([
+            'create', 'raster', 'remote',
+            'xyz', 'https://xyz.example.org', '0.25', bad_coords
+            ])
+        assert 'order' in  capsys.readouterr().err
+        assert (mock_create_raster.called or mock_add_raster.called) is False
+    # Working cases
+    parse_args([
+        'create', 'raster', 'remote',
+        'xyz', 'https://xyz.example.org', '0.25', '5.0,50.0,6.0,60.0'])
+    footprint = {
+        "type": "Polygon",
+        "coordinates": [[[5.0, 50.0], [6.0, 50.0], [6.0, 60.0], [5.0, 60.0], [5.0, 50.0]]]
+    }
+    mock_create_raster.assert_called_with(
+        'xyz', 'https://xyz.example.org', 0.25, footprint, None, None, None)
+    assert mock_add_raster.called is False
+    mock_create_raster.reset_mock()
+    mock_add_raster.reset_mock()
+    parse_args([
+        'create', 'raster', 'remote',
+        'xyz', 'https://xyz.example.org', '0.25', '5.0,50.0,6.0,60.0',
+        '--credentials', 'foo:bar',
+        '--name', 'beacon', '--folder', 'eggs',
+        '--detector', 'a', 'b', 'c'
+    ])
+    mock_create_raster.assert_called_with(
+        'xyz', 'https://xyz.example.org', 0.25, footprint, 'foo:bar', 'beacon',  'eggs')
     assert mock_add_raster.call_count == 3
     mock_add_raster.assert_called_with('spam', 'c')
 

@@ -172,7 +172,8 @@ class APIClient():
             filename (str): Local filename of raster to upload
             name (str): A human-readable name for this raster
             folder_id (optional, str): Id of the folder this raster
-                belongs to.
+                belongs to; if not provided, the raster will be put in the
+                "Picterra API Project" folder
             captured_at (optional, str): ISO-8601 date and time at which this
                 raster was captured, YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z];
                 e.g. "2020-01-01T12:34:56.789Z"
@@ -237,7 +238,8 @@ class APIClient():
             credentials (optional, str): Credentials for the imagery server in the
                 "user:password" format, if needed
             name (optional, str): Name the raster will take
-            folder_id (optional, str): Identifier of the folder this raster will belongs to
+            folder_id (optional, str): Identifier of the folder this raster will belongs to;
+                if not provided, the raster will be put in the "Picterra API Project" folder
             captured_at (optional, str): ISO-8601 date and time at which this
                 raster was captured, YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z];
                 e.g. "2020-01-01T12:34:56.789Z"

@@ -413,6 +413,7 @@ def test_upload_remote_raster(type):
     with pytest.raises(ValueError):
         client.upload_remote_raster('spam', 'http://example.com', 0.2, footprint)
     client.upload_remote_raster(type, 'http://example.com', 0.2, footprint)
+    # (1 call for the upload, 2 for the polling)
     assert len(responses.calls) == 3
 
 
