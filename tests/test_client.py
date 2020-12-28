@@ -194,6 +194,16 @@ def add_mock_raster_upload_responses():
         json=data, status=200)
 
 
+def add_mock_remote_raster_upload_responses(type):
+    data = {
+        'poll_interval': TEST_POLL_INTERVAL,
+        'operation_id': OPERATION_ID
+    }
+    responses.add(
+        responses.POST,
+        api_url('rasters/upload/remote/'), json=data, status=201)
+
+
 def add_mock_detection_areas_upload_responses(raster_id):
     upload_id = 42
 
@@ -330,6 +340,23 @@ def test_upload_raster():
             captured_at='2020-01-10T12:34:56.789Z'
         )
     assert len(responses.calls) == 4
+
+
+@pytest.mark.parametrize('type', ('xyz', 'wms', 'wmts'))
+@responses.activate
+def test_upload_remote_raster(type):
+    client = _client()
+    add_mock_remote_raster_upload_responses(type)
+    add_mock_operations_responses('processing')
+    add_mock_operations_responses('success')
+    footprint = {
+        "type": "Polygon",
+        "coordinates": [ [ [10.0, 0.0], [11.0, 0.0], [11.0, 1.0],  [10.0, 1.0], [10.0, 0.0] ] ]
+    }
+    with pytest.raises(ValueError):
+        client.upload_remote_raster('spam', 'http://example.com', 0.2, footprint)
+    client.upload_remote_raster(type, 'http://example.com', 0.2, footprint)
+    assert len(responses.calls) == 3
 
 
 @responses.activate

@@ -200,6 +200,52 @@ class APIClient():
         self._wait_until_operation_completes(resp.json())
         return raster_id
 
+    def upload_remote_raster(
+        self, server_type, server_url, spatial_resolution_meters, footprint,
+        credentials=None, name=None, folder_id=None, captured_at=None
+    ):
+        """
+        Upload a remote raster to picterra (WMS or XYZ imagery server sources).
+
+        Args:
+            server_type (str): One of ['wms', 'wmts', 'xyz']
+            server_url (str): URL for the imagery server
+            spatial_resolution_meters (float): GSD of the image we want to import
+            footprint (dict): GeoJSON Polygon containing the boundaries of the remote raster
+            credentials (optional, str): Credentials for the imagery server in the
+                "user:password" format, if needed
+            folder_id (optional, str): Identifier of the folder this raster will belongs to.
+            captured_at (optional, str): ISO-8601 date and time at which this
+                raster was captured, YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z];
+                e.g. "2020-01-01T12:34:56.789Z"
+
+        Returns:
+            raster_id (str): The id of the uploaded raster
+
+        Raises:
+            APIError: There was an error while trying to upload the raster
+            ValueError: One of the parameters is wrong
+
+        """
+        valid_types = ['wms', 'wmts', 'xyz']
+        server_type = server_type.lower()
+        if server_type not in valid_types:
+            raise ValueError('Invalid remote raster type "%s"; allowed values are: %s.' % (
+                server_type, ', '.join(valid_types)))
+        post_body = {
+            'type': server_type, 'url': server_url,
+            'spatial_res_m': float(spatial_resolution_meters),
+            'footprint': footprint, 'folder_id': folder_id,
+            'captured_at': captured_at, 'name': name
+        }
+        if credentials:
+            post_body['credentials'] = credentials
+        resp = self.sess.post(self._api_url('rasters/upload/remote/'), json=post_body)
+        if not resp.ok:
+            raise APIError(resp.text)
+        operation = self._wait_until_operation_completes(resp.json())
+        return operation['metadata']['raster_id']
+
     def list_rasters(self, folder_id=None):
         """
         List of rasters metadata
