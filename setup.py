@@ -19,7 +19,6 @@ setup(
     tests_require=[
         'pytest===6.1.2',
         'flake8',
-        'responses',
         'httpretty'
     ],
 )

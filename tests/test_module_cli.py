@@ -1,10 +1,5 @@
 import pytest
-import subprocess
-import os
-import argparse
-import responses
 import json
-from urllib.parse import urljoin
 from unittest.mock import MagicMock, patch, mock_open
 
 from picterra.__main__ import parse_args, APIClient
