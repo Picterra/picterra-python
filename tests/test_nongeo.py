@@ -1,6 +1,6 @@
 import pytest
 import tempfile
-from picterra.nongeo import _nongeo_latlng2xy
+from picterra.nongeo import _nongeo_latlng2xy, _load_polygons
 from picterra import nongeo_result_to_pixel
 
 
@@ -52,3 +52,99 @@ def test_nongeo_result_to_pixel():
         assert tuple(map(round, polygons[0][0][2])) == (1520, 0)
         assert tuple(map(round, polygons[0][0][3])) == (0, 0)
         assert tuple(map(round, polygons[0][0][4])) == (0, 1086)
+
+
+def test_load_polygons_multipoly():
+    geojson = {
+        "type": "MultiPolygon",
+        "coordinates": [
+            [
+                [
+                    [0.000000096, -0.000975470],
+                    [0.00136530, -0.00097539],
+                    [0.001365320, 0.000000129],
+                    [0.000000034, -0.000000034],
+                    [0.000000096, -0.000975470]
+                ]
+            ]
+        ]
+    }
+    polygons = _load_polygons(geojson)
+    assert len(polygons) == 1
+    assert len(polygons[0][0]) == 5
+    assert polygons[0][0][2][1] == 0.000000129
+
+
+def test_load_polygons_polygon():
+    geojson = {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [0.000000096, -0.000975470],
+                [0.00136530, -0.00097539],
+                [0.001365320, 0.000000129],
+                [0.000000034, -0.000000034],
+                [0.000000096, -0.000975470]
+            ]
+        ]
+    }
+    polygons = _load_polygons(geojson)
+    assert len(polygons) == 1
+    assert len(polygons[0][0]) == 5
+    assert polygons[0][0][2][1] == 0.000000129
+
+
+def test_load_polygons_fc():
+    geojson = {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [0.000000096, -0.000975470],
+                            [0.00136530, -0.00097539],
+                            [0.001365320, 0.000000129],
+                            [0.000000034, -0.000000034],
+                            [0.000000096, -0.000975470]
+                        ]
+                    ]
+                }
+            },
+            {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "type": "MultiPolygon",
+                    "coordinates": [
+                        [
+                            [
+                                [0.000000096, -0.000975470],
+                                [0.00136530, -0.00097539],
+                                [0.001365320, 0.000000129],
+                                [0.000000034, -0.000000034],
+                                [0.000000096, -0.000975470]
+                            ]
+                        ],
+                        [
+                            [
+                                [0.100000096, -0.100975470],
+                                [0.10136530, -0.10097539],
+                                [0.101365320, 0.100000129],
+                                [0.100000034, -0.100000034],
+                                [0.100000096, -0.100975470]
+                            ]
+                        ]
+                    ]
+                }
+            }
+        ]
+    }
+    polygons = _load_polygons(geojson)
+    assert len(polygons) == 3
+    assert len(polygons[0][0]) == 5
+    assert polygons[0][0][2][1] == 0.000000129
+    assert polygons[2][0][2][1] == 0.100000129
