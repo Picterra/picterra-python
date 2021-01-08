@@ -40,6 +40,33 @@ def _nongeo_latlng2xy(lat_deg, lng_deg):
     return x, y
 
 
+def _load_polygons(geojson):
+    """
+    Loads polygons from a geojson file; should work for both MultiPolygon and
+    FeatureCollection of Polygons
+    """
+    polygons = []
+    if geojson['type'] == 'MultiPolygon':
+        for polygon in geojson['coordinates']:
+            polygons.append(polygon)
+    elif geojson['type'] == 'Polygon':
+        polygons = [geojson['coordinates']]
+    elif geojson['type'] == 'FeatureCollection':
+        for feature in geojson['features']:
+            geom = feature['geometry']
+            polygons.extend(_load_polygons(geom))
+    return polygons
+
+
+def _polygon_to_xy(polygon):
+    xy_polygon = []
+    for ring in polygon:
+        xy_polygon.append([
+            _nongeo_latlng2xy(lat, lng) for lng, lat in ring
+        ])
+    return xy_polygon
+
+
 def nongeo_result_to_pixel(result_filename):
     """
     This is a helper function to convert result obtained on non-georeferenced
@@ -65,15 +92,7 @@ def nongeo_result_to_pixel(result_filename):
               ]
     """
     with open(result_filename) as f:
-        multipolygon = json.load(f)
-
-    polygons = []
-    for polygon in multipolygon['coordinates']:
-        xy_polygon = []
-        for ring in polygon:
-            xy_polygon.append([
-                _nongeo_latlng2xy(lat, lng) for lng, lat in ring
-            ])
-        polygons.append(xy_polygon)
-
+        geojson = json.load(f)
+    polygons = _load_polygons(geojson)
+    polygons = [_polygon_to_xy(p) for p in polygons]
     return polygons
