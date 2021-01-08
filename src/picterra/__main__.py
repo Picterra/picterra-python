@@ -262,4 +262,5 @@ def main():
         exit("\033[91m%s\033[00m" % e)
 
 
-main()
+if __name__ == '__main__':
+    main()
