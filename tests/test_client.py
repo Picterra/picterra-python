@@ -312,8 +312,9 @@ def add_mock_delete_detector_response(detector_id):
         api_url('detectors/%s/' % detector_id), status=204)
 
 
+@pytest.mark.parametrize(('identity_key'), (None, 'abc'))
 @responses.activate
-def test_upload_raster():
+def test_upload_raster(identity_key):
     client = _client()
     add_mock_raster_upload_responses()
     add_mock_operations_responses('success')
@@ -323,7 +324,8 @@ def test_upload_raster():
             f.name,
             name='test 1',
             folder_id='0',
-            captured_at='2020-01-10T12:34:56.789Z'
+            captured_at='2020-01-10T12:34:56.789Z',
+            identity_key=identity_key
         )
     assert len(responses.calls) == 4
 
