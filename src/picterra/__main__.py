@@ -54,6 +54,7 @@ def parse_args(args):
     # List detectors
     list_subparsers.add_parser(
         'detectors', help="List user's detectors")
+
     # create the parser for the "detect" command
     detect_parser = subparsers.add_parser(
         'detect',
@@ -75,7 +76,8 @@ def parse_args(args):
     # create the parser for the "train" command
     train_parser = subparsers.add_parser('train', help="Trains a detector")
     train_parser.add_argument("detector", help="ID of a detector", type=str)
-    # create the parsers for the "create" command
+
+    # create the parsers for the "create" commands
     create_parser = subparsers.add_parser('create', help="Create resources")
     create_subparsers = create_parser.add_subparsers(dest='create')
     # create detector
@@ -138,6 +140,15 @@ def parse_args(args):
         "detection_area", help="Removes the detection areas of raster, if any")
     delete_detectionarea_parser.add_argument(
         "raster", help="ID of the raster whose detection areas will be deleted", type=str)
+
+    # create the parsers for the "download" command
+    download_parser = subparsers.add_parser('download', help="Download resources")
+    download_subparsers = download_parser.add_subparsers(dest='download')
+    # download raster
+    download_raster_parser = download_subparsers.add_parser('raster', help="Downloads a raster")
+    download_raster_parser.add_argument("raster", help="ID of the raster to download", type=str)
+    download_raster_parser.add_argument(
+        "path", help="Path to the local file where the raster will be saved", type=str)
 
     # parse input
     options = parser.parse_args(args)
@@ -252,6 +263,10 @@ def parse_args(args):
             logger.debug('Removing detection area from raster %s..' % options.raster)
             client.remove_raster_detection_areas(options.raster)
             logger.info('Removed detection area for raster whose id is %s' % options.raster)
+    elif options.command == 'download':
+        if options.download == 'raster':
+            client.download_raster_to_file(options.raster, options.path)
+            logger.info('Downloaded raster whose id is %s' % options.raster)
     return options
 
 
