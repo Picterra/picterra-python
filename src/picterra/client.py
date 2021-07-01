@@ -250,6 +250,31 @@ class APIClient():
         if not resp.ok:
             raise APIError(resp.text)
 
+    def download_raster_to_file(self, raster_id: str, filename: str):
+        """
+        Downloads a raster to a local file
+
+        Args:
+            raster_id (str): The id of the raster to download
+
+        Raises:
+            APIError: There was an error while trying to download the raster
+        """
+        resp = self.sess.get(self._api_url('rasters/%s/download/' % raster_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+        raster_url = resp.json()['download_url']
+        logger.debug('Trying to download raster %s from %s..' % (raster_id, raster_url))
+        # Given we do not use self.sess the timeout is disabled (requests default), and this
+        # is good as file download can take a long time
+        with requests.get(raster_url, stream=True) as r:
+            r.raise_for_status()
+            with open(filename, 'wb') as f:
+                logger.debug('Trying to save result to file %s..' % filename)
+                for chunk in r.iter_content(chunk_size=CHUNK_SIZE_BYTES):
+                    if chunk:  # filter out keep-alive new chunks
+                        f.write(chunk)
+
     def set_raster_detection_areas_from_file(self, raster_id, filename):
         """
         This is an experimental feature

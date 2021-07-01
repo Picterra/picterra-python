@@ -274,6 +274,17 @@ def add_mock_download_result_response(op_id):
     return mock_content
 
 
+def add_mock_download_raster_response(raster_id):
+    file_url = 'http://storage.example.com/%s.tiff' % raster_id
+    data = {'download_url': file_url}
+    responses.add(
+        responses.GET,
+        api_url('rasters/%s/download/' % raster_id), json=data, status=200)
+    mock_content = (1024).to_bytes(2, byteorder='big')
+    responses.add(responses.GET, file_url, body=mock_content)
+    return mock_content
+
+
 def add_mock_url_result_response(op_id, url):
     data = {
         'results': {'url': url}
@@ -346,6 +357,17 @@ def test_delete_detectionarea():
     add_mock_delete_detectionarea_response(RASTER_ID)
     client.remove_raster_detection_areas(RASTER_ID)
     assert len(responses.calls) == 1
+
+
+@responses.activate
+def test_download_raster():
+    RASTER_ID = 'foobar'
+    expected_content = add_mock_download_raster_response(RASTER_ID)
+    client = _client()
+    with tempfile.NamedTemporaryFile() as f:
+        client.download_raster_to_file(RASTER_ID, f.name)
+        assert open(f.name, 'rb').read() == expected_content
+    assert len(responses.calls) == 2
 
 
 @responses.activate

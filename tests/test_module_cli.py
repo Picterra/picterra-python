@@ -282,3 +282,18 @@ def test_delete_detectionarea(monkeypatch, capsys):
     assert mock_delete.called is False
     parse_args(['delete', 'detection_area', 'my_raster'])
     mock_delete.assert_called_with('my_raster')
+
+def test_download_raster(monkeypatch, capsys):
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
+    mock_download = MagicMock()
+    monkeypatch.setattr(APIClient, 'download_raster_to_file', mock_download)
+    assert mock_download.called is False
+    with pytest.raises(BaseException):
+        parse_args(['download', 'raster', 'my_raster_id'])
+    captured = capsys.readouterr()
+    assert 'following arguments are required' in captured.err
+    assert 'path' in captured.err
+    assert mock_download.called is False
+    parse_args(['download', 'raster', 'my_raster_id', 'a_path'])
+    assert mock_download.called is True
+    mock_download.assert_called_with('my_raster_id', 'a_path')
