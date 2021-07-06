@@ -329,6 +329,7 @@ class APIClient():
 
         Args:
             raster_id (str): The id of the raster to download
+            filename (str): The local filename where to save the raster image
 
         Raises:
             APIError: There was an error while trying to download the raster
