@@ -176,8 +176,10 @@ def test_create_detector(monkeypatch, capsys):
 def test_create_raster(monkeypatch, capsys):
     monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_create_raster, mock_add_raster = MagicMock(return_value='spam'), MagicMock()
+    mock_raster_datetime_name = MagicMock(return_value='foobar')
     monkeypatch.setattr(APIClient, 'upload_raster', mock_create_raster)
     monkeypatch.setattr(APIClient, 'add_raster_to_detector', mock_add_raster)
+    monkeypatch.setattr(__main__, '_raster_datetime_name', mock_raster_datetime_name)
     assert mock_create_raster.called is False
     assert mock_add_raster.called is False
     with pytest.raises(BaseException):
@@ -188,7 +190,7 @@ def test_create_raster(monkeypatch, capsys):
     assert mock_create_raster.called is False
     assert mock_add_raster.called is False
     parse_args(['create', 'raster', 'my_path_to_tiff'])
-    mock_create_raster.assert_called_with('my_path_to_tiff', None, None)
+    mock_create_raster.assert_called_with('my_path_to_tiff', 'foobar', None)
     assert mock_add_raster.called is False
     mock_create_raster.reset_mock()
     mock_add_raster.reset_mock()
