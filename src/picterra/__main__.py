@@ -12,6 +12,7 @@ import logging
 import json
 import sys
 import os
+from datetime import datetime
 
 from .client import APIClient, APIError, CHUNK_SIZE_BYTES
 
@@ -26,6 +27,10 @@ def _read_in_chunks(file_object, chunk_size=CHUNK_SIZE_BYTES):
         if not data:
             break
         yield data
+
+
+def _raster_datetime_name() -> str:
+    return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 def parse_args(args):
@@ -226,12 +231,13 @@ def parse_args(args):
             logger.info('Created new detector whose id is %s%s' % (detector_id, tmp))
             print(detector_id)  # return value
         elif options.create == 'raster':
-            logger.debug('Starting creation %sraster from %s and uploading to %s..' % (
-                ('\"%s\" ' % options.name) if options.name else '',
+            raster_name = options.name or _raster_datetime_name()
+            logger.debug('Starting creation %s raster from %s and uploading to %s..' % (
+                '\"%s\" ' % raster_name,
                 options.path,
                 options.folder)
             )
-            raster_id = client.upload_raster(options.path, options.name, options.folder)
+            raster_id = client.upload_raster(options.path, raster_name, options.folder)
             i = 0
             for i, detector_id in enumerate(options.detector, 1):
                 client.add_raster_to_detector(raster_id, detector_id)
