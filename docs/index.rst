@@ -9,7 +9,7 @@ Easily integrate state-of-the-art machine learning models in your app
 
 Learn more about `Picterra <http://picterra.ch/for-developers/>`_
 
-If you are looking for our REST API documentation, `look here <https://app.picterra.ch/public/apidocs/v1/>`_
+If you are looking for our REST API documentation, `look here <https://app.picterra.ch/public/apidocs/v2/>`_
 
 ----
 
