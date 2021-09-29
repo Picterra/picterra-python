@@ -54,6 +54,18 @@ def validate_detector_args(detection_type: str, output_type: str, training_steps
             )
 
 
+def _download_to_file(url, filename):
+    # Given we do not use self.sess the timeout is disabled (requests default), and this
+    # is good as file download can take a long time
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(filename, 'wb') as f:
+            logger.debug('Downloading to file %s..' % filename)
+            for chunk in r.iter_content(chunk_size=CHUNK_SIZE_BYTES):
+                if chunk:  # filter out keep-alive new chunks
+                    f.write(chunk)
+
+
 class APIClient():
     """Main client class for the Picterra API"""
     def __init__(
@@ -265,15 +277,7 @@ class APIClient():
             raise APIError(resp.text)
         raster_url = resp.json()['download_url']
         logger.debug('Trying to download raster %s from %s..' % (raster_id, raster_url))
-        # Given we do not use self.sess the timeout is disabled (requests default), and this
-        # is good as file download can take a long time
-        with requests.get(raster_url, stream=True) as r:
-            r.raise_for_status()
-            with open(filename, 'wb') as f:
-                logger.debug('Trying to save result to file %s..' % filename)
-                for chunk in r.iter_content(chunk_size=CHUNK_SIZE_BYTES):
-                    if chunk:  # filter out keep-alive new chunks
-                        f.write(chunk)
+        _download_to_file(raster_url, filename)
 
     def set_raster_detection_areas_from_file(self, raster_id, filename):
         """
@@ -476,8 +480,8 @@ class APIClient():
             raster_id (str): The id of the raster
 
         Returns:
-            result_id (str): The id of the result. You typically want to pass this
-                to `download_results_to_file`
+            operation_id (str): The id of the operation. You typically want to pass this
+                to `download_result_to_feature_collection`
         """
         resp = self.sess.post(
             self._api_url('detectors/%s/run/' % detector_id),
@@ -493,30 +497,19 @@ class APIClient():
         Downloads a set of results to a local GeoJSON file
 
         Args:
-            result_id (str): The id of the result to download
+            operation_id (str): The id of the operation to download
             filename (str): The local filename where to save the results
         """
-        resp = self.sess.get(
-            self._api_url('operations/%s/' % operation_id),
-        )
-        result_url = resp.json()['results']['url']
+        result_url = self.get_operation_results(operation_id)['url']
         logger.debug('Trying to download result %s..' % result_url)
-        # Given we do not use self.sess the timeout is disabled (requests default), and this
-        # is good as file download can take a long time
-        with requests.get(result_url, stream=True) as r:
-            r.raise_for_status()
-            with open(filename, 'wb') as f:
-                logger.debug('Trying to save result to file %s..' % filename)
-                for chunk in r.iter_content(chunk_size=CHUNK_SIZE_BYTES):
-                    if chunk:  # filter out keep-alive new chunks
-                        f.write(chunk)
+        _download_to_file(result_url, filename)
 
     def download_operation_results_to_file(self, operation_id, filename):
         """
         Downloads the results URL to a local GeoJSON file
 
         Args:
-            result_id (str): The id of the result to download
+            operation_id (str): The id of the operation to download
             filename (str): The local filename where to save the results
         """
         data = self.get_operation_results_url(operation_id)
