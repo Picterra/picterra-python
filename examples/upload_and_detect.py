@@ -17,5 +17,5 @@ raster_id = client.upload_raster(
 )
 print('Upload finished, starting detector...')
 result_id = client.run_detector(detector_id, raster_id)
-client.download_result_to_file(result_id, 'result.geojson')
+client.download_result_to_feature_collection(result_id, 'result.geojson')
 print('Detection finished, results are in result.geojson')

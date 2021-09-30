@@ -257,21 +257,65 @@ def add_mock_detector_run_responses(detector_id):
     responses.add(responses.GET, api_url('results/%s/' % op_id), json=data, status=200)
 
 
+def make_geojson_multipolygon(npolygons=1):
+    coords = []
+    for i in range(npolygons):
+        coords.append([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]])
+    return {
+        "type": "MultiPolygon",
+        "coordinates": coords
+    }
+
+
 def add_mock_download_result_response(op_id):
     data = {
-        'results': {'url': 'http://storage.example.com/42.geojson'}
+        'results': {
+            'url': 'http://storage.example.com/42.geojson',
+            'by_class': [
+                {
+                    'class': {
+                        'name': 'class_1'
+                    },
+                    'result': {
+                        'url': 'http://storage.example.com/result_for_class_1.geojson'
+                    }
+                },
+                {
+                    'class': {
+                        'name': 'class_2'
+                    },
+                    'result': {
+                        'url': 'http://storage.example.com/result_for_class_2.geojson'
+                    }
+                }
+            ]
+        },
     }
     responses.add(
         responses.GET,
         api_url('operations/%s/' % op_id), json=data, status=201)
 
-    mock_content = '{"type":"FeatureCollection", "features":[]}'
+    mock_contents = {
+        'single_class': json.dumps(make_geojson_multipolygon(npolygons=1)),
+        'class_1': json.dumps(make_geojson_multipolygon(npolygons=2)),
+        'class_2': json.dumps(make_geojson_multipolygon(npolygons=3)),
+    }
     responses.add(
         responses.GET,
         'http://storage.example.com/42.geojson',
-        body=mock_content
+        body=mock_contents['single_class']
     )
-    return mock_content
+    responses.add(
+        responses.GET,
+        'http://storage.example.com/result_for_class_1.geojson',
+        body=mock_contents['class_1']
+    )
+    responses.add(
+        responses.GET,
+        'http://storage.example.com/result_for_class_2.geojson',
+        body=mock_contents['class_2']
+    )
+    return mock_contents
 
 
 def add_mock_download_raster_response(raster_id):
@@ -481,13 +525,33 @@ def test_run_detector():
 
 @responses.activate
 def test_download_result_to_file():
-    expected_content = add_mock_download_result_response(101)
+    expected_content = add_mock_download_result_response(101)['single_class']
     client = _client()
     with tempfile.NamedTemporaryFile() as f:
         client.download_result_to_file(101, f.name)
         assert open(f.name).read() == expected_content
     assert len(responses.calls) == 2
 
+@responses.activate
+def test_download_result_to_feature_collection():
+    expected_contents = add_mock_download_result_response(101)
+    client = _client()
+    with tempfile.NamedTemporaryFile() as f:
+        client.download_result_to_feature_collection(101, f.name)
+        with open(f.name) as fr:
+            fc = json.load(fr)
+        assert fc['type'] == 'FeatureCollection'
+        assert len(fc['features']) == 2
+        class_1_index = 0 if fc['features'][0]['properties']['class_name'] == 'class_1' else 1
+        feat1 = fc['features'][class_1_index]
+        assert feat1['type'] == 'Feature'
+        assert feat1['properties']['class_name'] == 'class_1'
+        assert feat1['geometry'] == json.loads(expected_contents['class_1'])
+        feat2 = fc['features'][(class_1_index + 1) % 2]
+        assert feat2['type'] == 'Feature'
+        assert feat2['properties']['class_name'] == 'class_2'
+        assert feat2['geometry'] == json.loads(expected_contents['class_2'])
+    assert len(responses.calls) == 3
 
 @responses.activate
 @pytest.mark.parametrize("annotation_type", ['outline', 'training_area', 'testing_area', 'validation_area'])

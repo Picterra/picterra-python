@@ -71,7 +71,7 @@ def test_prediction(monkeypatch, capsys):
     monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_run, mock_download_file, mock_download_url, mock_url = MagicMock(return_value='foobar'), MagicMock(),  MagicMock(), MagicMock(return_value='spam')
     monkeypatch.setattr(APIClient, 'run_detector', mock_run)
-    monkeypatch.setattr(APIClient, 'download_result_to_file', mock_download_file)
+    monkeypatch.setattr(APIClient, 'download_result_to_feature_collection', mock_download_file)
     monkeypatch.setattr(APIClient, 'download_operation_results_to_file', mock_download_url)
     monkeypatch.setattr(APIClient, 'get_operation_results_url', mock_url)
     monkeypatch.setattr(__main__, '_read_in_chunks', _mock_read_in_chunks)
