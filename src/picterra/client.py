@@ -516,6 +516,20 @@ class APIClient():
         with open(filename, 'w') as f:
             f.write(data)
 
+    def get_operation_results(self, operation_id: str) -> str:
+        """
+        Return the 'results' dict of an operation
+
+        This a **beta** function, subject to change.
+
+        Args:
+            operation_id (str): The id of the operation
+        """
+        resp = self.sess.get(
+            self._api_url('operations/%s/' % operation_id),
+        )
+        return resp.json()['results']
+
     def get_operation_results_url(self, operation_id: str) -> str:
         """
         Get the URL  of a set of results
@@ -525,11 +539,7 @@ class APIClient():
         Args:
             result_id (str): The id of the result
         """
-        resp = self.sess.get(
-            self._api_url('operations/%s/' % operation_id),
-        )
-        # This might raise KeyError for some operations
-        return resp.json()['results']['url']
+        return self.get_operation_results(operation_id)['url']
 
     def set_annotations(self, detector_id, raster_id, annotation_type, annotations):
         """
