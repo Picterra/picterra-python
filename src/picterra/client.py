@@ -1,7 +1,10 @@
 import os
 import time
+import json
 import requests
+import tempfile
 import logging
+import warnings
 from urllib.parse import urljoin, urlencode
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
@@ -496,13 +499,56 @@ class APIClient():
         """
         Downloads a set of results to a local GeoJSON file
 
+        .. deprecated:: 1.0.0
+           Use `download_result_to_feature_collection` instead
+
         Args:
             operation_id (str): The id of the operation to download
             filename (str): The local filename where to save the results
         """
+        warnings.warn(
+            "This function is deprecated. Use download_result_to_feature_collection instead",
+            DeprecationWarning)
         result_url = self.get_operation_results(operation_id)['url']
         logger.debug('Trying to download result %s..' % result_url)
         _download_to_file(result_url, filename)
+
+    def download_result_to_feature_collection(self, operation_id, filename):
+        """
+        Downloads the results from a detection operation to a local GeoJSON file.
+
+        Results are stored as a FeatureCollection of Multipolygon. Each feature has a 'class_name'
+        property indicating the corresponding class name
+
+        Args:
+            operation_id (str): The id of the operation to download. This should be a
+                detect operation
+            filename (str): The local filename where to save the results
+        """
+        results = self.get_operation_results(operation_id)
+        # We download results to a temporary directory and then assemble them into a
+        # FeatureCollection
+        fc = {
+            'type': 'FeatureCollection',
+            'features': []
+        }
+
+        for i, class_result in enumerate(results['by_class']):
+            with tempfile.NamedTemporaryFile() as f:
+                _download_to_file(class_result['result']['url'], f.name)
+                # Reopen in read text
+                with open(f.name) as fr:
+                    multipolygon = json.load(fr)
+                    fc['features'].append({
+                        'type': 'Feature',
+                        'properties': {
+                            'class_name': class_result['class']['name']
+                        },
+                        'geometry': multipolygon
+                    })
+
+        with open(filename, 'w') as f:
+            json.dump(fc, f)
 
     def download_operation_results_to_file(self, operation_id, filename):
         """

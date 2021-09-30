@@ -185,11 +185,11 @@ def parse_args(args):
         if options.output_type == 'geometries':   # outputting/saving result geometries
             if options.output_file:
                 logger.debug('Detection finished, writing result to %s' % options.output_file)
-                client.download_result_to_file(operation_id, options.output_file)
+                client.download_result_to_feature_collection(operation_id, options.output_file)
             else:
                 from tempfile import mkstemp
                 fd, path = mkstemp()
-                client.download_result_to_file(operation_id, path)
+                client.download_result_to_feature_collection(operation_id, path)
                 logger.debug('Detection finished, outputting result data')
                 with open(path) as f:
                     for piece in _read_in_chunks(f):
