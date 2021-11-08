@@ -12,3 +12,4 @@ venv
 .vscode
 dist
 examples/result.geojson
+build
