@@ -187,6 +187,10 @@ def test_create_raster__from_file(monkeypatch, capsys):
     captured = capsys.readouterr()
     assert 'following arguments are required' in captured.err
     assert 'path' in captured.err
+    with pytest.raises(BaseException):
+        parse_args(['create', 'raster'])
+    captured = capsys.readouterr()
+    assert 'usage' in captured.out
     assert mock_create_raster.called is False
     assert mock_add_raster.called is False
     parse_args(['create', 'raster', 'file', 'my_path_to_tiff'])
@@ -210,6 +214,10 @@ def test_create_raster__from_remote(monkeypatch, capsys):
     monkeypatch.setattr(APIClient, 'add_raster_to_detector', mock_add_raster)
     assert (mock_create_raster.called or mock_add_raster.called) is False
     # Errors
+    with pytest.raises(BaseException):
+        parse_args(['create', 'raster'])
+    captured = capsys.readouterr()
+    assert 'usage' in captured.out
     with pytest.raises(BaseException):
         parse_args(['create', 'raster', 'remote'])
     captured = capsys.readouterr()

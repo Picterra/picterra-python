@@ -113,7 +113,8 @@ def parse_args(args):
         'file', help="Uploads raster from a local file")
     create_raster_from_file_parser.add_argument("path", help="Path to the raster file", type=str)
     create_raster_from_file_parser.add_argument(
-        "--name", help="Name to give to the raster", type=str, required=False)
+        "--name", help="Name to give to the raster",
+        type=str, required=False, default=_raster_datetime_name())
     create_raster_from_file_parser.add_argument(
         "--folder", help="Id of the folder/project to which the raster will be uploaded",
         type=str, required=False)
@@ -280,18 +281,21 @@ def parse_args(args):
                 options.name, options.detection_type,
                 options.output_type, int(options.training_steps)
             )
-            i = 0
-            for i, r in enumerate(options.raster, 1):
-                client.add_raster_to_detector(r, detector_id)
-                logger.debug('Added raster %s to %s detector' % (r, detector_id))
-            tmp = (', and added %d rasters to it' % i) if i else ''
+            if options.raster:
+                i = 0
+                for i, r in enumerate(options.raster, 1):
+                    client.add_raster_to_detector(r, detector_id)
+                    logger.debug('Added raster %s to %s detector' % (r, detector_id))
+                tmp = (', and added %d rasters to it' % i) if i else ''
+            else:
+                tmp = ''
             logger.info('Created new detector whose id is %s%s' % (detector_id, tmp))
             print(detector_id)  # return value
         elif options.create == 'raster':
-            raster_name = options.name or _raster_datetime_name()
+            # raster_name = options.name or _raster_datetime_name()
             if options.raster == 'file':
                 logger.debug('Starting creation %s raster from %s and uploading to %s..' % (
-                    ('\"%s\" ' % raster_name),
+                    ('\"%s\" ' % options.name),
                     options.path,
                     options.folder)
                 )
@@ -310,15 +314,21 @@ def parse_args(args):
                     ]
                 }
                 logger.debug('Creating %s raster from %s @%s GSD with footprint %s..' % (
-                    raster_name, options.url, options.resolution, footprint))
+                    options.name, options.url, options.resolution, footprint))
                 raster_id = client.upload_remote_raster(
                     options.type, options.url, options.resolution, footprint,
                     options.credentials, options.name, options.folder)
-            i = 0
-            for i, detector_id in enumerate(options.detector, 1):
-                client.add_raster_to_detector(raster_id, detector_id)
-                logger.debug('Added raster %s to %s detector' % (raster_id, detector_id))
-            tmp = (', and added to %d detectors' % i) if i else ''
+            else:
+                parser.print_help()
+                sys.exit(0)
+            if options.detector:
+                i = 0
+                for i, detector_id in enumerate(options.detector, 1):
+                    client.add_raster_to_detector(raster_id, detector_id)
+                    logger.debug('Added raster %s to %s detector' % (raster_id, detector_id))
+                tmp = (', and added to %d detectors' % i) if i else ''
+            else:
+                tmp = ''
             logger.info('Created new raster whose id is %s%s' % (raster_id, tmp))
             print(raster_id)  # return value
         elif options.create == 'annotation':
