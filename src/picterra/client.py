@@ -72,26 +72,19 @@ def _download_to_file(url, filename):
 class APIClient():
     """Main client class for the Picterra API"""
     def __init__(
-        self, api_key: str = None, base_url: str = None,
-        timeout: int = 30, max_retries: int = 3, backoff_factor: int = 10
+        self, timeout: int = 30, max_retries: int = 3, backoff_factor: int = 10
     ):
         """
         Args:
-            api_key: Your picterra api_key. If None, will be obtained through the PICTERRA_API_KEY
-                     environment variable
-            base_url: URL of the Picterra server to target. Leave it to None
             timeout: number of seconds before the request times out
             max_retries: max attempts when ecountering gateway issues or throttles; see
                          retry_strategy comment below
             backoff_factor: factor used nin the backoff algorithm; see retry_strategy comment below
         """
-        if base_url is None:
-            base_url = os.environ.get('PICTERRA_BASE_URL', 'https://app.picterra.ch/public/api/v2/')
-        if api_key is None:
-            if 'PICTERRA_API_KEY' not in os.environ:
-                raise APIError('api_key is None and PICTERRA_API_KEY environment ' +
-                               'variable is not defined')
-            api_key = os.environ['PICTERRA_API_KEY']
+        base_url = os.environ.get('PICTERRA_BASE_URL', 'https://app.picterra.ch/public/api/v2/')
+        api_key = os.environ.get('PICTERRA_API_KEY', None)
+        if not api_key:
+            raise APIError('PICTERRA_API_KEY environment variable is not defined')
         logger.info(
             'Using base_url=%s; %d max retries, %d backoff and %s timeout.',
             base_url, max_retries, backoff_factor, timeout

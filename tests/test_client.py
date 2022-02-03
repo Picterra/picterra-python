@@ -4,6 +4,7 @@ import httpretty
 import pytest
 import time
 import json
+import os
 from urllib.parse import urljoin
 from requests.exceptions import ConnectionError
 from picterra import APIClient
@@ -18,9 +19,9 @@ OPERATION_ID = 21
 
 
 def _client(max_retries=0, timeout=1, **kwargs):
-    return APIClient(
-        api_key='1234', base_url=TEST_API_URL, max_retries=max_retries, timeout=timeout, **kwargs
-    )
+    os.environ['PICTERRA_BASE_URL'] = TEST_API_URL
+    os.environ['PICTERRA_API_KEY'] = '1234'
+    return APIClient(max_retries=max_retries, timeout=timeout, **kwargs)
 
 
 def api_url(path):
