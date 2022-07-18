@@ -329,6 +329,21 @@ def test_delete_raster(monkeypatch, capsys):
     mock_delete.assert_called_with('my_raster')
 
 
+def test_edit_raster(monkeypatch, capsys):
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
+    mock_edit = MagicMock()
+    monkeypatch.setattr(APIClient, 'edit_raster', mock_edit)
+    assert mock_edit.called is False
+    with pytest.raises(BaseException):
+        parse_args(['edit', 'raster'])
+    captured = capsys.readouterr()
+    assert 'following arguments are required' in captured.err
+    assert 'raster' in captured.err
+    assert mock_edit.called is False
+    parse_args(['edit', 'raster', 'a-raster-uuid', '--name', 'beacon'])
+    mock_edit.assert_called_with('a-raster-uuid', name='beacon')
+
+
 def test_delete_detector(monkeypatch, capsys):
     monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_delete = MagicMock()
