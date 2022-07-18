@@ -8,7 +8,6 @@ import os
 from urllib.parse import urljoin
 from requests.exceptions import ConnectionError
 from picterra import APIClient
-from picterra.client import APIError
 
 
 TEST_API_URL = 'http://example.com/public/api/v2/'
@@ -375,6 +374,14 @@ def add_get_operation_results_url_response(op_id):
     return url
 
 
+def add_mock_edit_raster_response(raster_id, body):
+    responses.add(
+        responses.PUT,
+        api_url('rasters/%s/' % raster_id),
+        #match=[responses.matchers.json_params_matcher(body)],
+        status=204)
+
+
 def add_mock_delete_raster_response(raster_id):
     responses.add(
         responses.DELETE,
@@ -427,6 +434,21 @@ def test_upload_remote_raster(type):
     client.upload_remote_raster(type, 'http://example.com', 0.2, footprint)
     # (1 call for the upload, 2 for the polling)
     assert len(responses.calls) == 3
+
+
+@pytest.mark.parametrize('edited_data', (
+    {'folder_id': '2233'},
+    {'folder_id': '2233', 'identity_key': 'dr43t5zrtzz'},
+    {'captured_at': '2020-01-01T12:34:56.789Z'},
+    {'multispectral_band_specification': {'ranges': [[2, 3], [12, 13], [22, 23]], 'vizbands': [0 ,1, 2]}}
+))
+@responses.activate
+def test_edit_raster(edited_data):
+    RASTER_ID = 'foobar'
+    client = _client()
+    add_mock_edit_raster_response(RASTER_ID, {'name': 'spam', **edited_data})
+    client.edit_raster(RASTER_ID, 'spam', **edited_data)
+    assert len(responses.calls) == 1
 
 
 @responses.activate

@@ -306,6 +306,47 @@ class APIClient():
         params = {'folder': folder_id} if folder_id else {}
         return self._paginate_through_list('rasters', params)
 
+    def edit_raster(
+        self, raster_id: str,
+        name: Optional[str]=None, folder_id: Optional[str]=None,
+        captured_at: Optional[str]=None, identity_key:Optional[str]=None,
+        multispectral_band_specification: Optional[dict] = None
+    ):
+        """
+        Edits an already existing raster.
+
+        Args:
+            name: New human-readable name for this raster
+            folder_id: Id of the new folder for this raster (move is in another project)
+            captured_at: new ISO-8601 date and time at which this
+                raster was captured, YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z];
+                e.g. "2020-01-01T12:34:56.789Z"
+            identity_key: New personal identifier for this raster.
+            multispectral_band_specification: If True, the raster is in multispectral mode and can have an associated band specification
+
+        Returns:
+            raster_id (str): The id of the uploaded raster
+        """
+        data = {}
+        if name is not None:
+            if len(name) == 0:
+                raise ValueError('Invalid empty name')
+            data.update({'name': name})
+        if folder_id is not None:
+            data.update({'folder_id': folder_id})
+        if captured_at is not None:
+            data.update({'captured_at': captured_at})
+        if identity_key is not None:
+            data.update({'identity_key': identity_key})
+        if multispectral_band_specification is not None:
+            data.update({'multispectral_band_specification': multispectral_band_specification})
+        if len(data) == 0:
+            raise ValueError('Nothing to edit')
+        resp = self.sess.put(self._api_url('rasters/%s/' % raster_id), json=data)
+        if not resp.ok:
+            raise APIError(resp.text)
+        return raster_id
+
     def delete_raster(self, raster_id):
         """
         Deletes a given raster by its identifier

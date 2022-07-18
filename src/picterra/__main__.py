@@ -207,6 +207,15 @@ def parse_args(args):
     delete_detectionarea_parser.add_argument(
         "raster", help="ID of the raster whose detection areas will be deleted", type=str)
 
+    # create the parsers for the "edit" command
+    edit_parser = subparsers.add_parser('edit', help="Edit resources")
+    edit_subparsers = edit_parser.add_subparsers(dest='edit')
+    # edit raster
+    edit_raster_parser = edit_subparsers.add_parser('raster', help="Edits a raster")
+    edit_raster_parser.add_argument("raster", help="ID of the raster to edit", type=str)
+    edit_raster_parser.add_argument(
+        "--name", help="Name to give to the raster", type=str, required=False)
+
     # create the parsers for the "download" command
     download_parser = subparsers.add_parser('download', help="Download resources")
     download_subparsers = download_parser.add_subparsers(dest='download')
@@ -359,6 +368,10 @@ def parse_args(args):
             logger.debug('Removing detection area from raster %s..' % options.raster)
             client.remove_raster_detection_areas(options.raster)
             logger.info('Removed detection area for raster whose id is %s' % options.raster)
+    elif options.command == 'edit':
+        if options.edit == 'raster':
+            client.edit_raster(options.raster, name=options.name)
+            logger.info('Edited raster whose id is %s' % options.raster)
     elif options.command == 'download':
         if options.download == 'raster':
             client.download_raster_to_file(options.raster, options.path)
