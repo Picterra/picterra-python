@@ -511,7 +511,7 @@ class APIClient():
         # Call API and check response
         resp = self.sess.put(
             self._api_url('detectors/%s/' % detector_id),
-            data=body_data
+            json=body_data
         )
         if not resp.status_code == 204:
             raise APIError(resp.text)

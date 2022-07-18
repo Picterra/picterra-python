@@ -364,7 +364,6 @@ def add_mock_url_result_response(op_id, url):
         api_url('operations/%s/' % op_id), json=data, status=201)
 
 
-
 def add_get_operation_results_url_response(op_id):
     url = 'http://storage.example.com/42.geojson'
     data = {
