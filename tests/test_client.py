@@ -148,16 +148,27 @@ def add_mock_annotations_responses(detector_id, raster_id, annotation_type):
     )
 
 
-def add_mock_raster_upload_responses():
+def add_mock_raster_upload_responses(identity_key, multispectral):
     raster_id = 42
     # Upload initiation
     data = {
         'upload_url': 'http://storage.example.com',
         'raster_id': raster_id
     }
+    body = {
+        'name': 'test 1',
+        "multispectral": multispectral,
+        'captured_at': '2020-01-10T12:34:56.789Z',
+        'folder_id': 'a-folder-uuid'
+    }
+    if identity_key:
+        body['identity_key'] = identity_key
     responses.add(
         responses.POST,
-        api_url('rasters/upload/file/'), json=data, status=200)
+        api_url('rasters/upload/file/'),
+        json=data,
+        match=[responses.matchers.json_params_matcher(body)],
+        status=200)
 
     # Storage PUT
     responses.add(responses.PUT, 'http://storage.example.com', status=200)
@@ -382,20 +393,21 @@ def add_mock_delete_detector_response(detector_id):
         api_url('detectors/%s/' % detector_id), status=204)
 
 
-@pytest.mark.parametrize(('identity_key'), (None, 'abc'))
+@pytest.mark.parametrize(('identity_key', 'multispectral'), ((None, False), ('abc', True)))
 @responses.activate
-def test_upload_raster(identity_key):
+def test_upload_raster(identity_key, multispectral):
     client = _client()
-    add_mock_raster_upload_responses()
+    add_mock_raster_upload_responses(identity_key, multispectral)
     add_mock_operations_responses('success')
-    # This just tests that this doesn't raise
     with tempfile.NamedTemporaryFile() as f:
+        # This just tests that this doesn't raise
         client.upload_raster(
             f.name,
             name='test 1',
-            folder_id='0',
+            folder_id='a-folder-uuid',
             captured_at='2020-01-10T12:34:56.789Z',
-            identity_key=identity_key
+            identity_key=identity_key,
+            multispectral=multispectral
         )
     assert len(responses.calls) == 4
 

@@ -194,15 +194,17 @@ def test_create_raster__from_file(monkeypatch, capsys):
     assert mock_create_raster.called is False
     assert mock_add_raster.called is False
     parse_args(['create', 'raster', 'file', 'my_path_to_tiff'])
-    mock_create_raster.assert_called_with('my_path_to_tiff', 'foobar', None)
+    mock_create_raster.assert_called_with(
+        'my_path_to_tiff', 'foobar', None, multispectral=False)
     assert mock_add_raster.called is False
     mock_create_raster.reset_mock()
     mock_add_raster.reset_mock()
     parse_args([
         'create', 'raster', 'file', 'my_path_to_tiff', '--name', 'beacon', '--folder', 'eggs',
-        '--detector', 'a', 'b', 'c'
+        '--detector', 'a', 'b', 'c', '--multispectral'
     ])
-    mock_create_raster.assert_called_with('my_path_to_tiff', 'beacon', 'eggs')
+    mock_create_raster.assert_called_with(
+        'my_path_to_tiff', 'beacon', 'eggs', multispectral=True)
     assert mock_add_raster.call_count == 3
     mock_add_raster.assert_called_with('spam', 'c')
 

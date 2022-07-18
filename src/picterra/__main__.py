@@ -121,6 +121,9 @@ def parse_args(args):
     create_raster_from_file_parser.add_argument(
         "-d", "--detector", help="ID(s) of the detector(s) to which we'll associate the raster",
         type=str, required=False, nargs='+', default=[])
+    create_raster_from_file_parser.add_argument(
+        '--multispectral', default=False, action='store_true',
+        help=" If True, the raster is in multispectral mode and can have an associated band specification")
     # create raster (from remote imagery server)
     create_raster_from_remote_parser = create_raster_subparsers.add_parser(
         'remote', help="Uploads raster from a remote imagery server")
@@ -299,7 +302,8 @@ def parse_args(args):
                     options.path,
                     options.folder)
                 )
-                raster_id = client.upload_raster(options.path, options.name, options.folder)
+                raster_id = client.upload_raster(
+                    options.path, options.name, options.folder, multispectral=options.multispectral)
             elif options.raster == 'remote':
                 footprint = {
                     "type": "Polygon",

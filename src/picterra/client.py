@@ -156,27 +156,32 @@ class APIClient():
             data += r['results']
         return data
 
-    def upload_raster(self, filename: str, name: str, folder_id=None,
-                      captured_at=None, identity_key=None):
+    def upload_raster(
+        self, filename: str, name: str, folder_id: Optional[str]=None,
+        captured_at: Optional[str]=None, identity_key:Optional[str]=None,
+        multispectral: bool = False
+    ):
         """
         Upload a raster to picterra.
 
         Args:
-            filename (str): Local filename of raster to upload
-            name (str): A human-readable name for this raster
-            folder_id (optional, str): Id of the folder this raster
+            filename: Local filename of raster to upload
+            name: A human-readable name for this raster
+            folder_id: Id of the folder this raster
                 belongs to; if not provided, the raster will be put in the
                 "Picterra API Project" folder
-            captured_at (optional, str): ISO-8601 date and time at which this
+            captured_at: ISO-8601 date and time at which this
                 raster was captured, YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z];
                 e.g. "2020-01-01T12:34:56.789Z"
-            identity_key (optional, str): Personal identifier for this raster.
+            identity_key: Personal identifier for this raster.
+            multispectral: If True, the raster is in multispectral mode and can have an associated band specification
 
         Returns:
             raster_id (str): The id of the uploaded raster
         """
         data = {
-            'name': name
+            'name': name,
+            'multispectral': multispectral
         }
         if folder_id is not None:
             data.update({
