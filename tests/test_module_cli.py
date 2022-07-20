@@ -1,14 +1,12 @@
 import pytest
-import subprocess
-import os
-import argparse
-import responses
 import json
 from urllib.parse import urljoin
 from unittest.mock import MagicMock, patch, mock_open
 
-from picterra.__main__ import parse_args, APIClient
+from picterra.__main__ import parse_args
+from picterra.helpers import APIClient
 from picterra import __main__
+from picterra.command_helpers import detect, create
 
 
 def _mock_read_in_chunks(f):
@@ -74,7 +72,7 @@ def test_prediction(monkeypatch, capsys):
     monkeypatch.setattr(APIClient, 'download_result_to_feature_collection', mock_download_file)
     monkeypatch.setattr(APIClient, 'download_operation_results_to_file', mock_download_url)
     monkeypatch.setattr(APIClient, 'get_operation_results_url', mock_url)
-    monkeypatch.setattr(__main__, '_read_in_chunks', _mock_read_in_chunks)
+    monkeypatch.setattr(detect, '_read_in_chunks', _mock_read_in_chunks)
     with pytest.raises(BaseException):
         parse_args(['detect'])
     captured = capsys.readouterr()
@@ -179,7 +177,7 @@ def test_create_raster__from_file(monkeypatch, capsys):
     mock_raster_datetime_name = MagicMock(return_value='foobar')
     monkeypatch.setattr(APIClient, 'upload_raster', mock_create_raster)
     monkeypatch.setattr(APIClient, 'add_raster_to_detector', mock_add_raster)
-    monkeypatch.setattr(__main__, '_raster_datetime_name', mock_raster_datetime_name)
+    monkeypatch.setattr(create, '_raster_datetime_name', mock_raster_datetime_name)
     assert mock_create_raster.called is False
     assert mock_add_raster.called is False
     with pytest.raises(BaseException):
