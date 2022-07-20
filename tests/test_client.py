@@ -378,7 +378,7 @@ def add_mock_edit_raster_response(raster_id, body):
     responses.add(
         responses.PUT,
         api_url('rasters/%s/' % raster_id),
-        #match=[responses.matchers.json_params_matcher(body)],
+        match=[responses.matchers.json_params_matcher(body)],
         status=204)
 
 
