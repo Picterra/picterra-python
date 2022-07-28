@@ -32,7 +32,7 @@ __version__ = get_distribution('picterra').version
 def parse_args(args):
     # create the top-level parser
     parser = argparse.ArgumentParser(
-        prog='picterra', description='Picterra API wrapper CLI tool', epilog=f'© Picterra {date.today().year}')
+        prog='picterra', description='Picterra API wrapper CLI tool', epilog='© Picterra '+ str(date.today().year))
     # Parser for version and verbosity
     parser.add_argument('--version', action='version', version=__version__)
     parser.add_argument("-v", help="set output verbosity", action="store_true")
