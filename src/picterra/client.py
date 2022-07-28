@@ -322,10 +322,10 @@ class APIClient():
                 raster was captured, YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z];
                 e.g. "2020-01-01T12:34:56.789Z"
             identity_key: New personal identifier for this raster.
-            multispectral_band_specification: If True, the raster is in multispectral mode and can have an associated band specification
+            multispectral_band_specification: The new band specification, see https://docs.picterra.ch/advanced-topics/multispectral
 
         Returns:
-            raster_id (str): The id of the uploaded raster
+            raster_id (str): The id of the edited raster
         """
         data = {}
         if name is not None:
