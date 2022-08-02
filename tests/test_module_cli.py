@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch, mock_open
 from picterra.__main__ import parse_args
 from picterra.helpers import APIClient
 from picterra import __main__
-from picterra.command_helpers import detect, create
+from picterra.command_parsers import detect, create
 
 
 def _mock_read_in_chunks(f):
@@ -385,3 +385,26 @@ def test_download_raster(monkeypatch, capsys):
     parse_args(['download', 'raster', 'my_raster_id', 'a_path'])
     assert mock_download.called is True
     mock_download.assert_called_with('my_raster_id', 'a_path')
+
+
+@pytest.mark.parametrize("args,content", [
+    ([], '{create,delete,detect,download,edit,list,train}'),
+    (['list'], "List user's detectors"),
+    (['create'], "Add an annotation to a raster for a given detector"),
+    (['create raster'], "Uploads raster from a local file"),
+    (['create annotation'], "following arguments are required: path, raster, detector"),
+    (['create detection_area'], "required: path, raster"),
+    (['delete'], "Removes the detection areas of raster, if any"),
+    (['delete raster'], "{raster}"),
+    (['detect'], "[--output-type {url,geometries}]"),
+    (['download'], "Downloads a raster"),
+    (['edit'], "usage: picterra edit [-h] {raster}"),
+    (['create train'], "required: detector"),
+])
+def test_parser_specific_helpers(monkeypatch, capsys, args, content):
+    """Checks different helpers are shown depending on subparser"""
+    monkeypatch.setattr(APIClient, '__init__', _fake__init__)
+    with pytest.raises(BaseException):
+        parse_args(args)
+        captured = capsys.readouterr()
+        assert content in captured.err

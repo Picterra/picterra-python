@@ -13,19 +13,19 @@ import sys
 from datetime import date
 
 from .client import APIError
-from .command_helpers.create import CreateCommandParser
-from .command_helpers.delete import DeleteCommandParser
-from .command_helpers.detect import DetectCommandParser
-from .command_helpers.download import DownloadCommandParser
-from .command_helpers.edit import EditCommandParser
-from .command_helpers.list import ListCommandParser
-from .command_helpers.train import TrainCommandParser
+from .command_parsers.create import set_parser as create_set_parser
+from .command_parsers.delete import set_parser as set_delete_parser
+from .command_parsers.detect import set_parser as set_detect_parser
+from .command_parsers.download import set_parser as set_download_parser
+from .command_parsers.edit import set_parser as set_edit_parser
+from .command_parsers.list import set_parser as set_list_parser
+from .command_parsers.train import set_parser as set_train_parser
 from .helpers import InvalidOptionError
 
 from pkg_resources import get_distribution
 
-
 logger = logging.getLogger(__name__)
+
 
 __version__ = get_distribution('picterra').version
 
@@ -41,31 +41,25 @@ def parse_args(args):
     # Create the parser for the subcommands
     subparsers = parser.add_subparsers(dest='command')
     # Create the parsers for the different commands
-    command_parsers = {
-        'create': CreateCommandParser(subparsers, logger),
-        'delete': DeleteCommandParser(subparsers, logger),
-        'detect': DetectCommandParser(subparsers, logger),
-        'download': DownloadCommandParser(subparsers, logger),
-        'edit': EditCommandParser(subparsers, logger),
-        'list': ListCommandParser(subparsers, logger),
-        'train': TrainCommandParser(subparsers, logger)
-    }
+    create_set_parser(subparsers)
+    set_delete_parser(subparsers)
+    set_detect_parser(subparsers)
+    set_download_parser(subparsers)
+    set_edit_parser(subparsers)
+    set_list_parser(subparsers)
+    set_train_parser(subparsers)
     # Parse the command input
-    options = parser.parse_args(args)
+    args = parser.parse_args(args)
     # Verbosity increase (optional)
-    if options.v:
+    if args.v:
         logging.basicConfig(level=logging.DEBUG)
     # Branch depending on command
     try:
-        cmd = options.command
-        if cmd and cmd in command_parsers:
-            command_parsers[cmd].handle_command(options)
-        else:
-            parser.print_help()
+        args.func(args)
     except InvalidOptionError as e:
         e.parser.print_help()
         sys.exit(0)
-    return options
+    return args
 
 
 def main():
