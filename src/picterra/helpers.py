@@ -20,12 +20,4 @@ class CommandParser():
         self.parser = parser
         self.logger = logger
         self.parsers_map = None
-        try:
-            self.client = APIClient()
-        except APIError as e:
-            sys.exit("\033[91m%s\033[00m" % e)
-
-    def handle_command(self, options: Namespace):
-        """TODO"""
-        if not self.client:
-            self.parser.print_help()
+        
