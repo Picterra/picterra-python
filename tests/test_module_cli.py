@@ -1,6 +1,5 @@
 import pytest
 import json
-from urllib.parse import urljoin
 from unittest.mock import MagicMock, patch, mock_open
 
 from picterra.__main__ import parse_args
@@ -328,6 +327,16 @@ def test_delete_raster(monkeypatch, capsys):
 
 
 def test_edit_raster(monkeypatch, capsys):
+    mock_resp = MagicMock(return_value={
+        'multispectral_band_specification': {
+            'vizbands': [4, 5, 6],
+            'ranges': []
+        }
+    })
+    api_url_mock = MagicMock()
+    def _fake__init__(s):
+        s._api_url = api_url_mock
+        s.sess = MagicMock(get=lambda u: MagicMock(ok=True, json=mock_resp))
     monkeypatch.setattr(APIClient, '__init__', _fake__init__)
     mock_edit = MagicMock()
     monkeypatch.setattr(APIClient, 'edit_raster', mock_edit)
@@ -339,7 +348,20 @@ def test_edit_raster(monkeypatch, capsys):
     assert 'raster' in captured.err
     assert mock_edit.called is False
     parse_args(['edit', 'raster', 'a-raster-uuid', '--name', 'beacon'])
-    mock_edit.assert_called_with('a-raster-uuid', name='beacon')
+    mock_edit.assert_called_with(
+        'a-raster-uuid', name='beacon', multispectral_band_specification=None)
+    mock_edit.reset_mock()
+    parse_args([
+        'edit', 'raster', 'a-raster-uuid', '--red', '1', '--blue', '0',
+        '--ranges', '3:5', '44:66', '67:1111', '2000:3000'
+    ])
+    mock_edit.assert_called_with(
+        'a-raster-uuid', name=None,
+        multispectral_band_specification={
+            'vizbands': [1, 5, 0],
+            'ranges': [[3, 5], [44, 66], [67, 1111], [2000, 3000]]
+        })
+    api_url_mock.assert_called_with('rasters/a-raster-uuid/')
 
 
 def test_delete_detector(monkeypatch, capsys):
