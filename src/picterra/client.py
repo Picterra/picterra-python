@@ -527,13 +527,16 @@ class APIClient():
 
     def edit_detector(
         self, detector_id: str,
-        name: str = None, detection_type: str = None, output_type: str = None,
-        training_steps: int = None
+        name: Optional[str] = None, detection_type: Optional[str] = None, output_type: Optional[str] = None,
+        training_steps: Optional[int] = None, backbone: Optional[str] = None, tile_size: Optional[int] = None,
+        background_sample_ratio: Optional[float] = None
     ):
         """
         Edit a detector
 
         This a **beta** function, subject to change.
+
+        Please note that depending on your plan some settings may not be editable.
 
         Args:
             detector_id: identifier of the detector
@@ -541,6 +544,9 @@ class APIClient():
             detection_type: The type of the detector (one of 'count', 'segmentation')
             output_type: The output type of the detector (one of 'polygon', 'bbox')
             training_steps: The training steps the detector (int in [500, 40000])
+            backbone: detector backbone (one of 'resnet18', 'resnet34', 'resnet50')
+            tile_size: tile size (see HTTP API docs for the allowed values)
+            background_sample_ratio: bg sample ratio (between 0 and 1)
 
         Raises:
             APIError: There was an error while editing the detector
@@ -549,7 +555,10 @@ class APIClient():
         body_data = {'configuration': {}}
         if name:
             body_data['name'] = name
-        for i in ('detection_type', 'output_type', 'training_steps'):
+        for i in (
+            'detection_type', 'output_type', 'training_steps',
+            'backbone', 'tile_size', 'background_sample_ratio'
+        ):
             if locals()[i]:
                 body_data['configuration'][i] = locals()[i]
         # Call API and check response

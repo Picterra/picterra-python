@@ -581,27 +581,19 @@ def test_delete_detector():
 def test_detector_edit():
     client = _client()
     detector_id = 'foobar'
-    bad_args = [
-        {'detection_type': 'spam'}, {'output_type': 'spam'}, {'training_steps': 10**6}
+    args = [
+        {'detection_type': 'segmentation'}, {'output_type': 'bbox'}, {'training_steps': 10**3},
+        {'backbone': 'resnet50'}, {'tile_size': 512}, {'background_sample_ratio': 0.3},
     ]
-    good_args = [
-        {'detection_type': 'segmentation'}, {'output_type': 'bbox'}, {'training_steps': 10**3}
-    ]
-    for bad_arg in bad_args:
-        with pytest.raises(ValueError) as e:
-            client.edit_detector(detector_id, **bad_arg)
-            assert bad_arg in e
-    with pytest.raises(ValueError):
-        client.edit_detector(detector_id, **dict(p for d in bad_args for p in d.items()))
     add_mock_detector_edit_response(detector_id)
     client.edit_detector(detector_id)
-    for good_arg in good_args:
-        add_mock_detector_edit_response(detector_id, **good_arg)
-        client.edit_detector(detector_id, **good_arg)
-    merge = dict(p for d in good_args for p in d.items())
+    for a in args:
+        add_mock_detector_edit_response(detector_id, **a)
+        client.edit_detector(detector_id, **a)
+    merge = dict(p for d in args for p in d.items())
     add_mock_detector_edit_response(detector_id, **merge)
     client.edit_detector(detector_id, **merge)
-    assert len(responses.calls) == 5
+    assert len(responses.calls) == 8
 
 
 @responses.activate
