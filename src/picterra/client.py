@@ -435,18 +435,26 @@ class APIClient():
 
     def create_detector(
         self, name: str = '', detection_type: str = 'count',
-        output_type: str = 'polygon', training_steps: int = 500
+        output_type: str = 'polygon', training_steps: int = 500,
+        backbone: str = 'resnet34', tile_size: int = 256,
+        background_sample_ratio: float = 0.25
     ) -> str:
         """
         Creates a new detector
 
         This a **beta** function, subject to change.
 
+        Please note that depending on your plan some setting cannot be different
+        from the default ones
+
         Args:
             name: Name of the detector
             detection_type: Type of the detector (one of 'count', 'segmentation')
             output_type: Output type of the detector (one of 'polygon', 'bbox')
             training_steps: Training steps the detector (integer between 500 & 40000)
+            backbone: detector backbone (one of 'resnet18', 'resnet34', 'resnet50')
+            tile_size: tile size (see HTTP API docs for the allowed values)
+            background_sample_ratio: bg sample ratio (between 0 and 1)
 
         Returns:
             detector_id (str): The id of the detector
@@ -458,7 +466,10 @@ class APIClient():
         body_data = {'configuration': {}}
         if name:
             body_data['name'] = name
-        for i in ('detection_type', 'output_type', 'training_steps'):
+        for i in (
+            'detection_type', 'output_type', 'training_steps',
+            'backbone', 'tile_size', 'background_sample_ratio'
+        ):
             body_data['configuration'][i] = locals()[i]
         # Call API and check response
         resp = self.sess.post(
