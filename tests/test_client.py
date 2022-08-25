@@ -534,24 +534,16 @@ def test_list_rasters():
 @responses.activate
 def test_detector_creation():
     client = _client()
-    bad_args = [
-        {'detection_type': 'spam'}, {'output_type': 'spam'}, {'training_steps': 10**6}
+    args = [
+        {'detection_type': 'segmentation'}, {'output_type': 'bbox'}, {'training_steps': 10**3},
+        {'backbone': 'resnet18'}, {'tile_size': 352}, {'background_sample_ratio': 0.3}
     ]
-    good_args = [
-        {'detection_type': 'segmentation'}, {'output_type': 'bbox'}, {'training_steps': 10**3}
-    ]
-    for bad_arg in bad_args:
-        with pytest.raises(ValueError) as e:
-            client.create_detector(**bad_arg)
-            assert bad_arg in e
-    with pytest.raises(ValueError):
-        client.create_detector(**dict(p for d in bad_args for p in d.items()))
     add_mock_detector_creation_response()
     client.create_detector()
-    for good_arg in good_args:
-        add_mock_detector_creation_response(**good_arg)
-        client.create_detector(**good_arg)
-    merge = dict(p for d in good_args for p in d.items())
+    for a in args:
+        add_mock_detector_creation_response(**a)
+        client.create_detector(**a)
+    merge = dict(p for d in args for p in d.items())
     add_mock_detector_creation_response(**merge)
     detector_id = client.create_detector(**merge)
     assert detector_id == 'foobar'
