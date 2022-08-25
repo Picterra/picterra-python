@@ -37,30 +37,6 @@ class _RequestsSession(requests.Session):
         return super().request(*args, **kwargs)
 
 
-def validate_detector_args(detection_type: str, output_type: str, training_steps: int):
-    if detection_type:
-        valid_types = ('count', 'segmentation')
-        if detection_type not in valid_types:
-            raise ValueError(
-                'Invalid detection type "%s", choose one of %s.' % (
-                    detection_type, ', '.join(valid_types))
-            )
-    if output_type:
-        valid_types = ('polygon', 'bbox')
-        if output_type not in valid_types:
-            raise ValueError(
-                'Invalid output type "%s", choose one of %s.' % (
-                    output_type, ', '.join(valid_types))
-            )
-    if training_steps:
-        valid_training_steps = [500, 40000]
-        if not (valid_training_steps[0] <= training_steps <= valid_training_steps[1]):
-            raise ValueError(
-                'Steps value %d should be in [%s, %s].' % (
-                    training_steps, valid_training_steps[0], valid_training_steps[1])
-            )
-
-
 def _download_to_file(url, filename):
     if not (os.path.exists(filename) and os.path.isfile(filename)):
         raise ValueError('Invalid file: ' + filename)
@@ -478,8 +454,6 @@ class APIClient():
         Raises:
             APIError: There was an error while creating the detector
         """
-        # Validate args
-        validate_detector_args(detection_type, output_type, training_steps)
         # Build request body
         body_data = {'configuration': {}}
         if name:
@@ -560,8 +534,6 @@ class APIClient():
         Raises:
             APIError: There was an error while editing the detector
         """
-        # Validate args
-        validate_detector_args(detection_type, output_type, training_steps)
         # Build request body
         body_data = {'configuration': {}}
         if name:
