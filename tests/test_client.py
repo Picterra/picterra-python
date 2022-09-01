@@ -42,8 +42,14 @@ def add_mock_rasters_list_response():
             {"id": "43", "status": "ready", "name": "raster4"}
         ]
     }
-    responses.add(responses.GET, api_url('rasters/?page_number=1'), json=data1, status=200)
-    responses.add(responses.GET, api_url('rasters/?page_number=2'), json=data2, status=200)
+    responses.add(
+        responses.GET, api_url('rasters/'),
+        json=data1, match=[responses.matchers.query_param_matcher({'page_number': '1'})],
+        status=200)
+    responses.add(
+        responses.GET, api_url('rasters/'),
+        json=data2, match=[responses.matchers.query_param_matcher({'page_number': '2'})],
+        status=200)
 
 
 def add_mock_rasters_in_folder_list_response(folder_id):
@@ -53,7 +59,25 @@ def add_mock_rasters_in_folder_list_response(folder_id):
             {"id": "77", "status": "ready", "name": "raster_in_folder1", "folder_id": folder_id},
         ]
     }
-    responses.add(responses.GET, api_url('rasters/?page_number=1&folder=%s' % folder_id), json=data, status=200)
+    responses.add(
+        responses.GET,
+        api_url('rasters/'),
+        match=[responses.matchers.query_param_matcher({'folder': folder_id, 'page_number': '1'})], json=data,
+        status=200)
+
+
+def add_mock_rasters_in_search_list_response(string):
+    data = {
+        "count": 1, "next": None, "previous": None, "page_size": 2,
+        "results": [
+            {"id": "77", "status": "ready", "name": string + '_raster'},
+        ]
+    }
+    responses.add(
+        responses.GET,
+        api_url('rasters/'),
+        match=[responses.matchers.query_param_matcher({'search': string, 'page_number': '1'})], json=data,
+        status=200)
 
 
 def add_mock_detectors_list_response():
@@ -507,6 +531,10 @@ def test_list_rasters():
     rasters = client.list_rasters('foobar')
     assert rasters[0]['name'] == 'raster_in_folder1'
     assert rasters[0]['folder_id'] == 'foobar'
+    # Search list
+    add_mock_rasters_in_search_list_response('spam')
+    rasters = client.list_rasters('', 'spam')
+    assert rasters[0]['name'] == 'spam_raster'
 
 
 @responses.activate
@@ -538,10 +566,15 @@ def test_detector_creation():
 @responses.activate
 def test_list_detectors():
     client = _client()
+    # Full list
     add_mock_detectors_list_response()
     detectors = client.list_detectors()
     assert detectors[0]['name'] == 'detector1'
     assert detectors[1]['name'] == 'detector2'
+    # Search list
+    add_mock_detectors_in_search_list_response('spam')
+    detectors = client.list_detectors('spam')
+    assert detectors[0]['name'] == 'spam_detector'
 
 
 @responses.activate

@@ -8,14 +8,14 @@ logger = logging.getLogger(__name__)
 
 def handle_command(options, client, parsers_map):
     if options.list == 'rasters':
-        rasters = client.list_rasters(options.folder)
+        rasters = client.list_rasters(options.folder, options.search)
         if options.output == 'ids_only':
             for r in rasters:
                 print(r['id'])
         else:  # default json
             print(json.dumps(rasters))
     elif options.list == 'detectors':
-        print(json.dumps(client.list_detectors()))
+        print(json.dumps(client.list_detectors(options.search)))
     else:
         raise InvalidOptionError(parsers_map['list'])
 
@@ -35,6 +35,9 @@ def set_parser(parser):
         "--output", help="Type of output", type=str, choices=['json', 'ids_only'], default='json')
     list_rasters_parser.add_argument(
         "--folder", help="Id of the folder/project whose rasters we want to list",
+        type=str, required=False)
+    list_rasters_parser.add_argument(
+        "--search", help="String to search in the raster names to filter",
         type=str, required=False)
     ## List detectors
     list_detectors_parser = list_subparsers.add_parser(
