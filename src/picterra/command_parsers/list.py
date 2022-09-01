@@ -42,6 +42,10 @@ def set_parser(parser):
     ## List detectors
     list_detectors_parser = list_subparsers.add_parser(
         'detectors', help="List user's detectors")
+    list_detectors_parser.add_argument(
+        "--search", help="String to search in the detector names to filter",
+        type=str, required=False)
+    # Parsers mapping
     parsers_map = {
         'list': list_parser,
         'rasters': list_rasters_parser,
