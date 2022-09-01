@@ -8,7 +8,7 @@ import warnings
 from urllib.parse import urljoin, urlencode
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-from typing import Optional
+from typing import List, Optional
 
 logger = logging.getLogger()
 
@@ -275,12 +275,15 @@ class APIClient():
         operation = self._wait_until_operation_completes(resp.json())
         return operation['metadata']['raster_id']
 
-    def list_rasters(self, folder_id=None):
+    def list_rasters(
+        self, folder_id: Optional[str] = None, search_string: Optional[str] = None
+    ) -> List[dict]:
         """
         List of rasters metadata
 
         Args:
             folder_id (str, optional): The id of the folder to search rasters in
+            search_string (str, optional): The search term used to filter rasters by name
 
         Returns:
             A list of rasters dictionaries
@@ -303,7 +306,11 @@ class APIClient():
                 }
 
         """
-        params = {'folder': folder_id} if folder_id else {}
+        params = {}
+        if folder_id:
+            params['folder'] = folder_id
+        if search_string:
+            params['search'] = search_string
         return self._paginate_through_list('rasters', params)
     
     def get_raster(
@@ -509,8 +516,10 @@ class APIClient():
             raise APIError(resp.text)
         return resp.json()['id']
 
-    def list_detectors(self):
+    def list_detectors(self, search_string: Optional[str] = None):
         """
+        Args:
+            search_string (str, optional): The search term used to filter rasters by name
         Returns:
             A list of detectors dictionaries
 
@@ -538,7 +547,7 @@ class APIClient():
                 }
 
         """
-        return self._paginate_through_list('detectors')
+        return self._paginate_through_list('detectors', {'search': search_string})
 
     def edit_detector(
         self, detector_id: str,

@@ -35,8 +35,8 @@ def test_rasters_list(monkeypatch):
     assert mock_rasterlist.called is True
     mock_rasterlist.reset_mock()
     assert mock_rasterlist.called is False
-    parse_args(['list', 'rasters', '--folder', 'foobar'])
-    mock_rasterlist.assert_called_with('foobar')
+    parse_args(['list', 'rasters', '--folder', 'foobar', '--search', 'spam'])
+    mock_rasterlist.assert_called_with('foobar', 'spam')
 
 def test_rasters_list_output_format(monkeypatch, capsys):
     # Setup
