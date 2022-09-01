@@ -64,6 +64,10 @@ def test_detectors_list(monkeypatch):
     monkeypatch.setattr(APIClient, 'list_detectors', mock_detectorslist)
     parse_args(['list', 'detectors'])
     mock_detectorslist.called is True
+    mock_detectorslist.reset_mock()
+    parse_args(['list', 'detectors', '--search', 'spam'])
+    mock_detectorslist.assert_called_with('spam')
+
 
 def test_prediction(monkeypatch, capsys):
     monkeypatch.setattr(APIClient, '__init__', _fake__init__)

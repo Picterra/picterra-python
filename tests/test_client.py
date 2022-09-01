@@ -80,23 +80,35 @@ def add_mock_rasters_in_search_list_response(string):
         status=200)
 
 
-def add_mock_detectors_list_response():
+def add_mock_detectors_list_response(string=None):
     data1 = {
         "count": 4, "next": api_url('detectors/?page_number=2'), "previous": None, "page_size": 2,
         "results": [
-            {"id": "40", "type": "count", "name": "detector1"},
-            {"id": "41", "type": "count", "name": "detector2"}
+            {"id": "40", "type": "count", "name": string or "detector1"},
+            {"id": "41", "type": "count", "name": string or "detector2"}
         ]
     }
     data2 = {
         "count": 4, "next": None, "previous": api_url('detectors/?page_number=1'), "page_size": 2,
         "results": [
-            {"id": "42", "type": "count", "name": "detector3"},
-            {"id": "43", "type": "count", "name": "detector4"}
+            {"id": "42", "type": "count", "name": string or "detector3"},
+            {"id": "43", "type": "count", "name": string or "detector4"}
         ]
     }
-    responses.add(responses.GET, api_url('detectors/?page_number=1'), json=data1, status=200)
-    responses.add(responses.GET, api_url('detectors/?page_number=2'), json=data2, status=200)
+    qs_params = {'page_number': '1'}
+    if string:
+        qs_params['search'] = string
+    responses.add(
+        responses.GET, api_url('detectors/'),
+         match=[responses.matchers.query_param_matcher(qs_params)], json=data1,
+         status=200)
+    qs_params2 = {'page_number': '2'}
+    if string:
+        qs_params2['search'] = string
+    responses.add(
+        responses.GET, api_url('detectors/'),
+        json=data2,  match=[responses.matchers.query_param_matcher(qs_params2)],
+        status=200)
 
 
 def add_mock_detector_creation_response(**kwargs):
@@ -572,9 +584,10 @@ def test_list_detectors():
     assert detectors[0]['name'] == 'detector1'
     assert detectors[1]['name'] == 'detector2'
     # Search list
-    add_mock_detectors_in_search_list_response('spam')
+    add_mock_detectors_list_response('spam')
     detectors = client.list_detectors('spam')
-    assert detectors[0]['name'] == 'spam_detector'
+    assert detectors[0]['name'] == 'spam'
+    assert len(responses.calls) == 4
 
 
 @responses.activate

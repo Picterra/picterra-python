@@ -516,10 +516,10 @@ class APIClient():
             raise APIError(resp.text)
         return resp.json()['id']
 
-    def list_detectors(self, search_string: Optional[str] = None):
+    def list_detectors(self, search_string: Optional[str] = None) -> List[dict]:
         """
         Args:
-            search_string (str, optional): The search term used to filter rasters by name
+            search_string (str, optional): The term used to filter detectors by name
         Returns:
             A list of detectors dictionaries
 
@@ -547,7 +547,9 @@ class APIClient():
                 }
 
         """
-        return self._paginate_through_list('detectors', {'search': search_string})
+        return self._paginate_through_list(
+            'detectors',
+            {'search': search_string} if search_string else None)
 
     def edit_detector(
         self, detector_id: str,
