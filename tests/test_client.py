@@ -452,6 +452,19 @@ def test_edit_raster(edited_data):
 
 
 @responses.activate
+def test_get_raster():
+    """Test the raster information"""
+    RASTER_ID = 'foobar'
+    client = _client()
+    responses.add(
+        responses.GET,
+        api_url('rasters/%s/' % RASTER_ID), status=201,
+        json={})
+    resp = client.get_raster(RASTER_ID)
+    assert len(responses.calls) == 1
+
+
+@responses.activate
 def test_delete_raster():
     RASTER_ID = 'foobar'
     client = _client()
@@ -494,7 +507,6 @@ def test_list_rasters():
     rasters = client.list_rasters('foobar')
     assert rasters[0]['name'] == 'raster_in_folder1'
     assert rasters[0]['folder_id'] == 'foobar'
-
 
 
 @responses.activate

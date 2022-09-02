@@ -41,6 +41,23 @@ See the `examples` folder for examples.
 [![Read the Docs](https://storage.googleapis.com/cloud.picterra.ch/external/assets/python_api_docs_screenshot.png)](https://picterra-python.readthedocs.io/)
 
 
+## Test locally
+
+run:
+```
+python setup.py install
+```
+
+Then you need to set the following environment variables:
+```bash
+export PICTERRA_API_KEY='' # Generate from local platform account Ex:1234
+export PICTERRA_BASE_URL='' # Ex: http://localhost:8080/public/api/v2/
+```
+
+
 ## Development
 
-In order to test locally, run `python setup.py test`
+In order to test locally, run:
+```bash
+python setup.py test
+```
