@@ -305,6 +305,26 @@ class APIClient():
         """
         params = {'folder': folder_id} if folder_id else {}
         return self._paginate_through_list('rasters', params)
+    
+    def get_raster(
+        self, raster_id: str
+    ):
+        """
+        Get raster information
+
+        Args:
+            raster_id (str): id of the raster
+
+        Raises:
+            APIError: There was an error while getting the raster information
+
+        Returns:
+            dict: Dictionary of the information
+        """
+        resp = self.sess.get(self._api_url('rasters/%s/' % raster_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+        return resp.json()
 
     def edit_raster(
         self, raster_id: str,
