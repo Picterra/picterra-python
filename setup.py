@@ -14,12 +14,12 @@ setup(
         'flake8',
     ],
     install_requires=[
-        'requests<=2.26.0',
+        'requests',
     ],
     tests_require=[
-        'pytest===6.1.2',
+        'pytest==7.1',
         'flake8',
-        'responses==0.17.0',
+        'responses==0.22',
         'httpretty'
     ],
 )
