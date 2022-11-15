@@ -27,6 +27,9 @@ class _RequestsSession(requests.Session):
     def __init__(self, *args, **kwargs):
         self.timeout = kwargs.pop('timeout')
         super().__init__(*args, **kwargs)
+        self.headers.update({
+            'User-Agent': 'picterra-python %s' % self.headers['User-Agent']
+        })
 
     def request(self, *args, **kwargs):
         kwargs.setdefault('timeout', self.timeout)
