@@ -229,6 +229,8 @@ class APIClient():
         folder_id: Optional[str] = None, captured_at: Optional[str] = None
     ) -> str:
         """
+        **closed beta**: This API endpoint is currently in closed beta and unstable.
+
         Upload a remote raster to picterra (WMS or XYZ imagery server sources).
 
         Args:
@@ -253,6 +255,8 @@ class APIClient():
             ValueError: One of the parameters is wrong
 
         """
+        warnings.warn("This function is unstable and currently in closed beta. Use at your own risks")
+
         valid_types = ['wms', 'xyz']
         server_type = server_type.lower()
         if server_type not in valid_types:
