@@ -106,7 +106,7 @@ class APIClient():
             total=max_retries,
             status_forcelist=[429, 502, 503, 504],
             backoff_factor=backoff_factor,
-            method_whitelist=["GET"]
+            allowed_methods=["GET"]
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.sess.mount("https://", adapter)
