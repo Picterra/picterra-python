@@ -50,8 +50,8 @@ python setup.py install
 
 Then you need to set the following environment variables:
 ```bash
-export PICTERRA_API_KEY='' # Generate from local platform account Ex:1234
-export PICTERRA_BASE_URL='' # Ex: http://localhost:8080/public/api/v2/
+export PICTERRA_API_KEY=<> # Generate from local platform account Ex:1234
+export PICTERRA_BASE_URL=<> # Ex: http://localhost:8080/public/api/v2/
 ```
 
 
