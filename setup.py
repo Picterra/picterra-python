@@ -15,6 +15,8 @@ setup(
     ],
     install_requires=[
         'requests',
+        # We use the new `allowed_methods` option
+        'urllib3>=1.26.0',
     ],
     tests_require=[
         'pytest==7.1',
