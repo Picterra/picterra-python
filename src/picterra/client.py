@@ -6,7 +6,7 @@ import time
 import warnings
 from typing import List, Optional
 from urllib.parse import urlencode, urljoin
-
+from uuid import UUID
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
@@ -727,3 +727,26 @@ class APIClient():
         resp = self.sess.post(self._api_url('detectors/%s/train/' % detector_id))
         assert resp.status_code == 201, resp.status_code
         self._wait_until_operation_completes(resp.json())
+
+
+    def run_advanced_tool(self, tool_id: UUID, inputs: dict, outputs: dict):
+            """
+            This is an experimental feature
+
+            Runs a tool and waits for its execution, returning the finished operation metadata
+
+            Args:
+                tool_id: The id of the tool to run
+                inputs: tool inputs
+                outputs: tool outputs
+
+            Raises:
+                APIError: There was an error while launching and executing the tool
+            """
+            resp = self.sess.post(
+                self._api_url('advanced_tools/%s/run/' % tool_id),
+                json={'inputs': inputs, 'outputs': outputs}
+            )
+            if not resp.ok:
+                raise APIError(resp.text)
+            return self._wait_until_operation_completes(resp.json())
