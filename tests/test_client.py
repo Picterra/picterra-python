@@ -649,3 +649,22 @@ def test_timeout():
     assert 'timeout' in full_error
     assert 'read timeout=%d' % timeout in full_error
     assert len(httpretty.latest_requests()) == 1
+
+@responses.activate
+def test_run_advanced_tool():
+    _add_api_response(
+        'advanced_tools/foobar/run/',
+        responses.POST,
+        json=OP_RESP,
+        match=responses.matchers.json_params_matcher({
+            'inputs': { 'foo': 'bar' },
+            'outputs': {'spam': [1, 2], 'bar': { 'foo': None, 'bar': 4 }}
+        }))
+    add_mock_operations_responses('success')
+    client = _client()
+    assert client.run_advanced_tool(
+        'foobar',
+        { 'foo': 'bar' },
+        {'spam': [1, 2], 'bar': { 'foo': None, 'bar': 4 }}
+    )['type'] == 'mock_operation_type'
+    assert len(responses.calls) == 2
