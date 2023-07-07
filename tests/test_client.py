@@ -17,6 +17,8 @@ TEST_POLL_INTERVAL = 0.1
 
 OPERATION_ID = 21
 
+OP_RESP = { 'operation_id': OPERATION_ID, 'poll_interval': TEST_POLL_INTERVAL }
+
 
 def _client(max_retries=0, timeout=1, **kwargs):
     os.environ['PICTERRA_BASE_URL'] = TEST_API_URL
@@ -26,6 +28,30 @@ def _client(max_retries=0, timeout=1, **kwargs):
 
 def api_url(path):
     return urljoin(TEST_API_URL, path)
+
+
+def _add_api_response(path, verb = responses.GET, json=None, match=None, body=None, status=None):
+    if status:
+        expected_status = status
+    else:
+        if verb == responses.GET:
+            expected_status = 200
+        elif verb == responses.POST:
+            expected_status = 201
+        elif verb == responses.PUT:
+            expected_status = 204
+        elif verb == responses.DELETE:
+            expected_status = 204
+    matchers = [responses.matchers.header_matcher({'X-Api-Key': '1234'})]
+    if match:
+        matchers.append(match)
+    responses.add(
+        verb,
+        api_url(path),
+        body=body,
+        json=json,
+        match=matchers,
+        status=expected_status)
 
 
 def add_mock_rasters_list_response():
@@ -43,14 +69,8 @@ def add_mock_rasters_list_response():
             {"id": "43", "status": "ready", "name": "raster4"}
         ]
     }
-    responses.add(
-        responses.GET, api_url('rasters/'),
-        json=data1, match=[responses.matchers.query_param_matcher({'page_number': '1'})],
-        status=200)
-    responses.add(
-        responses.GET, api_url('rasters/'),
-        json=data2, match=[responses.matchers.query_param_matcher({'page_number': '2'})],
-        status=200)
+    _add_api_response('rasters/', json=data1, match=responses.matchers.query_param_matcher({'page_number': '1'}))
+    _add_api_response('rasters/', json=data2, match=responses.matchers.query_param_matcher({'page_number': '2'}))
 
 
 def add_mock_rasters_in_folder_list_response(folder_id):
@@ -60,11 +80,8 @@ def add_mock_rasters_in_folder_list_response(folder_id):
             {"id": "77", "status": "ready", "name": "raster_in_folder1", "folder_id": folder_id},
         ]
     }
-    responses.add(
-        responses.GET,
-        api_url('rasters/'),
-        match=[responses.matchers.query_param_matcher({'folder': folder_id, 'page_number': '1'})], json=data,
-        status=200)
+    qs = {'folder': folder_id, 'page_number': '1'}
+    _add_api_response('rasters/', json=data, match=responses.matchers.query_param_matcher(qs))
 
 
 def add_mock_rasters_in_search_list_response(string):
@@ -74,11 +91,8 @@ def add_mock_rasters_in_search_list_response(string):
             {"id": "77", "status": "ready", "name": string + '_raster'},
         ]
     }
-    responses.add(
-        responses.GET,
-        api_url('rasters/'),
-        match=[responses.matchers.query_param_matcher({'search': string, 'page_number': '1'})], json=data,
-        status=200)
+    qs = {'search': string, 'page_number': '1'}
+    _add_api_response('rasters/', match=responses.matchers.query_param_matcher(qs), json=data)
 
 
 def add_mock_detectors_list_response(string=None):
@@ -99,44 +113,29 @@ def add_mock_detectors_list_response(string=None):
     qs_params = {'page_number': '1'}
     if string:
         qs_params['search'] = string
-    responses.add(
-        responses.GET, api_url('detectors/'),
-         match=[responses.matchers.query_param_matcher(qs_params)], json=data1,
-         status=200)
+    _add_api_response('detectors/', match=responses.matchers.query_param_matcher(qs_params), json=data1)
     qs_params2 = {'page_number': '2'}
     if string:
         qs_params2['search'] = string
-    responses.add(
-        responses.GET, api_url('detectors/'),
-        json=data2,  match=[responses.matchers.query_param_matcher(qs_params2)],
-        status=200)
+    _add_api_response('detectors/', match=responses.matchers.query_param_matcher(qs_params2), json=data2)
 
 
 def add_mock_detector_creation_response(**kwargs):
-    match = [responses.json_params_matcher({"configuration": kwargs})] if kwargs else []
-    responses.add(
-        responses.POST, api_url('detectors/'),
-        json={'id': 'foobar'}, status=201,
-        match=match)
+    match = responses.json_params_matcher({"configuration": kwargs}) if kwargs else None
+    _add_api_response('detectors/', responses.POST, json={'id': 'foobar'}, match=match)
 
 
 def add_mock_detector_edit_response(d_id, **kwargs):
-    match = [responses.json_params_matcher({"configuration": kwargs})] if kwargs else []
-    responses.add(
-        responses.PUT, api_url('detectors/%s/' % d_id), status=204,
-        match=match
-    )
+    match = responses.json_params_matcher({"configuration": kwargs}) if kwargs else None
+    _add_api_response('detectors/%s/' % d_id, responses.PUT, status=204, match=match)
 
 
 def add_mock_detector_train_responses(detector_id):
-    responses.add(
+    _add_api_response(
+        'detectors/%s/train/' % detector_id,
         responses.POST,
-        api_url('detectors/%s/train/' % detector_id),
-        json={
-            'operation_id': OPERATION_ID,
-            'poll_interval': TEST_POLL_INTERVAL
-        },
-        status=201)
+        OP_RESP
+    )
 
 
 def add_mock_operations_responses(status):
@@ -148,40 +147,19 @@ def add_mock_operations_responses(status):
         data.update({
             'metadata': {'raster_id': 'foo', 'detector_id': 'bar', 'folder_id': 'spam'}
         })
-    responses.add(
-        responses.GET, 
-        api_url('operations/%s/' % OPERATION_ID),
-        json=data, status=200
-    )
+    _add_api_response('operations/%s/' % OPERATION_ID, json=data)
 
 
 def add_mock_annotations_responses(detector_id, raster_id, annotation_type):
     upload_id = 32
+    url = 'detectors/%s/training_rasters/%s/%s/upload/bulk/' % (detector_id, raster_id, annotation_type)
     responses.add(responses.PUT, 'http://storage.example.com', status=200)
-    responses.add(
-        responses.POST,
-        api_url(
-            'detectors/%s/training_rasters/%s/%s/upload/bulk/'
-            % (detector_id, raster_id, annotation_type)
-        ),
-        json={
-            'upload_url': 'http://storage.example.com',
-            'upload_id': upload_id
-        },
-        status=201
-    )
-    responses.add(
-        responses.POST,
-        api_url(
-            'detectors/%s/training_rasters/%s/%s/upload/bulk/%s/commit/'
-            % (detector_id, raster_id, annotation_type, upload_id)
-        ),
-        json={
-            'operation_id': OPERATION_ID,
-            'poll_interval': TEST_POLL_INTERVAL
-        },
-        status=201
-    )
+    _add_api_response(url, responses.POST, {
+        'upload_url': 'http://storage.example.com',
+        'upload_id': upload_id
+    })
+    url = 'detectors/%s/training_rasters/%s/%s/upload/bulk/%s/commit/' % (detector_id, raster_id, annotation_type, upload_id)
+    _add_api_response(url, responses.POST, OP_RESP)
 
 
 def add_mock_raster_upload_responses(identity_key, multispectral):
@@ -199,47 +177,31 @@ def add_mock_raster_upload_responses(identity_key, multispectral):
     }
     if identity_key:
         body['identity_key'] = identity_key
-    responses.add(
+    _add_api_response(
+        'rasters/upload/file/',
         responses.POST,
-        api_url('rasters/upload/file/'),
-        json=data,
-        match=[responses.matchers.json_params_matcher(body)],
-        status=200)
-
+        data,
+        responses.matchers.json_params_matcher(body),
+        status=200
+    )
     # Storage PUT
     responses.add(responses.PUT, 'http://storage.example.com', status=200)
-
     # Commit
-    data = {
-        'poll_interval': TEST_POLL_INTERVAL,
-        'operation_id': OPERATION_ID
-    }
-    responses.add(
-        responses.POST,
-        api_url('rasters/%s/commit/' % raster_id),
-        json=data, status=200)
-
+    _add_api_response('rasters/%s/commit/' % raster_id, responses.POST, OP_RESP)
     # Status, first check
     data = {
         'id': raster_id,
         'name': 'raster1',
         'status': 'processing'
     }
-    responses.add(
-        responses.GET,
-        api_url('rasters/%s/' % raster_id),
-        json=data, status=200)
-
+    _add_api_response('rasters/%s/' % raster_id, json=data)
     # Status, second check
     data = {
         'id': raster_id,
         'name': 'raster1',
         'status': 'ready'
     }
-    responses.add(
-        responses.GET,
-        api_url('rasters/%s/' % raster_id),
-        json=data, status=200)
+    _add_api_response('rasters/%s/' % raster_id, json=data)
 
 
 def add_mock_detection_areas_upload_responses(raster_id):
@@ -250,63 +212,40 @@ def add_mock_detection_areas_upload_responses(raster_id):
         'upload_url': 'http://storage.example.com',
         'upload_id': upload_id
     }
-    responses.add(
-        responses.POST,
-        api_url('rasters/%s/detection_areas/upload/file/' % raster_id), json=data, status=200)
-
+    _add_api_response('rasters/%s/detection_areas/upload/file/' % raster_id, responses.POST, data)
     # Storage PUT
     responses.add(responses.PUT, 'http://storage.example.com', status=200)
-
     # Commit
-    data = {
-        'poll_interval': TEST_POLL_INTERVAL,
-        'operation_id': OPERATION_ID
-    }
-    responses.add(
+    _add_api_response(
+        'rasters/%s/detection_areas/upload/%s/commit/' % (raster_id, upload_id),
         responses.POST,
-        api_url('rasters/%s/detection_areas/upload/%s/commit/' % (raster_id, upload_id)),
-        json=data, status=200)
-
+        OP_RESP,
+        status=200)
     # Status, first check
     data = {
         'status': 'processing'
     }
-    responses.add(
-        responses.GET,
-        api_url('rasters/%s/detection_areas/upload/%s/' % (raster_id, upload_id)),
-        json=data, status=200)
-
+    _add_api_response('rasters/%s/detection_areas/upload/%s/' % (raster_id, upload_id), json=data)
     # Status, second check
     data = {
         'status': 'ready'
     }
-    responses.add(
-        responses.GET,
-        api_url('rasters/%s/detection_areas/upload/%s/' % (raster_id, upload_id)),
-        json=data, status=200)
+    _add_api_response('rasters/%s/detection_areas/upload/%s/' % (raster_id, upload_id), json=data)
 
 
 def add_mock_detector_run_responses(detector_id):
     op_id = 43
-    data = {
-        'poll_interval': TEST_POLL_INTERVAL,
-        'operation_id': OPERATION_ID
-    }
-    responses.add(
-        responses.POST,
-        api_url('detectors/%s/run/' % detector_id), json=data, status=201)
-
+    _add_api_response('detectors/%s/run/' % detector_id, responses.POST, OP_RESP)
     # First status check
     data = {
         'status': 'running'
     }
-    responses.add(responses.GET, api_url('operations/%s/' % op_id), json=data, status=200)
-
+    _add_api_response('operations/%s/' % op_id, json=data)
     # Second status check
     data = {
         'status': 'success'
     }
-    responses.add(responses.GET, api_url('results/%s/' % op_id), json=data, status=200)
+    _add_api_response('operations/%s/' % op_id, json=data)
 
 
 def make_geojson_multipolygon(npolygons=1):
@@ -343,10 +282,7 @@ def add_mock_download_result_response(op_id):
             ]
         },
     }
-    responses.add(
-        responses.GET,
-        api_url('operations/%s/' % op_id), json=data, status=201)
-
+    _add_api_response('operations/%s/' % op_id,json=data, status=201)
     mock_contents = {
         'single_class': json.dumps(make_geojson_multipolygon(npolygons=1)),
         'class_1': json.dumps(make_geojson_multipolygon(npolygons=2)),
@@ -373,9 +309,7 @@ def add_mock_download_result_response(op_id):
 def add_mock_download_raster_response(raster_id):
     file_url = 'http://storage.example.com/%s.tiff' % raster_id
     data = {'download_url': file_url}
-    responses.add(
-        responses.GET,
-        api_url('rasters/%s/download/' % raster_id), json=data, status=200)
+    _add_api_response('rasters/%s/download/' % raster_id, json=data)
     mock_content = (1024).to_bytes(2, byteorder='big')
     responses.add(responses.GET, file_url, body=mock_content)
     return mock_content
@@ -385,9 +319,7 @@ def add_mock_url_result_response(op_id, url):
     data = {
         'results': {'url': url}
     }
-    responses.add(
-        responses.GET,
-        api_url('operations/%s/' % op_id), json=data, status=201)
+    _add_api_response('operations/%s/' % op_id, json=data, status=201)
 
 
 def add_get_operation_results_url_response(op_id):
@@ -395,35 +327,28 @@ def add_get_operation_results_url_response(op_id):
     data = {
         'results': {'url': url}
     }
-    responses.add(
-        responses.GET,
-        api_url('operations/%s/' % op_id), json=data, status=201)
+    _add_api_response('operations/%s/' % op_id, json=data, status=201)
     return url
 
 
 def add_mock_edit_raster_response(raster_id, body):
-    responses.add(
+    _add_api_response(
+        'rasters/%s/' % raster_id,
         responses.PUT,
-        api_url('rasters/%s/' % raster_id),
-        match=[responses.matchers.json_params_matcher(body)],
+        match=responses.matchers.json_params_matcher(body),
         status=204)
 
 
 def add_mock_delete_raster_response(raster_id):
-    responses.add(
-        responses.DELETE,
-        api_url('rasters/%s/' % raster_id), status=204)
+    _add_api_response('rasters/%s/' % raster_id, responses.DELETE)
+
 
 def add_mock_delete_detectionarea_response(raster_id):
-    responses.add(
-        responses.DELETE,
-        api_url('rasters/%s/detection_areas/' % raster_id), status=204)
+    _add_api_response('rasters/%s/detection_areas/' % raster_id, responses.DELETE)
 
 
 def add_mock_delete_detector_response(detector_id):
-    responses.add(
-        responses.DELETE,
-        api_url('detectors/%s/' % detector_id), status=204)
+    _add_api_response('detectors/%s/' % detector_id, responses.DELETE)
 
 
 @pytest.mark.parametrize(('identity_key', 'multispectral'), ((None, False), ('abc', True)))
@@ -465,11 +390,8 @@ def test_get_raster():
     """Test the raster information"""
     RASTER_ID = 'foobar'
     client = _client()
-    responses.add(
-        responses.GET,
-        api_url('rasters/%s/' % RASTER_ID), status=201,
-        json={})
-    resp = client.get_raster(RASTER_ID)
+    _add_api_response('rasters/%s/' % RASTER_ID, json={}, status=201)
+    client.get_raster(RASTER_ID)
     assert len(responses.calls) == 1
 
 
