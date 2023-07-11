@@ -750,3 +750,41 @@ class APIClient():
             if not resp.ok:
                 raise APIError(resp.text)
             return self._wait_until_operation_completes(resp.json())
+
+
+    def upload_vector_layer(self, raster_id: UUID, filename: str, name: Optional[str] = None) -> UUID:
+        """
+        Uploads a vector layer from a GeoJSON file
+
+        This a **beta** function, subject to change.
+
+        Args:
+            raster_id: The id of the raster we want to attach the vector layer to
+            filename: Path to the local GeoJSOn file we want to upload
+            name: Optional nam to give to the vector layer
+        Returns;
+            the vector layer unique identifier
+        """
+        assert os.path.exists(filename) and os.path.isfile(filename), 'Invalid file ' + filename
+        resp = self.sess.post(self._api_url('vector_layers/%s/upload/' % raster_id))
+        assert resp.status_code == 201, str(resp.content)
+        upload = resp.json()
+        upload_id, upload_url = upload["upload_id"], upload["upload_url"]
+        with open(filename, 'rb') as f: # binary recommended by requests stream upload (see link below)
+            logger.debug('Opening vector layer file %s' % filename)
+            # Given we do not use self.sess the timeout is disabled (requests default), and this
+            # is good as file upload can take a long time. Also we use requests streaming upload
+            # (https://requests.readthedocs.io/en/latest/user/advanced/#streaming-uploads) to avoid
+            # reading the (potentially large) layer GeoJSON in memory
+            resp = requests.put(upload_url, data=f)
+        if not resp.ok:
+            logger.error('Error when uploading to blobstore %s' % upload_url)
+            raise APIError(resp.text)
+        data = { "name": name } if name else None
+        resp = self.sess.post(
+            self._api_url('vector_layers/%s/upload/%s/commit/' % (raster_id, upload_id)),
+            json=data
+        )
+        assert resp.status_code == 201, str(resp.content)
+        op = self._wait_until_operation_completes(resp.json())
+        return op['vector_layer_id']
