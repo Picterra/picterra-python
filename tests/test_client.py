@@ -398,6 +398,16 @@ def add_mock_raster_markers_list_response(raster_id):
         match=responses.matchers.query_param_matcher({'page_number': '2'}))
 
 
+def add_mock_marker_creation_response(marker_id, raster_id, detector_id, coords, text):
+    url = 'detectors/%s/training_rasters/%s/markers/' %(detector_id, raster_id)
+    body = {
+        "marker": {"type": "Point", "coordinates": coords},
+        "text": text,
+    }
+    match = responses.matchers.json_params_matcher(body)
+    _add_api_response(url, responses.POST, json={'id': marker_id}, match=match)
+
+
 @pytest.mark.parametrize(('identity_key', 'multispectral', 'cloud_coverage' ,'tag'), ((None, False, None, None), ('abc', True, 18, 'spam')))
 @responses.activate
 def test_upload_raster(identity_key, multispectral, cloud_coverage, tag):
@@ -664,6 +674,14 @@ def test_list_raster_markers():
     rasters = client.list_raster_markers('spam')
     assert rasters[0]['id'] == '1'
     assert rasters[2]['id'] == '3'
+
+
+@responses.activate
+def test_list_raster_markers():
+    client = _client()
+    add_mock_marker_creation_response('spam', 'foo', 'bar', [12.34, 56.78], 'foobar')
+    marker = client.create_marker('foo', 'bar', 12.34, 56.78, 'foobar')
+    assert marker['id'] == 'spam'
 
 
 # Cannot test Retry with responses, @see https://github.com/getsentry/responses/issues/135

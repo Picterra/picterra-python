@@ -818,3 +818,27 @@ class APIClient():
             """
             url = 'rasters/%s/markers/' % raster_id
             return self._paginate_through_list(url)
+
+
+    def create_marker(self, raster_id: UUID, detector_id: UUID, lng: float, lat: float, text: str):
+            """
+            This is an **experimental** (beta) feature
+
+            Creates a marker
+
+            Args:
+                raster_id: The id of the raster (belonging to detector) to create the marker on
+                detector_id: The id of the detector to create the marker on
+
+            Raises:
+                APIError: There was an error while creating the marker
+            """
+            url = 'detectors/%s/training_rasters/%s/markers/' %(detector_id, raster_id)
+            data = {
+                "marker": {"type": "Point", "coordinates": [lng, lat]},
+                "text": text,
+            }
+            resp = self.sess.post(self._api_url(url), json=data)
+            if not resp.ok:
+                raise APIError(resp.text)
+            return resp.json()
