@@ -164,7 +164,7 @@ def add_mock_annotations_responses(detector_id, raster_id, annotation_type):
     _add_api_response(url, responses.POST, OP_RESP)
 
 
-def add_mock_raster_upload_responses(identity_key, multispectral):
+def add_mock_raster_upload_responses(identity_key, multispectral, cloud_coverage):
     raster_id = 42
     # Upload initiation
     data = {
@@ -179,6 +179,8 @@ def add_mock_raster_upload_responses(identity_key, multispectral):
     }
     if identity_key:
         body['identity_key'] = identity_key
+    if cloud_coverage is not None:
+        body['cloud_coverage'] = cloud_coverage
     _add_api_response(
         'rasters/upload/file/',
         responses.POST,
@@ -374,11 +376,11 @@ def add_mock_delete_detector_response(detector_id):
     _add_api_response('detectors/%s/' % detector_id, responses.DELETE)
 
 
-@pytest.mark.parametrize(('identity_key', 'multispectral'), ((None, False), ('abc', True)))
+@pytest.mark.parametrize(('identity_key', 'multispectral', 'cloud_coverage'), ((None, False, None), ('abc', True, 18)))
 @responses.activate
-def test_upload_raster(identity_key, multispectral):
+def test_upload_raster(identity_key, multispectral, cloud_coverage):
     client = _client()
-    add_mock_raster_upload_responses(identity_key, multispectral)
+    add_mock_raster_upload_responses(identity_key, multispectral, cloud_coverage)
     add_mock_operations_responses('success')
     with tempfile.NamedTemporaryFile() as f:
         # This just tests that this doesn't raise
@@ -388,7 +390,8 @@ def test_upload_raster(identity_key, multispectral):
             folder_id='a-folder-uuid',
             captured_at='2020-01-10T12:34:56.789Z',
             identity_key=identity_key,
-            multispectral=multispectral
+            multispectral=multispectral,
+            cloud_coverage=cloud_coverage
         )
     assert len(responses.calls) == 4
 
@@ -396,7 +399,7 @@ def test_upload_raster(identity_key, multispectral):
 @pytest.mark.parametrize('edited_data', (
     {'folder_id': '2233'},
     {'folder_id': '2233', 'identity_key': 'dr43t5zrtzz'},
-    {'captured_at': '2020-01-01T12:34:56.789Z'},
+    {'captured_at': '2020-01-01T12:34:56.789Z', 'cloud_coverage': 88},
     {'multispectral_band_specification': {'ranges': [[2, 3], [12, 13], [22, 23]], 'vizbands': [0 ,1, 2]}}
 ))
 @responses.activate
