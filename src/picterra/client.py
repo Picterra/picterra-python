@@ -163,7 +163,7 @@ class APIClient():
     def upload_raster(
         self, filename: str, name: str, folder_id: Optional[str]=None,
         captured_at: Optional[str]=None, identity_key:Optional[str]=None,
-        multispectral: bool = False
+        multispectral: bool = False,  cloud_coverage:Optional[int]=None
     ):
         """
         Upload a raster to picterra.
@@ -179,6 +179,7 @@ class APIClient():
                 e.g. "2020-01-01T12:34:56.789Z"
             identity_key: Personal identifier for this raster.
             multispectral: If True, the raster is in multispectral mode and can have an associated band specification
+            cloud_coverage: Raster cloud coverage %.
 
         Returns:
             raster_id (str): The id of the uploaded raster
@@ -198,6 +199,10 @@ class APIClient():
         if identity_key is not None:
             data.update({
                 'identity_key': identity_key
+            })
+        if cloud_coverage is not None:
+            data.update({
+                'cloud_coverage': cloud_coverage
             })
         resp = self.sess.post(
             self._api_url('rasters/upload/file/'),
@@ -286,7 +291,8 @@ class APIClient():
         self, raster_id: str,
         name: Optional[str]=None, folder_id: Optional[str]=None,
         captured_at: Optional[str]=None, identity_key:Optional[str]=None,
-        multispectral_band_specification: Optional[dict] = None
+        multispectral_band_specification: Optional[dict] = None,
+        cloud_coverage:Optional[int]=None
     ):
         """
         Edits an already existing raster.
@@ -299,6 +305,7 @@ class APIClient():
                 e.g. "2020-01-01T12:34:56.789Z"
             identity_key: New personal identifier for this raster.
             multispectral_band_specification: The new band specification, see https://docs.picterra.ch/advanced-topics/multispectral
+            cloud_coverage: Raster cloud coverage new percentage
 
         Returns:
             raster_id (str): The id of the edited raster
@@ -316,6 +323,8 @@ class APIClient():
             data.update({'identity_key': identity_key})
         if multispectral_band_specification is not None:
             data.update({'multispectral_band_specification': multispectral_band_specification})
+        if cloud_coverage is not None:
+            data.update({'cloud_coverage': cloud_coverage})
         if len(data) == 0:
             raise ValueError('Nothing to edit')
         resp = self.sess.put(self._api_url('rasters/%s/' % raster_id), json=data)
