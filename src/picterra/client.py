@@ -806,3 +806,16 @@ class APIClient():
         assert resp.status_code == 201, str(resp.content)
         op = self._wait_until_operation_completes(resp.json())
         return op['vector_layer_id']
+
+
+    def list_raster_markers(self, raster_id):
+            """
+            This a **beta** function, subject to change.
+
+            List all the markers on a raster
+
+            Args:
+                raster_id (str): The id of the raster
+            """
+            url = 'rasters/%s/markers/' % raster_id
+            return self._paginate_through_list(url)

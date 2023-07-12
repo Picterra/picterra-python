@@ -378,6 +378,26 @@ def add_mock_delete_detector_response(detector_id):
     _add_api_response('detectors/%s/' % detector_id, responses.DELETE)
 
 
+def add_mock_raster_markers_list_response(raster_id):
+    base_url = 'rasters/%s/markers/' % raster_id
+    data1 = {
+        "count": 4, "next": api_url(base_url + '?page_number=2'), "previous": api_url(base_url + '?page_number=1'), "page_size": 2,
+        "results": [ {"id": "1"}, {"id": "2"}]
+    }
+    data2 = {
+        "count": 4, "next": None, "previous": None, "page_size": 2,
+        "results": [{"id": "3"}, {"id": "4"}]
+    }
+    _add_api_response(
+        base_url,
+        json=data1,
+        match=responses.matchers.query_param_matcher({'page_number': '1'}))
+    _add_api_response(
+        base_url,
+        json=data2,
+        match=responses.matchers.query_param_matcher({'page_number': '2'}))
+
+
 @pytest.mark.parametrize(('identity_key', 'multispectral', 'cloud_coverage' ,'tag'), ((None, False, None, None), ('abc', True, 18, 'spam')))
 @responses.activate
 def test_upload_raster(identity_key, multispectral, cloud_coverage, tag):
@@ -636,6 +656,14 @@ def test_upload_vector_layer(name):
     with tempfile.NamedTemporaryFile() as f:
         assert client.upload_vector_layer(22, f.name, name) == 'spam'
     assert len(responses.calls) == 5 # upload req, upload PUT, commit + 2 op polling
+
+@responses.activate
+def test_list_raster_markers():
+    client = _client()
+    add_mock_raster_markers_list_response('spam')
+    rasters = client.list_raster_markers('spam')
+    assert rasters[0]['id'] == '1'
+    assert rasters[2]['id'] == '3'
 
 
 # Cannot test Retry with responses, @see https://github.com/getsentry/responses/issues/135
