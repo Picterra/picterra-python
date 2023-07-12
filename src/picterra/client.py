@@ -62,6 +62,8 @@ def validate_detector_args(detection_type: str, output_type: str, training_steps
 
 
 def _download_to_file(url, filename):
+    if not (os.path.exists(filename) and os.path.isfile(filename)):
+        raise ValueError('Invalid file: ' + filename)
     # Given we do not use self.sess the timeout is disabled (requests default), and this
     # is good as file download can take a long time
     with requests.get(url, stream=True) as r:
@@ -71,6 +73,22 @@ def _download_to_file(url, filename):
             for chunk in r.iter_content(chunk_size=CHUNK_SIZE_BYTES):
                 if chunk:  # filter out keep-alive new chunks
                     f.write(chunk)
+
+
+def _upload_file_to_blobstore(upload_url: str, filename: str):
+    if not (os.path.exists(filename) and os.path.isfile(filename)):
+        raise ValueError('Invalid file: ' + filename)
+    with open(filename, 'rb') as f: # binary recommended by requests stream upload (see link below)
+        logger.debug('Opening and streaming to upload file %s' % filename)
+        # Given we do not use self.sess the timeout is disabled (requests default), and this
+        # is good as file upload can take a long time. Also we use requests streaming upload
+        # (https://requests.readthedocs.io/en/latest/user/advanced/#streaming-uploads) to avoid
+        # reading the (potentially large) layer GeoJSON in memory
+        resp = requests.put(upload_url, data=f)
+    if not resp.ok:
+        logger.error('Error when uploading to blobstore %s' % upload_url)
+        raise APIError(resp.text)
+
 
 
 class APIClient():
@@ -97,7 +115,7 @@ class APIClient():
         # Create the session with a default timeout (30 sec), that we can then
         # override on a per-endpoint basis (will be disabled for file uploads and downloads)
         self.sess = _RequestsSession(timeout=timeout)
-        # Retry: we set the HTTP codes for our throttle ($29) plus possible gateway problems (50*),
+        # Retry: we set the HTTP codes for our throttle (429) plus possible gateway problems (50*),
         # and for polling methods (GET), as non-idempotent ones should be addressed via idempotency
         # key mechanism; given the algorithm is {<backoff_factor> * (2 **<retries-1>}, and we
         # default to 30s for polling and max 30 req/min, the default 5-10-20 sequence should
@@ -219,16 +237,7 @@ class APIClient():
         data = resp.json()
         upload_url = data["upload_url"]
         raster_id = data["raster_id"]
-
-        with open(filename, 'rb') as f:
-            logger.debug('Opening raster file %s' % filename)
-            # Given we do not use self.sess the timeout is disabled (requests default), and this
-            # is good as file upload can take a long time
-            resp = requests.put(upload_url, data=f)
-        if not resp.ok:
-            logger.error('Error when uploading to blobstore %s' % upload_url)
-            raise APIError(resp.text)
-
+        _upload_file_to_blobstore(upload_url, filename)
         resp = self.sess.post(self._api_url('rasters/%s/commit/' % raster_id))
         if not resp.ok:
             raise APIError(resp.text)
@@ -396,11 +405,7 @@ class APIClient():
         upload_url = data['upload_url']
         upload_id = data['upload_id']
         # Upload to blobstore
-        with open(filename, 'rb') as f:
-            resp = requests.put(upload_url, data=f)
-        if not resp.ok:
-            raise APIError(resp.text)
-
+        _upload_file_to_blobstore(upload_url, filename)
         # Commit upload
         resp = self.sess.post(
             self._api_url('rasters/%s/detection_areas/upload/%s/commit/' % (raster_id, upload_id))
@@ -586,7 +591,8 @@ class APIClient():
             self._api_url('detectors/%s/run/' % detector_id),
             json={'raster_id': raster_id}
         )
-        assert resp.status_code == 201, resp.status_code
+        if not resp.ok:
+            raise APIError(resp.text)
         operation_response = resp.json()
         self._wait_until_operation_completes(operation_response)
         return operation_response['operation_id']
@@ -743,7 +749,8 @@ class APIClient():
             detector_id (str): The id of the detector
         """
         resp = self.sess.post(self._api_url('detectors/%s/train/' % detector_id))
-        assert resp.status_code == 201, resp.status_code
+        if not resp.ok:
+            raise APIError(resp.text)
         self._wait_until_operation_completes(resp.json())
 
 
@@ -779,31 +786,23 @@ class APIClient():
         Args:
             raster_id: The id of the raster we want to attach the vector layer to
             filename: Path to the local GeoJSOn file we want to upload
-            name: Optional nam to give to the vector layer
+            name: Optional name to give to the vector layer
         Returns;
             the vector layer unique identifier
         """
-        assert os.path.exists(filename) and os.path.isfile(filename), 'Invalid file ' + filename
         resp = self.sess.post(self._api_url('vector_layers/%s/upload/' % raster_id))
-        assert resp.status_code == 201, str(resp.content)
+        if not resp.ok:
+            raise APIError(resp.text)
         upload = resp.json()
         upload_id, upload_url = upload["upload_id"], upload["upload_url"]
-        with open(filename, 'rb') as f: # binary recommended by requests stream upload (see link below)
-            logger.debug('Opening vector layer file %s' % filename)
-            # Given we do not use self.sess the timeout is disabled (requests default), and this
-            # is good as file upload can take a long time. Also we use requests streaming upload
-            # (https://requests.readthedocs.io/en/latest/user/advanced/#streaming-uploads) to avoid
-            # reading the (potentially large) layer GeoJSON in memory
-            resp = requests.put(upload_url, data=f)
-        if not resp.ok:
-            logger.error('Error when uploading to blobstore %s' % upload_url)
-            raise APIError(resp.text)
+        _upload_file_to_blobstore(upload_url, filename)
         data = { "name": name } if name else None
         resp = self.sess.post(
             self._api_url('vector_layers/%s/upload/%s/commit/' % (raster_id, upload_id)),
             json=data
         )
-        assert resp.status_code == 201, str(resp.content)
+        if not resp.ok:
+            raise APIError(resp.text)
         op = self._wait_until_operation_completes(resp.json())
         return op['vector_layer_id']
 
