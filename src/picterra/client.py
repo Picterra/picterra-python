@@ -245,7 +245,8 @@ class APIClient():
         return raster_id
 
     def list_rasters(
-        self, folder_id: Optional[str] = None, search_string: Optional[str] = None
+        self, folder_id: Optional[str] = None, search_string: Optional[str] = None,
+        user_tag: Optional[str] = None
     ) -> List[dict]:
         """
         List of rasters metadata
@@ -253,6 +254,7 @@ class APIClient():
         Args:
             folder_id (str, optional): The id of the folder to search rasters in
             search_string (str, optional): The search term used to filter rasters by name
+            user_tag (str, optional): [beta] The user tag to filter rasters by
 
         Returns:
             A list of rasters dictionaries
@@ -280,6 +282,8 @@ class APIClient():
             params['folder'] = folder_id
         if search_string:
             params['search'] = search_string
+        if user_tag is not None:
+            params['user_tag'] = user_tag.strip()
         return self._paginate_through_list('rasters', params)
     
     def get_raster(
