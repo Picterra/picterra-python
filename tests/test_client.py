@@ -84,14 +84,19 @@ def add_mock_rasters_in_folder_list_response(folder_id):
     _add_api_response('rasters/', json=data, match=responses.matchers.query_param_matcher(qs))
 
 
-def add_mock_rasters_in_search_list_response(string):
+def add_mock_rasters_in_filtered_list_response(search = None, tag = None):
+    name = (search + "_" if search else "") + 'raster' + ("_" + tag if tag else "")
     data = {
         "count": 1, "next": None, "previous": None, "page_size": 2,
         "results": [
-            {"id": "77", "status": "ready", "name": string + '_raster'},
+            {"id": "77", "status": "ready", "name": name},
         ]
     }
-    qs = {'search': string, 'page_number': '1'}
+    qs = {'page_number': '1'}
+    if search:
+        qs['search'] = search
+    if tag:
+        qs['user_tag'] = tag
     _add_api_response('rasters/', match=responses.matchers.query_param_matcher(qs), json=data)
 
 
@@ -507,9 +512,13 @@ def test_list_rasters():
     assert rasters[0]['name'] == 'raster_in_folder1'
     assert rasters[0]['folder_id'] == 'foobar'
     # Search list
-    add_mock_rasters_in_search_list_response('spam')
-    rasters = client.list_rasters('', 'spam')
+    add_mock_rasters_in_filtered_list_response(search='spam')
+    rasters = client.list_rasters('', search_string='spam')
     assert rasters[0]['name'] == 'spam_raster'
+    # Filter list
+    add_mock_rasters_in_filtered_list_response(tag='foobar')
+    rasters = client.list_rasters('', user_tag='foobar')
+    assert rasters[0]['name'] == 'raster_foobar'
 
 
 @responses.activate
