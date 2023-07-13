@@ -95,7 +95,7 @@ def add_mock_rasters_in_search_list_response(string):
     _add_api_response('rasters/', match=responses.matchers.query_param_matcher(qs), json=data)
 
 
-def add_mock_detectors_list_response(string=None):
+def add_mock_detectors_list_response(string=None, tag=None, shared=None):
     data1 = {
         "count": 4, "next": api_url('detectors/?page_number=2'), "previous": None, "page_size": 2,
         "results": [
@@ -113,10 +113,18 @@ def add_mock_detectors_list_response(string=None):
     qs_params = {'page_number': '1'}
     if string:
         qs_params['search'] = string
+    if tag:
+        qs_params['user_tag'] = tag
+    if shared:
+        qs_params['is_shared'] = shared
     _add_api_response('detectors/', match=responses.matchers.query_param_matcher(qs_params), json=data1)
     qs_params2 = {'page_number': '2'}
     if string:
         qs_params2['search'] = string
+    if tag:
+        qs_params2['user_tag'] = tag
+    if shared:
+        qs_params2['is_shared'] = shared
     _add_api_response('detectors/', match=responses.matchers.query_param_matcher(qs_params2), json=data2)
 
 
@@ -542,7 +550,11 @@ def test_list_detectors():
     add_mock_detectors_list_response('spam')
     detectors = client.list_detectors('spam')
     assert detectors[0]['name'] == 'spam'
-    assert len(responses.calls) == 4
+    # Filter list
+    add_mock_detectors_list_response(None, 'foobar', True)
+    detectors = client.list_detectors(user_tag='foobar', is_shared=True)
+    assert detectors[1]['name'] == 'detector2'
+    assert len(responses.calls) == 6
 
 
 @responses.activate
