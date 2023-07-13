@@ -488,7 +488,12 @@ class APIClient():
             raise APIError(resp.text)
         return resp.json()['id']
 
-    def list_detectors(self, search_string: Optional[str] = None) -> List[dict]:
+    def list_detectors(
+            self,
+            search_string: Optional[str] = None,
+            user_tag: Optional[str] = None,
+            is_shared: Optional[bool] = None
+        ) -> List[dict]:
         """
         Args:
             search_string (str, optional): The term used to filter detectors by name
@@ -519,9 +524,14 @@ class APIClient():
                 }
 
         """
-        return self._paginate_through_list(
-            'detectors',
-            {'search': search_string} if search_string else None)
+        data = {}
+        if search_string is not None:
+            data['search'] = search_string.strip()
+        if user_tag is not None:
+            data['user_tag'] = user_tag.strip()
+        if is_shared is not None:
+            data['is_shared'] = is_shared
+        return self._paginate_through_list('detectors', data)
 
     def edit_detector(
         self, detector_id: str,
