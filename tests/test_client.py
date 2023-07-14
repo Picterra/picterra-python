@@ -84,7 +84,7 @@ def add_mock_rasters_in_folder_list_response(folder_id):
     _add_api_response('rasters/', json=data, match=responses.matchers.query_param_matcher(qs))
 
 
-def add_mock_rasters_in_filtered_list_response(search = None, tag = None):
+def add_mock_rasters_in_filtered_list_response(search = None, tag = None, cloud = None):
     name = (search + "_" if search else "") + 'raster' + ("_" + tag if tag else "")
     data = {
         "count": 1, "next": None, "previous": None, "page_size": 2,
@@ -97,6 +97,8 @@ def add_mock_rasters_in_filtered_list_response(search = None, tag = None):
         qs['search'] = search
     if tag:
         qs['user_tag'] = tag
+    if cloud:
+        qs['max_cloud_coverage'] = cloud
     _add_api_response('rasters/', match=responses.matchers.query_param_matcher(qs), json=data)
 
 
@@ -518,6 +520,10 @@ def test_list_rasters():
     # Filter list
     add_mock_rasters_in_filtered_list_response(tag='foobar')
     rasters = client.list_rasters('', user_tag='foobar')
+    assert rasters[0]['name'] == 'raster_foobar'
+    # Filter list
+    add_mock_rasters_in_filtered_list_response(tag='foobar', cloud=44)
+    rasters = client.list_rasters('', user_tag='foobar', max_cloud_coverage=44)
     assert rasters[0]['name'] == 'raster_foobar'
 
 
