@@ -821,7 +821,7 @@ class APIClient():
         if not resp.ok:
             raise APIError(resp.text)
         op = self._wait_until_operation_completes(resp.json())
-        return op['vector_layer_id']
+        return op['results']['vector_layer_id']
 
 
     def list_raster_markers(self, raster_id):

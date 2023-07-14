@@ -688,7 +688,7 @@ def test_train_detector():
 def test_upload_vector_layer(name):
     add_mock_vector_layer_responses(11, 22, name)
     add_mock_operations_responses('running')
-    add_mock_operations_responses('success', vector_layer_id='spam')
+    add_mock_operations_responses('success', results= { "vector_layer_id": 'spam' })
     client = _client()
     with tempfile.NamedTemporaryFile() as f:
         assert client.upload_vector_layer(22, f.name, name) == 'spam'
