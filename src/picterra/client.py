@@ -772,26 +772,26 @@ class APIClient():
 
 
     def run_advanced_tool(self, tool_id: UUID, inputs: dict, outputs: dict):
-            """
-            This is an experimental feature
+        """
+        This is an experimental feature
 
-            Runs a tool and waits for its execution, returning the finished operation metadata
+        Runs a tool and waits for its execution, returning the finished operation metadata
 
-            Args:
-                tool_id: The id of the tool to run
-                inputs: tool inputs
-                outputs: tool outputs
+        Args:
+            tool_id: The id of the tool to run
+            inputs: tool inputs
+            outputs: tool outputs
 
-            Raises:
-                APIError: There was an error while launching and executing the tool
-            """
-            resp = self.sess.post(
-                self._api_url('advanced_tools/%s/run/' % tool_id),
-                json={'inputs': inputs, 'outputs': outputs}
-            )
-            if not resp.ok:
-                raise APIError(resp.text)
-            return self._wait_until_operation_completes(resp.json())
+        Raises:
+            APIError: There was an error while launching and executing the tool
+        """
+        resp = self.sess.post(
+            self._api_url('advanced_tools/%s/run/' % tool_id),
+            json={'inputs': inputs, 'outputs': outputs}
+        )
+        if not resp.ok:
+            raise APIError(resp.text)
+        return self._wait_until_operation_completes(resp.json())
 
 
     def upload_vector_layer(self, raster_id: UUID, filename: str, name: Optional[str] = None) -> UUID:
@@ -825,37 +825,37 @@ class APIClient():
 
 
     def list_raster_markers(self, raster_id):
-            """
-            This a **beta** function, subject to change.
+        """
+        This a **beta** function, subject to change.
 
-            List all the markers on a raster
+        List all the markers on a raster
 
-            Args:
-                raster_id (str): The id of the raster
-            """
-            url = 'rasters/%s/markers/' % raster_id
-            return self._paginate_through_list(url)
+        Args:
+            raster_id (str): The id of the raster
+        """
+        url = 'rasters/%s/markers/' % raster_id
+        return self._paginate_through_list(url)
 
 
     def create_marker(self, raster_id: UUID, detector_id: UUID, lng: float, lat: float, text: str):
-            """
-            This is an **experimental** (beta) feature
+        """
+        This is an **experimental** (beta) feature
 
-            Creates a marker
+        Creates a marker
 
-            Args:
-                raster_id: The id of the raster (belonging to detector) to create the marker on
-                detector_id: The id of the detector to create the marker on
+        Args:
+            raster_id: The id of the raster (belonging to detector) to create the marker on
+            detector_id: The id of the detector to create the marker on
 
-            Raises:
-                APIError: There was an error while creating the marker
-            """
-            url = 'detectors/%s/training_rasters/%s/markers/' %(detector_id, raster_id)
-            data = {
-                "marker": {"type": "Point", "coordinates": [lng, lat]},
-                "text": text,
-            }
-            resp = self.sess.post(self._api_url(url), json=data)
-            if not resp.ok:
-                raise APIError(resp.text)
-            return resp.json()
+        Raises:
+            APIError: There was an error while creating the marker
+        """
+        url = 'detectors/%s/training_rasters/%s/markers/' %(detector_id, raster_id)
+        data = {
+            "marker": {"type": "Point", "coordinates": [lng, lat]},
+            "text": text,
+        }
+        resp = self.sess.post(self._api_url(url), json=data)
+        if not resp.ok:
+            raise APIError(resp.text)
+        return resp.json()
