@@ -824,6 +824,20 @@ class APIClient():
         return op['results']['vector_layer_id']
 
 
+    def delete_vector_layer(self, vector_layer_id: UUID):
+        """
+        Removes a vector layer
+
+        This a **beta** function, subject to change.
+
+        Args:
+            vector_layer_id: The id of the vector layer to remove
+        """
+        resp = self.sess.delete(self._api_url('vector_layers/%s/' % vector_layer_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+
+
     def list_raster_markers(self, raster_id):
         """
         This a **beta** function, subject to change.

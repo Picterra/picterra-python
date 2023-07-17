@@ -393,6 +393,10 @@ def add_mock_delete_detector_response(detector_id):
     _add_api_response('detectors/%s/' % detector_id, responses.DELETE)
 
 
+def add_mock_delete_vector_layer_response(layer_id):
+    _add_api_response('vector_layers/%s/' % layer_id, responses.DELETE)
+
+
 def add_mock_raster_markers_list_response(raster_id):
     base_url = 'rasters/%s/markers/' % raster_id
     data1 = {
@@ -693,6 +697,14 @@ def test_upload_vector_layer(name):
     with tempfile.NamedTemporaryFile() as f:
         assert client.upload_vector_layer(22, f.name, name) == 'spam'
     assert len(responses.calls) == 5 # upload req, upload PUT, commit + 2 op polling
+
+@responses.activate
+def test_delete_vector_layer():
+    LAYER_ID = 'foobar'
+    client = _client()
+    add_mock_delete_vector_layer_response(LAYER_ID)
+    client.delete_vector_layer(LAYER_ID)
+    assert len(responses.calls) == 1
 
 @responses.activate
 def test_list_raster_markers():
