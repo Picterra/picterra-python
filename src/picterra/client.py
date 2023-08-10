@@ -843,7 +843,7 @@ class APIClient():
         return self._paginate_through_list(url)
 
 
-    def create_marker(self, raster_id: UUID, detector_id: UUID, lng: float, lat: float, text: str):
+    def create_marker(self, raster_id: UUID, detector_id: Optional[UUID], lng: float, lat: float, text: str):
         """
         This is an **experimental** (beta) feature
 
@@ -851,12 +851,16 @@ class APIClient():
 
         Args:
             raster_id: The id of the raster (belonging to detector) to create the marker on
-            detector_id: The id of the detector to create the marker on
+            detector_id: The id of the detector to create the marker on. If this is None, the marker
+                is created associated with the raster only
 
         Raises:
             APIError: There was an error while creating the marker
         """
-        url = 'detectors/%s/training_rasters/%s/markers/' %(detector_id, raster_id)
+        if detector_id is None:
+            url = 'rasters/%s/markers/' % raster_id
+        else:
+            url = 'detectors/%s/training_rasters/%s/markers/' %(detector_id, raster_id)
         data = {
             "marker": {"type": "Point", "coordinates": [lng, lat]},
             "text": text,

@@ -418,7 +418,10 @@ def add_mock_raster_markers_list_response(raster_id):
 
 
 def add_mock_marker_creation_response(marker_id, raster_id, detector_id, coords, text):
-    url = 'detectors/%s/training_rasters/%s/markers/' %(detector_id, raster_id)
+    if detector_id is None:
+        url = 'rasters/%s/markers/' % raster_id
+    else:
+        url = 'detectors/%s/training_rasters/%s/markers/' %(detector_id, raster_id)
     body = {
         "marker": {"type": "Point", "coordinates": coords},
         "text": text,
@@ -706,6 +709,12 @@ def test_list_raster_markers():
     marker = client.create_marker('foo', 'bar', 12.34, 56.78, 'foobar')
     assert marker['id'] == 'spam'
 
+@responses.activate
+def test_create_raster_marker():
+    client = _client()
+    add_mock_marker_creation_response('id123', 'rasterid123', None, [43.21, 87.65], 'comment')
+    marker = client.create_marker('rasterid123', None, 43.21, 87.65, 'comment')
+    assert marker['id'] == 'id123'
 
 # Cannot test Retry with responses, @see https://github.com/getsentry/responses/issues/135
 @httpretty.activate
