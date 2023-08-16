@@ -846,6 +846,30 @@ class APIClient():
         return op['results']['vector_layer_id']
 
 
+    def edit_vector_layer(self, vector_layer_id: UUID, name: Optional[str] = None, color: Optional[str] = None, raster_id: Optional [UUID] = None):
+        """
+        Edits a vector layer
+
+        This a **beta** function, subject to change.
+
+        Args:
+            vector_layer_id: The id of the vector layer to remove
+            name: new name
+            color: new color
+            raster_id: identifier of the new raster to asscoaite the vector layer with
+        """
+        data = {}
+        if name:
+            data.update({'name': name})
+        if color is not None:
+            data.update({'color': color})
+        if raster_id is not None:
+            data.update({'raster_id': raster_id})
+        resp = self.sess.put(self._api_url('vector_layers/%s/' % vector_layer_id), json=data)
+        if not resp.ok:
+            raise APIError(resp.text)
+
+
     def delete_vector_layer(self, vector_layer_id: UUID):
         """
         Removes a vector layer
