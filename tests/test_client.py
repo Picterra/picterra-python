@@ -397,6 +397,10 @@ def add_mock_delete_vector_layer_response(layer_id):
     _add_api_response('vector_layers/%s/' % layer_id, responses.DELETE)
 
 
+def add_mock_edit_vector_layer_response(layer_id, **kwargs):
+    _add_api_response('vector_layers/%s/' % layer_id, responses.PUT, match=responses.matchers.json_params_matcher(kwargs))
+
+
 def add_mock_raster_markers_list_response(raster_id):
     base_url = 'rasters/%s/markers/' % raster_id
     data1 = {
@@ -730,6 +734,14 @@ def test_delete_vector_layer():
     client = _client()
     add_mock_delete_vector_layer_response(LAYER_ID)
     client.delete_vector_layer(LAYER_ID)
+    assert len(responses.calls) == 1
+
+@responses.activate
+def test_edit_vector_layer():
+    LAYER_ID = 'foobar'
+    client = _client()
+    add_mock_edit_vector_layer_response(LAYER_ID, color="#ffffff", raster_id="spam")
+    client.edit_vector_layer(LAYER_ID, color="#ffffff", raster_id="spam")
     assert len(responses.calls) == 1
 
 @responses.activate
