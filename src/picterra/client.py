@@ -220,6 +220,36 @@ class APIClient():
         self._wait_until_operation_completes(resp.json())
         return raster_id
 
+    def list_folder_detectors(self, folder_id: str):
+        """
+        List of detectors assigned to a given folder
+
+        This a **beta** function, subject to change.
+
+        Args:
+            folder_id (str): The id of the folder to obtain the detectors for
+
+        Returns:
+            A list of detector dictionaries
+
+        Example:
+
+            ::
+                {
+                    "id": "id1",
+                    "name": "detector1",
+                    "is_runnable": True,
+                    "user_tag": "tag1",
+                },
+                {
+                    "id": "id2",
+                    "name": "detector2",
+                    "is_runnable": False,
+                    "user_tag": "tag2",
+                }
+        """
+        return self._paginate_through_list('folders/%s/detectors' % folder_id)
+
     def list_rasters(
         self, folder_id: Optional[str] = None, search_string: Optional[str] = None,
         user_tag: Optional[str] = None, max_cloud_coverage: Optional[int] = None
