@@ -429,6 +429,45 @@ def add_mock_marker_creation_response(marker_id, raster_id, detector_id, coords,
     match = responses.matchers.json_params_matcher(body)
     _add_api_response(url, responses.POST, json={'id': marker_id}, match=match)
 
+def add_mock_folder_detector_response(folder_id: str):
+    base_url = 'folders/%s/detectors/' % folder_id
+    data1 = {
+        "count": 4, "next": api_url(base_url + '?page_number=2'),
+        "previous": api_url(base_url + '?page_number=1'), "page_size": 2,
+        "results": [{
+            "id": "id1",
+            "name": "detector1",
+            "is_runnable": True,
+            "user_tag": "tag1",
+        }, {
+            "id": "id2",
+            "name": "detector2",
+            "is_runnable": False,
+            "user_tag": "tag2",
+        }]
+    }
+    data2 = {
+        "count": 4, "next": None, "previous": None, "page_size": 2,
+        "results": [{
+            "id": "id3",
+            "name": "detector3",
+            "is_runnable": True,
+            "user_tag": "",
+        }, {
+            "id": "id4",
+            "name": "detector4",
+            "is_runnable": False,
+            "user_tag": "",
+        }]
+    }
+    _add_api_response(
+        base_url,
+        json=data1,
+        match=responses.matchers.query_param_matcher({'page_number': '1'}))
+    _add_api_response(
+        base_url,
+        json=data2,
+        match=responses.matchers.query_param_matcher({'page_number': '2'}))
 
 @pytest.mark.parametrize(('identity_key', 'multispectral', 'cloud_coverage' ,'tag'), ((None, False, None, None), ('abc', True, 18, 'spam')))
 @responses.activate
@@ -716,6 +755,17 @@ def test_create_raster_marker():
     marker = client.create_marker('rasterid123', None, 43.21, 87.65, 'comment')
     assert marker['id'] == 'id123'
 
+
+@responses.activate
+def test_list_folder_detectors():
+    client = _client()
+    add_mock_folder_detector_response("folder_id123")
+    detector_list = client.list_folder_detectors("folder_id123")
+    assert len(detector_list) == 4
+    assert detector_list[0]['id'] == 'id1'
+    assert detector_list[2]['id'] == 'id3'
+
+
 # Cannot test Retry with responses, @see https://github.com/getsentry/responses/issues/135
 @httpretty.activate
 def test_backoff_success():
@@ -752,7 +802,6 @@ def test_backoff_failure():
 
 @httpretty.activate
 def test_timeout():
-
     def request_callback(request, uri, response_headers):
         time.sleep(2)
         return [200, response_headers, json.dumps([])]
