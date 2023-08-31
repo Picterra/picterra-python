@@ -252,7 +252,9 @@ class APIClient():
 
     def list_rasters(
         self, folder_id: Optional[str] = None, search_string: Optional[str] = None,
-        user_tag: Optional[str] = None, max_cloud_coverage: Optional[int] = None
+        user_tag: Optional[str] = None, max_cloud_coverage: Optional[int] = None,
+        captured_before: Optional[str] = None, captured_after: Optional[str] = None,
+        has_vector_layers: Optional[bool] = None,
     ) -> List[dict]:
         """
         List of rasters metadata
@@ -262,6 +264,9 @@ class APIClient():
             search_string (str, optional): The search term used to filter rasters by name
             user_tag (str, optional): [beta] The user tag to filter rasters by
             max_cloud_coverage (int, optional): [beta] The max_cloud_coverage of the rasters (between 0 and 100)
+            captured_before (str, optional): [beta] ISO 8601 -formatted date / time of capture we want to list the rasters since
+            captured_after (str, optional): [beta] ISO 8601 -formatted date / time of capture we want to list the rasters from+
+            has_vector_layers (bool, optional): [beta] Whether or not the rasters have at least one vector layer
 
         Returns:
             A list of rasters dictionaries
@@ -293,6 +298,12 @@ class APIClient():
             params['user_tag'] = user_tag.strip()
         if max_cloud_coverage is not None:
             params['max_cloud_coverage'] = max_cloud_coverage
+        if captured_before is not None:
+            params['captured_before'] = captured_before
+        if captured_after is not None:
+            params['captured_after'] = captured_after
+        if has_vector_layers is not None:
+            params['has_vector_layers'] = bool(has_vector_layers)
         return self._paginate_through_list('rasters', params)
     
     def get_raster(
