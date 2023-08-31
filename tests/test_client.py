@@ -84,7 +84,7 @@ def add_mock_rasters_in_folder_list_response(folder_id):
     _add_api_response('rasters/', json=data, match=responses.matchers.query_param_matcher(qs))
 
 
-def add_mock_rasters_in_filtered_list_response(search = None, tag = None, cloud = None):
+def add_mock_rasters_in_filtered_list_response(search = None, tag = None, cloud = None, before = None, after = None, has_layers = None):
     name = (search + "_" if search else "") + 'raster' + ("_" + tag if tag else "")
     data = {
         "count": 1, "next": None, "previous": None, "page_size": 2,
@@ -92,13 +92,19 @@ def add_mock_rasters_in_filtered_list_response(search = None, tag = None, cloud 
             {"id": "77", "status": "ready", "name": name},
         ]
     }
-    qs = {'page_number': '1'}
-    if search:
+    qs = {'page_number': 1}
+    if search is not None:
         qs['search'] = search
-    if tag:
+    if tag is not None:
         qs['user_tag'] = tag
-    if cloud:
+    if cloud is not None:
         qs['max_cloud_coverage'] = cloud
+    if before:
+        qs['captured_before'] = before
+    if after:
+        qs['captured_after'] = after
+    if has_layers is not None:
+        qs['has_vector_layers'] = bool(has_layers)
     _add_api_response('rasters/', match=responses.matchers.query_param_matcher(qs), json=data)
 
 
@@ -551,7 +557,7 @@ def test_download_raster():
 
 @responses.activate
 def test_list_rasters():
-    """Test the list of rasters, both generic and specifying the folder"""
+    """Test the list of rasters, both generic and specifying the filters"""
     client = _client()
     # Generic
     add_mock_rasters_list_response()
@@ -567,14 +573,22 @@ def test_list_rasters():
     add_mock_rasters_in_filtered_list_response(search='spam')
     rasters = client.list_rasters('', search_string='spam')
     assert rasters[0]['name'] == 'spam_raster'
-    # Filter list
+    # Filter list 1
     add_mock_rasters_in_filtered_list_response(tag='foobar')
     rasters = client.list_rasters('', user_tag='foobar')
     assert rasters[0]['name'] == 'raster_foobar'
-    # Filter list
+    # Filter list 2
     add_mock_rasters_in_filtered_list_response(tag='foobar', cloud=44)
     rasters = client.list_rasters('', user_tag='foobar', max_cloud_coverage=44)
     assert rasters[0]['name'] == 'raster_foobar'
+    # Filter list 3
+    add_mock_rasters_in_filtered_list_response(has_layers=False, search='foo', before='2018-11-13T20:20:39+00:00')
+    rasters = client.list_rasters(search_string='foo', captured_before='2018-11-13T20:20:39+00:00', has_vector_layers=False)
+    assert rasters[0]['name'] == 'foo_raster'
+    # # Filter list 4
+    add_mock_rasters_in_filtered_list_response(has_layers=True, after='2022-11-13T20:20:39+00:00', search='bar')
+    rasters = client.list_rasters(search_string='bar', captured_after='2022-11-13T20:20:39+00:00', has_vector_layers=True)
+    assert rasters[0]['name'] == 'bar_raster'
 
 
 @responses.activate
