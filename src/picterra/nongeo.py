@@ -1,5 +1,5 @@
-import math
 import json
+import math
 
 # The projected bounds for EPSG 3857 are computed based on the earth radius
 # defined in the spheroid https://epsg.io/3857
@@ -14,23 +14,25 @@ _EPSG_3857_Y_MIN = -math.pi * _EARTH_RADIUS
 _EPSG_3857_X_MAX = math.pi * _EARTH_RADIUS
 _EPSG_3857_Y_MAX = math.pi * _EARTH_RADIUS
 
-_EPSG_3857_X_EXTENT = (_EPSG_3857_X_MAX - _EPSG_3857_X_MIN)
-_EPSG_3857_Y_EXTENT = (_EPSG_3857_Y_MAX - _EPSG_3857_Y_MIN)
+_EPSG_3857_X_EXTENT = _EPSG_3857_X_MAX - _EPSG_3857_X_MIN
+_EPSG_3857_Y_EXTENT = _EPSG_3857_Y_MAX - _EPSG_3857_Y_MIN
 
 _DEG_TO_RAD = math.pi / 180.0
 
 
 def _nongeo_latlng2xy(lat_deg, lng_deg):
-    """
-    """
+    """ """
     lat = _DEG_TO_RAD * lat_deg
     lng = _DEG_TO_RAD * lng_deg
 
     # First, project to pseudo-mercator
     # https://en.wikipedia.org/wiki/Web_Mercator_projection#Formulas
     x_proj = _EPSG_3857_X_EXTENT / (2.0 * math.pi) * lng
-    y_proj = _EPSG_3857_Y_EXTENT / (2.0 * math.pi) *\
-        math.log(math.tan(math.pi / 4.0 + lat / 2.0))
+    y_proj = (
+        _EPSG_3857_Y_EXTENT
+        / (2.0 * math.pi)
+        * math.log(math.tan(math.pi / 4.0 + lat / 2.0))
+    )
 
     # Then, apply the raster geotransform to get pixel coordinates
     # The arbitrary 3857 geotransform that Picterra sets on non-georeferenced rasters
@@ -46,14 +48,14 @@ def _load_polygons(geojson):
     FeatureCollection of Polygons
     """
     polygons = []
-    if geojson['type'] == 'MultiPolygon':
-        for polygon in geojson['coordinates']:
+    if geojson["type"] == "MultiPolygon":
+        for polygon in geojson["coordinates"]:
             polygons.append(polygon)
-    elif geojson['type'] == 'Polygon':
-        polygons = [geojson['coordinates']]
-    elif geojson['type'] == 'FeatureCollection':
-        for feature in geojson['features']:
-            geom = feature['geometry']
+    elif geojson["type"] == "Polygon":
+        polygons = [geojson["coordinates"]]
+    elif geojson["type"] == "FeatureCollection":
+        for feature in geojson["features"]:
+            geom = feature["geometry"]
             polygons.extend(_load_polygons(geom))
     return polygons
 
@@ -61,9 +63,7 @@ def _load_polygons(geojson):
 def _polygon_to_xy(polygon):
     xy_polygon = []
     for ring in polygon:
-        xy_polygon.append([
-            _nongeo_latlng2xy(lat, lng) for lng, lat in ring
-        ])
+        xy_polygon.append([_nongeo_latlng2xy(lat, lng) for lng, lat in ring])
     return xy_polygon
 
 
