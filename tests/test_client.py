@@ -317,18 +317,23 @@ def add_mock_detector_run_responses(detector_id):
     _add_api_response("operations/%s/" % op_id, json=data)
 
 
-def add_mock_vector_layer_responses(upload_id, raster_id, name):
+def add_mock_vector_layer_responses(upload_id, raster_id, name, color):
     _add_api_response(
         "vector_layers/%s/upload/" % raster_id,
         responses.POST,
         json={"upload_url": "http://storage.example.com", "upload_id": upload_id},
     )
     responses.add(responses.PUT, "http://storage.example.com", status=200)
+    qs = {}
+    if name is not None:
+        qs["name"] = name
+    if color is not None:
+        qs["color"] = color
     _add_api_response(
         "vector_layers/%s/upload/%s/commit/" % (raster_id, upload_id),
         responses.POST,
         json={"operation_id": OPERATION_ID, "poll_interval": TEST_POLL_INTERVAL},
-        match=responses.matchers.json_params_matcher({"name": name}) if name else [],
+        match=responses.matchers.json_params_matcher(qs) if len(qs.keys()) != 0 else [],
     )
 
 
@@ -822,15 +827,15 @@ def test_train_detector():
     assert len(responses.calls) == 4
 
 
-@pytest.mark.parametrize("name", (None, "foobar"))
+@pytest.mark.parametrize(("name", "color"), ((None, None), ("foobar", "#aabbcc")))
 @responses.activate
-def test_upload_vector_layer(name):
-    add_mock_vector_layer_responses(11, 22, name)
+def test_upload_vector_layer(name, color):
+    add_mock_vector_layer_responses(11, 22, name, color)
     add_mock_operations_responses("running")
     add_mock_operations_responses("success", results={"vector_layer_id": "spam"})
     client = _client()
     with tempfile.NamedTemporaryFile() as f:
-        assert client.upload_vector_layer(22, f.name, name) == "spam"
+        assert client.upload_vector_layer(22, f.name, name, color) == "spam"
     assert len(responses.calls) == 5  # upload req, upload PUT, commit + 2 op polling
 
 

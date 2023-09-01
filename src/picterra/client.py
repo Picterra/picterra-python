@@ -858,7 +858,11 @@ class APIClient:
         return self._wait_until_operation_completes(resp.json())
 
     def upload_vector_layer(
-        self, raster_id: UUID, filename: str, name: Optional[str] = None
+        self,
+        raster_id: UUID,
+        filename: str,
+        name: Optional[str] = None,
+        color: Optional[str] = None,
     ) -> UUID:
         """
         Uploads a vector layer from a GeoJSON file
@@ -869,6 +873,7 @@ class APIClient:
             raster_id: The id of the raster we want to attach the vector layer to
             filename: Path to the local GeoJSOn file we want to upload
             name: Optional name to give to the vector layer
+            color: Optional color of the vector layer, has an HTML hex color code (eg "#aabbcc")
         Returns;
             the vector layer unique identifier
         """
@@ -878,7 +883,11 @@ class APIClient:
         upload = resp.json()
         upload_id, upload_url = upload["upload_id"], upload["upload_url"]
         _upload_file_to_blobstore(upload_url, filename)
-        data = {"name": name} if name else None
+        data = {}
+        if name is not None:
+            data["name"] = name
+        if color is not None:
+            data["color"] = color
         resp = self.sess.post(
             self._api_url(
                 "vector_layers/%s/upload/%s/commit/" % (raster_id, upload_id)
