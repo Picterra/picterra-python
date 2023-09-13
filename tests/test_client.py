@@ -142,6 +142,29 @@ def add_mock_rasters_in_filtered_list_response(
     )
 
 
+def add_mock_vector_layers_filtered_list_response(
+    idx, raster, search=None, detector=None
+):
+    name = f"layer_{idx}"
+    data = {
+        "count": 1,
+        "next": None,
+        "previous": None,
+        "page_size": 1,
+        "results": [{"id": str(idx), "count": idx, "name": name}],
+    }
+    qs = {"page_number": 1}
+    if search is not None:
+        qs["search"] = search
+    if detector is not None:
+        qs["detector"] = detector
+    _add_api_response(
+        f"rasters/{raster}/vector_layers/",
+        match=responses.matchers.query_param_matcher(qs),
+        json=data,
+    )
+
+
 def add_mock_detectors_list_response(string=None, tag=None, shared=None):
     data1 = {
         "count": 4,
@@ -988,6 +1011,18 @@ def test_list_folder_detectors():
     assert len(detector_list) == 4
     assert detector_list[0]["id"] == "id1"
     assert detector_list[2]["id"] == "id3"
+
+
+@responses.activate
+def test_list_raster_vector_layers():
+    client = _client()
+    add_mock_vector_layers_filtered_list_response(0, "raster1")
+    add_mock_vector_layers_filtered_list_response(1, "raster1", "spam", "detector1")
+    assert client.list_raster_vector_layers("raster1")[0]["id"] == "0"
+    assert (
+        client.list_raster_vector_layers("raster1", "spam", "detector1")[0]["name"]
+        == "layer_1"
+    )
 
 
 # Cannot test Retry with responses, @see https://github.com/getsentry/responses/issues/135
