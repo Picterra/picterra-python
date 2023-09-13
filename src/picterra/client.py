@@ -1083,3 +1083,25 @@ class APIClient:
         # Poll operation and get raster identifier
         operation = self._wait_until_operation_completes(resp.json())
         return operation["metadata"]["raster_id"]
+
+    def list_raster_vector_layers(
+        self,
+        raster_id: str,
+        search: str | None = None,
+        detector_id: str | None = None,
+    ):
+        """
+        This a **beta** function, subject to change.
+
+        List all the vector layers on a raster
+
+        Args:
+            raster_id (str): The id of the raster
+        """
+        params = {}
+        if search is not None:
+            params["search"] = search
+        if detector_id is not None:
+            params["detector"] = detector_id
+        url = "rasters/%s/vector_layers/" % raster_id
+        return self._paginate_through_list(url, params)
