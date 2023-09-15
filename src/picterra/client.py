@@ -41,13 +41,11 @@ class _RequestsSession(requests.Session):
 
 
 def _download_to_file(url, filename):
-    if not (os.path.exists(filename) and os.path.isfile(filename)):
-        raise ValueError("Invalid file: " + filename)
     # Given we do not use self.sess the timeout is disabled (requests default), and this
     # is good as file download can take a long time
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
-        with open(filename, "wb") as f:
+        with open(filename, "wb+") as f:
             logger.debug("Downloading to file %s.." % filename)
             for chunk in r.iter_content(chunk_size=CHUNK_SIZE_BYTES):
                 if chunk:  # filter out keep-alive new chunks
@@ -942,6 +940,30 @@ class APIClient:
         resp = self.sess.delete(self._api_url("vector_layers/%s/" % vector_layer_id))
         if not resp.ok:
             raise APIError(resp.text)
+
+    def download_vector_layer_to_file(self, vector_layer_id: UUID, filename: str):
+        """
+        Downloads a vector layer
+
+        This a **beta** function, subject to change.
+
+        Args:
+            vector_layer_id: The id of the vector layer to download
+            filename: existing file to save the vector layer in
+        """
+        resp = self.sess.get(self._api_url("vector_layers/%s/" % vector_layer_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+        urls = resp.json()["geojson_urls"]
+        final_fc = {"type": "FeatureCollection", "features": []}
+        for url in urls:
+            with tempfile.NamedTemporaryFile("w+") as f:
+                _download_to_file(url, f.name)
+                fc = json.load(f)
+                for feature in fc["features"]:
+                    final_fc["features"].append(feature)
+        with open(filename, "w") as fp:
+            json.dump(final_fc, fp)
 
     def list_raster_markers(self, raster_id):
         """

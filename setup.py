@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="picterra",
-    version="1.1.0",
+    version="1.2.0",
     description="Picterra API client",
     package_dir={"": "src"},
     packages=find_packages("src"),
