@@ -337,6 +337,40 @@ def add_mock_vector_layer_responses(upload_id, raster_id, name, color):
     )
 
 
+def add_mock_vector_layer_download_responses(layer_id, urls_num=1):
+    url = "vector_layers/%s/" % layer_id
+    data = {
+        "name": "layer%s" % layer_id,
+        "raster_id": "raster-id",
+        "count": 1,
+        "color": "#aa0000",
+        "id": layer_id,
+        "geojson_urls": [
+            "http://layer%s.geojson.example.com" % str(i) for i in range(urls_num)
+        ],
+    }
+    _add_api_response(url, json=data)
+    features = []
+    for i in range(urls_num):
+        url = "http://layer%s.geojson.example.com" % str(i)
+        temp_features = [
+            {
+                "type": "Feature",
+                "geometry": make_geojson_multipolygon(j + 1),
+                "properties": {},
+            }
+            for j in range(i + 1)
+        ]
+        for f in temp_features:
+            features.append(f)
+        responses.add(
+            responses.GET,
+            url,
+            body=json.dumps({"type": "FeatureCollection", "features": temp_features}),
+        )
+    return {"type": "FeatureCollection", "features": features}
+
+
 def make_geojson_multipolygon(npolygons=1):
     coords = []
     for i in range(npolygons):
@@ -870,6 +904,20 @@ def test_edit_vector_layer():
     add_mock_edit_vector_layer_response(LAYER_ID, color="#ffffff", raster_id="spam")
     client.edit_vector_layer(LAYER_ID, color="#ffffff", raster_id="spam")
     assert len(responses.calls) == 1
+
+
+@responses.activate
+def test_download_vector_layer_to_file():
+    expected_content = add_mock_vector_layer_download_responses("foobar", 2)
+    client = _client()
+    with tempfile.NamedTemporaryFile() as fp:
+        client.download_vector_layer_to_file("foobar", fp.name)
+        fc = json.load(fp)
+        assert fc == expected_content and len(fc["features"]) == 3
+        assert (
+            fc["type"] == "FeatureCollection" and fc["features"][0]["type"] == "Feature"
+        )
+    assert len(responses.calls) == 3
 
 
 @responses.activate
