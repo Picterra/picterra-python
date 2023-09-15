@@ -821,9 +821,24 @@ def test_train_detector():
     add_mock_detector_train_responses(1)
     add_mock_operations_responses("running")
     add_mock_operations_responses("running")
-    add_mock_operations_responses("success")
+    add_mock_operations_responses(
+        "success",
+        results={
+            "score": 92,
+            "stats": {
+                "rasters_count": 1,
+                "training_areas_count": 2,
+                "assessment_areas_count": 10,
+                "validation_areas_count": 5,
+                "total_annotations_count": 4,
+                "training_annotations_count": 3,
+                "validation_annotations_count": 1,
+            },
+        }
+    )
     client = _client()
-    client.train_detector(1)
+    op = client.train_detector(1)
+    assert op["results"]["score"] == 92
     assert len(responses.calls) == 4
 
 

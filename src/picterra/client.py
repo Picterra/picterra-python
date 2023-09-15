@@ -833,7 +833,7 @@ class APIClient:
         resp = self.sess.post(self._api_url("detectors/%s/train/" % detector_id))
         if not resp.ok:
             raise APIError(resp.text)
-        self._wait_until_operation_completes(resp.json())
+        return self._wait_until_operation_completes(resp.json())
 
     def run_advanced_tool(self, tool_id: UUID, inputs: dict, outputs: dict):
         """
