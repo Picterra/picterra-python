@@ -833,6 +833,21 @@ class APIClient:
             raise APIError(resp.text)
         return self._wait_until_operation_completes(resp.json())
 
+    def run_dataset_recommendation(self, detector_id):
+        """
+        This is an **experimental** feature
+
+        Runs dataset recommendation on a detector. Note that you currently have to use
+        the UI to be able to view the recommendation markers/report.
+
+        Args:
+            detector_id (str): The id of the detector
+        """
+        resp = self.sess.post(self._api_url("detectors/%s/dataset_recommendation/" % detector_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+        return self._wait_until_operation_completes(resp.json())
+
     def run_advanced_tool(self, tool_id: UUID, inputs: dict, outputs: dict):
         """
         This is an experimental feature

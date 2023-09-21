@@ -202,6 +202,9 @@ def add_mock_detector_edit_response(d_id, **kwargs):
 def add_mock_detector_train_responses(detector_id):
     _add_api_response("detectors/%s/train/" % detector_id, responses.POST, OP_RESP)
 
+def add_mock_run_dataset_recommendation_responses(detector_id):
+    _add_api_response("detectors/%s/dataset_recommendation/" % detector_id, responses.POST, OP_RESP)
+
 
 def add_mock_operations_responses(status, **kwargs):
     data = {"type": "mock_operation_type", "status": status}
@@ -873,6 +876,18 @@ def test_train_detector():
     client = _client()
     op = client.train_detector(1)
     assert op["results"]["score"] == 92
+    assert len(responses.calls) == 4
+
+
+@responses.activate
+def test_run_dataset_recommendation():
+    add_mock_run_dataset_recommendation_responses(1)
+    add_mock_operations_responses("running")
+    add_mock_operations_responses("running")
+    add_mock_operations_responses("success")
+    client = _client()
+    op = client.run_dataset_recommendation(1)
+    assert op["status"] == "success"
     assert len(responses.calls) == 4
 
 
