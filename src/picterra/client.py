@@ -598,6 +598,24 @@ class APIClient:
             data["is_shared"] = is_shared
         return self._paginate_through_list("detectors", data)
 
+    def get_detector(self, detector_id: str):
+        """
+        Get detector information
+
+        Args:
+            detector_id: id of the detector
+
+        Raises:
+            APIError: There was an error while getting the detector information
+
+        Returns:
+            dict: Dictionary of the information
+        """
+        resp = self.sess.get(self._api_url("detectors/%s/" % detector_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+        return resp.json()
+
     def edit_detector(
         self,
         detector_id: str,
@@ -952,6 +970,24 @@ class APIClient:
         )
         if not resp.ok:
             raise APIError(resp.text)
+
+    def get_vector_layer(self, vector_layer_id: str):
+        """
+        Get vector layer information
+
+        Args:
+            vector_layer_id: id of the detector
+
+        Raises:
+            APIError: There was an error while getting the vector layer information
+
+        Returns:
+            dict: Dictionary of the information
+        """
+        resp = self.sess.get(self._api_url("vector_layers/%s/" % vector_layer_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+        return resp.json()
 
     def delete_vector_layer(self, vector_layer_id: str):
         """
