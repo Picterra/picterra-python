@@ -748,6 +748,16 @@ def test_list_detectors():
 
 
 @responses.activate
+def test_get_detector():
+    """Test the detector information"""
+    DETECTOR_ID = "foobar"
+    client = _client()
+    _add_api_response("detectors/%s/" % DETECTOR_ID, json={}, status=200)
+    client.get_detector(DETECTOR_ID)
+    assert len(responses.calls) == 1
+
+
+@responses.activate
 def test_delete_detector():
     DETECTOR_ID = "foobar"
     client = _client()
@@ -868,7 +878,7 @@ def test_train_detector():
                 "training_annotations_count": 3,
                 "validation_annotations_count": 1,
             },
-        }
+        },
     )
     client = _client()
     op = client.train_detector(1)
@@ -894,6 +904,16 @@ def test_delete_vector_layer():
     client = _client()
     add_mock_delete_vector_layer_response(LAYER_ID)
     client.delete_vector_layer(LAYER_ID)
+    assert len(responses.calls) == 1
+
+
+@responses.activate
+def test_get_vector_layer():
+    """Test the vector layer information"""
+    LAYER_ID = "foobar"
+    client = _client()
+    _add_api_response("vector_layers/%s/" % LAYER_ID, json={}, status=200)
+    client.get_vector_layer(LAYER_ID)
     assert len(responses.calls) == 1
 
 
@@ -930,7 +950,7 @@ def test_list_raster_markers():
 
 
 @responses.activate
-def test_list_raster_markers():
+def test_create_marker():
     client = _client()
     add_mock_marker_creation_response("spam", "foo", "bar", [12.34, 56.78], "foobar")
     marker = client.create_marker("foo", "bar", 12.34, 56.78, "foobar")
