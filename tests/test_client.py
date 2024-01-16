@@ -916,8 +916,8 @@ def test_delete_vector_layer():
 def test_edit_vector_layer():
     LAYER_ID = "foobar"
     client = _client()
-    add_mock_edit_vector_layer_response(LAYER_ID, color="#ffffff", raster_id="spam")
-    client.edit_vector_layer(LAYER_ID, color="#ffffff", raster_id="spam")
+    add_mock_edit_vector_layer_response(LAYER_ID, color="#ffffff", name="spam")
+    client.edit_vector_layer(LAYER_ID, color="#ffffff", name="spam")
     assert len(responses.calls) == 1
 
 

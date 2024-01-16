@@ -265,8 +265,8 @@ class APIClient:
             search_string (str, optional): The search term used to filter rasters by name
             user_tag (str, optional): [beta] The user tag to filter rasters by
             max_cloud_coverage (int, optional): [beta] The max_cloud_coverage of the rasters (between 0 and 100)
-            captured_before (str, optional): [beta] ISO 8601 -formatted date / time of capture we want to list the rasters since
-            captured_after (str, optional): [beta] ISO 8601 -formatted date / time of capture we want to list the rasters from+
+            captured_before (str, optional): ISO 8601 -formatted date / time of capture we want to list the rasters since
+            captured_after (str, optional): ISO 8601 -formatted date / time of capture we want to list the rasters from
             has_vector_layers (bool, optional): [beta] Whether or not the rasters have at least one vector layer
 
         Returns:
@@ -545,7 +545,9 @@ class APIClient:
     ) -> List[dict]:
         """
         Args:
-            search_string (str, optional): The term used to filter detectors by name
+            search_string: The term used to filter detectors by name
+            user_tag: [beta] User tag to filter detectors by
+            is_shared: [beta] Share status to filter detectors by
         Returns:
             A list of detectors dictionaries
 
@@ -916,8 +918,7 @@ class APIClient:
         self,
         vector_layer_id: UUID,
         name: Optional[str] = None,
-        color: Optional[str] = None,
-        raster_id: Optional[UUID] = None,
+        color: Optional[str] = None
     ):
         """
         Edits a vector layer
@@ -928,15 +929,12 @@ class APIClient:
             vector_layer_id: The id of the vector layer to remove
             name: new name
             color: new color
-            raster_id: identifier of the new raster to asscoaite the vector layer with
         """
         data = {}
         if name:
             data.update({"name": name})
         if color is not None:
             data.update({"color": color})
-        if raster_id is not None:
-            data.update({"raster_id": raster_id})
         resp = self.sess.put(
             self._api_url("vector_layers/%s/" % vector_layer_id), json=data
         )
