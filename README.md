@@ -7,6 +7,7 @@
 # Picterra Python API Client
 
 ![Tests](https://github.com/Picterra/picterra-python/workflows/lint%20and%20tests/badge.svg?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/picterra-python/badge/?version=latest)](https://picterra-python.readthedocs.io/en/latest/?badge=latest)
 
 Easily integrate state-of-the-art machine learning models in your app
 
