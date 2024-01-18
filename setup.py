@@ -2,10 +2,17 @@
 # -*- coding: utf-8 -*-
 from setuptools import find_packages, setup
 
+# read the contents of your README file
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
 setup(
     name="picterra",
-    version="1.2.0",
+    version="1.2.1",
     description="Picterra API client",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     package_dir={"": "src"},
     packages=find_packages("src"),
     setup_requires=[
