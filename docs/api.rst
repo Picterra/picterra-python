@@ -2,6 +2,7 @@
 API
 ===
 
+
 APIClient
 ---------
 
@@ -13,4 +14,11 @@ nongeo
 ------
 
 .. automodule:: picterra.nongeo
+    :members:
+
+
+Exceptions
+----------
+
+.. autoclass:: picterra.client.APIError
     :members:

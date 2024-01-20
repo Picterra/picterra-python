@@ -232,6 +232,7 @@ class APIClient:
         Example:
 
             ::
+
                 {
                     "id": "id1",
                     "name": "detector1",
@@ -244,6 +245,7 @@ class APIClient:
                     "is_runnable": False,
                     "user_tag": "tag2",
                 }
+
         """
         return self._paginate_through_list("folders/%s/detectors" % folder_id)
 
@@ -513,7 +515,7 @@ class APIClient:
             background_sample_ratio: bg sample ratio (between 0 and 1)
 
         Returns:
-            detector_id (str): The id of the detector
+            The id of the detector
 
         Raises:
             APIError: There was an error while creating the detector

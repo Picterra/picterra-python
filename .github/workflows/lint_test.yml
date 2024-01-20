@@ -34,4 +34,13 @@ jobs:
     - name: check build
       run: |
         python setup.py bdist && twine check dist/*
+    # Even thought we have readthedocs build docs on every MR, this is useful
+    # because we build with -W --keep-going (see Makefile) and this will
+    # therefore fail on warnings that could be ignored by readthedocs and
+    # lead to half-broken docs
+    - name: build docs
+      run: |
+        cd docs
+        python -m pip install -r requirements.txt
+        make html
 

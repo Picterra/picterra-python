@@ -78,18 +78,21 @@ def nongeo_result_to_pixel(result_filename):
     This is currently in **beta** so let us know if you find any issues
 
     Args:
-        - result_filename (str): The file path to the GeoJSON file obtained by
-            `APIClient.download_result_to_file`
+        result_filename (str): The file path to the GeoJSON file obtained by
+                               `APIClient.download_result_to_file`
     Returns:
-        - polygons: A list of polygons. Each polygon is a list of rings and
-            each ring is a list of (x, y) tuples. For example:
-              [
+        A list of polygons. Each polygon is a list of rings and
+        each ring is a list of (x, y) tuples. For example:
+
+        ::
+
+            [
                 # This is a square with a square hole
                 [[(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)],
                  [(0.4, 0.4), (0.5, 0.4), (0.5, 0.5), (0.4, 0.5), (0.4, 0.4)],
                 # A triangle
                 [[(0, 0), (1, 0), (1, 1), (0, 0)]]
-              ]
+            ]
     """
     with open(result_filename) as f:
         geojson = json.load(f)

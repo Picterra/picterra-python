@@ -1,4 +1,3 @@
 sphinx
 sphinx-rtd-theme
 sphinx-autobuild
-docutils<0.18
