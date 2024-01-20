@@ -48,3 +48,13 @@ In order to test locally, run:
 ```bash
 python setup.py test
 ```
+
+## Release process
+
+1. Bump the version number in `setup.py`
+2. Manually run the [publish to testpypi workflow](https://github.com/Picterra/picterra-python/actions/workflows/python-publish-testpypi.yml)
+3. Check the publication result on [testpypi](https://test.pypi.org/project/picterra/)
+4. Create a release through github
+5. The 'publish to pypi' workflow should automatically run
+6. Updated package should be available on [pypi](https://pypi.org/project/picterra/)
+
