@@ -8,6 +8,7 @@
 
 ![Tests](https://github.com/Picterra/picterra-python/workflows/lint%20and%20tests/badge.svg?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/picterra-python/badge/?version=latest)](https://picterra-python.readthedocs.io/en/latest/?badge=latest)
+[![PyPI - Version](https://img.shields.io/pypi/v/picterra)](https://pypi.org/project/picterra/)
 
 Easily integrate state-of-the-art machine learning models in your app
 
@@ -32,7 +33,7 @@ print('Detection finished, results are in result.geojson')
 ## Installation
 
 ```
-pip install git+https://github.com/Picterra/picterra-python.git
+pip install picterra
 ```
 
 See the `examples` folder for examples.
