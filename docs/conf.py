@@ -47,14 +47,9 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "venv"]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "alabaster"
+html_theme = "sphinx_rtd_theme"
 
 html_theme_options = {
-    "show_powered_by": False,
-    "github_user": "Picterra",
-    "github_repo": "picterra-python",
-    "github_banner": True,
-    "show_related": False,
 }
 
 
