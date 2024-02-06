@@ -7,6 +7,9 @@ from pathlib import Path
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
+lint_deps = ["flake8"]
+test_deps = ["pytest==7.1", "responses==0.22", "httpretty"]
+
 setup(
     name="picterra",
     version="1.2.2",
@@ -15,14 +18,13 @@ setup(
     long_description_content_type="text/markdown",
     package_dir={"": "src"},
     packages=find_packages("src"),
-    setup_requires=[
-        "pytest-runner",
-        "flake8",
-    ],
     install_requires=[
         "requests",
         # We use the new `allowed_methods` option
         "urllib3>=1.26.0",
     ],
-    tests_require=["pytest==7.1", "flake8", "responses==0.22", "httpretty"],
+    extras_require={
+        'test': test_deps,
+        'lint': lint_deps,
+    }
 )
