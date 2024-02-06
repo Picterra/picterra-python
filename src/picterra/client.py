@@ -4,7 +4,8 @@ import os
 import tempfile
 import time
 import warnings
-from typing import Any, Literal, TypedDict
+from collections.abc import Callable
+from typing import Any, Generic, Iterator, Literal, TypedDict, TypeVar
 from urllib.parse import urlencode, urljoin
 
 import requests
@@ -66,6 +67,54 @@ def _upload_file_to_blobstore(upload_url: str, filename: str):
     if not resp.ok:
         logger.error("Error when uploading to blobstore %s" % upload_url)
         raise APIError(resp.text)
+
+
+T = TypeVar("T")
+
+
+class ResultsPage(Generic[T]):
+    """
+    Interface for a paginated response from the API
+
+    Typically the endpoint returning list of objects return them splitted
+    in pages (page 1, page 2, etc..) of a fixed dimension (eg 20). Thus
+    each `list_XX` function returns a ResultsPage (by default the first one);
+    once you have a ResultsPage for a given list of objects, you can:
+    * check its length with `len()` (eg `len(page)`)
+    * access a single element with the index operator `[]` (eg `page[5]`)
+    * turn it into a list of dictionaries with  `list()` (eg `list(page)`)
+    * get the next page with `.next()` (eg `page.next()`); this could return
+    None if the list is finished
+    You can also get a specific page passing the page number to the `list_XX` function
+    """
+
+    def __init__(self, url: str, fetch: Callable[[str], requests.Response]):
+        resp = fetch(url)
+        if not resp.ok:
+            raise APIError(resp.text)
+        r: dict[str, Any] = resp.json()
+        next_url: str | None = r["next"]
+        results: list[T] = r["results"]
+
+        self._fetch = fetch
+        self._next_url = next_url
+        self._results = results
+        self._url = url
+
+    def next(self):
+        return ResultsPage(self._next_url, self._fetch) if self._next_url else None
+
+    def __len__(self) -> int:
+        return len(self._results)
+
+    def __getitem__(self, key: int) -> T:
+        return self._results[key]
+
+    def __iter__(self) -> Iterator[T]:
+        return iter([self._results[i] for i in range(len(self._results))])
+
+    def __str__(self) -> str:
+        return f"{len(self._results)} results from {self._url}"
 
 
 class Feature(TypedDict):
@@ -158,23 +207,16 @@ class APIClient:
             time.sleep(poll_interval)
         return resp.json()
 
-    def _paginate_through_list(
+    def _return_results_page(
         self, resource_endpoint: str, params: dict[str, Any] | None = None
-    ) -> list[dict[str, Any]]:
+    ) -> ResultsPage:
         if params is None:
             params = {}
-        params["page_number"] = 1
-        data = []
+        if "page_number" not in params:
+            params["page_number"] = 1
+
         url = self._api_url("%s/" % resource_endpoint, params=params)
-        while url:
-            logger.debug("Fetching page url=%s", url)
-            resp = self.sess.get(url)
-            if not resp.ok:
-                raise APIError(resp.text)
-            r = resp.json()
-            url = r["next"]
-            data += r["results"]
-        return data
+        return ResultsPage(url, self.sess.get)
 
     def upload_raster(
         self,
@@ -200,7 +242,8 @@ class APIClient:
                 raster was captured, YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z];
                 e.g. "2020-01-01T12:34:56.789Z"
             identity_key: Personal identifier for this raster.
-            multispectral: If True, the raster is in multispectral mode and can have an associated band specification
+            multispectral: If True, the raster is in multispectral mode and can have
+                an associated band specification
             cloud_coverage: Raster cloud coverage %.
             user_tag (beta): Raster tag
 
@@ -231,17 +274,20 @@ class APIClient:
         self._wait_until_operation_completes(resp.json())
         return raster_id
 
-    def list_folder_detectors(self, folder_id: str):
+    def list_folder_detectors(self, folder_id: str, page_number: int | None = None):
         """
-        List of detectors assigned to a given folder
+        List of detectors assigned to a given folder, see `ResultsPage`
+        for the pagination access pattern.
 
         This a **beta** function, subject to change.
 
         Args:
             folder_id: The id of the folder to obtain the detectors for
+            page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
-            A list of detector dictionaries
+            A ResultsPage object that contains a slice of the list of detector dictionaries,
+            plus methods to retrieve the other pages
 
         Example:
 
@@ -261,7 +307,10 @@ class APIClient:
                 }
 
         """
-        return self._paginate_through_list("folders/%s/detectors" % folder_id)
+        return self._return_results_page(
+            "folders/%s/detectors" % folder_id,
+            {"page_number": page_number} if page_number is not None else None,
+        )
 
     def list_rasters(
         self,
@@ -272,18 +321,22 @@ class APIClient:
         captured_before: str | None = None,
         captured_after: str | None = None,
         has_vector_layers: bool | None = None,
-    ) -> list[dict[str, Any]]:
+        page_number: int | None = None,
+    ):
         """
-        List of rasters metadata
+        List of rasters metadata, see `ResultsPage` for the pagination access pattern.
 
         Args:
             folder_id: The id of the folder to search rasters in
             search_string: The search term used to filter rasters by name
             user_tag: [beta] The user tag to filter rasters by
             max_cloud_coverage: [beta] The max_cloud_coverage of the rasters (between 0 and 100)
-            captured_before: ISO 8601 -formatted date / time of capture we want to list the rasters since
-            captured_after: ISO 8601 -formatted date / time of capture we want to list the rasters from
+            captured_before: ISO 8601 -formatted date / time of capture
+                we want to list the rasters since
+            captured_after: ISO 8601 -formatted date / time of capture
+                we want to list the rasters from
             has_vector_layers: [beta] Whether or not the rasters have at least one vector layer
+            page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
             A list of rasters dictionaries
@@ -321,7 +374,9 @@ class APIClient:
             params["captured_after"] = captured_after
         if has_vector_layers is not None:
             params["has_vector_layers"] = bool(has_vector_layers)
-        return self._paginate_through_list("rasters", params)
+        if page_number is not None:
+            params["page_number"] = page_number
+        return self._return_results_page("rasters", params)
 
     def get_raster(self, raster_id: str) -> dict[str, Any]:
         """
@@ -362,7 +417,8 @@ class APIClient:
                 raster was captured, YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z];
                 e.g. "2020-01-01T12:34:56.789Z"
             identity_key: New personal identifier for this raster.
-            multispectral_band_specification: The new band specification, see https://docs.picterra.ch/advanced-topics/multispectral
+            multispectral_band_specification: The new band specification,
+                see https://docs.picterra.ch/advanced-topics/multispectral
             cloud_coverage: Raster cloud coverage new percentage
             user_tag (beta): Raster tag
 
@@ -554,14 +610,18 @@ class APIClient:
         search_string: str | None = None,
         user_tag: str | None = None,
         is_shared: bool | None = None,
-    ) -> list[dict[str, Any]]:
+        page_number: int | None = None,
+    ):
         """
-        List all the detectors the user can access
+        List all the detectors the user can access, see `ResultsPage`
+            for the pagination access pattern.
 
         Args:
             search_string: The term used to filter detectors by name
             user_tag: [beta] User tag to filter detectors by
             is_shared: [beta] Share status to filter detectors by
+            page_number: Optional page (from 1) of the list we want to retrieve
+
         Returns:
             A list of detectors dictionaries
 
@@ -596,7 +656,9 @@ class APIClient:
             data["user_tag"] = user_tag.strip()
         if is_shared is not None:
             data["is_shared"] = is_shared
-        return self._paginate_through_list("detectors", data)
+        if page_number is not None:
+            data["page_number"] = page_number
+        return self._return_results_page("detectors", data)
 
     def edit_detector(
         self,
@@ -990,17 +1052,24 @@ class APIClient:
         with open(filename, "w") as fp:
             json.dump(final_fc, fp)
 
-    def list_raster_markers(self, raster_id: str):
+    def list_raster_markers(
+        self,
+        raster_id: str,
+        page_number: int | None = None,
+    ):
         """
         This a **beta** function, subject to change.
 
-        List all the markers on a raster
+        List all the markers on a raster, see `ResultsPage` for the pagination access pattern.
 
         Args:
             raster_id: The id of the raster
+            page_number: Optional page (from 1) of the list we want to retrieve
         """
-        url = "rasters/%s/markers/" % raster_id
-        return self._paginate_through_list(url)
+        return self._return_results_page(
+            "rasters/%s/markers/" % raster_id,
+            {"page_number": page_number} if page_number is not None else None,
+        )
 
     def create_marker(
         self,
@@ -1089,19 +1158,25 @@ class APIClient:
         raster_id: str,
         search: str | None = None,
         detector_id: str | None = None,
+        page_number: int | None = None,
     ):
         """
         This a **beta** function, subject to change.
 
-        List all the vector layers on a raster
+        List all the vector layers on a raster, see `ResultsPage`
+            for the pagination access pattern.
 
         Args:
-            raster_id (str): The id of the raster
+            raster_id: The id of the raster
+            search: Optional string to search layers by name
+            page_number: Optional page (from 1) of the list we want to retrieve
         """
-        params = {}
+        params: dict[str, str | int] = {}
         if search is not None:
             params["search"] = search
         if detector_id is not None:
             params["detector"] = detector_id
+        if page_number is not None:
+            params["page_number"] = page_number
         url = "rasters/%s/vector_layers/" % raster_id
-        return self._paginate_through_list(url, params)
+        return self._return_results_page(url, params)

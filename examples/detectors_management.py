@@ -12,14 +12,16 @@ detector_id = client.create_detector("My first detector")
 client.edit_detector(detector_id, "Renamed detector", "segmentation", "bbox", 1000)
 
 # List existing detectors
-for d in client.list_detectors():
-    print(
-        "detector id=%s, name=%s, detection_type=%s, output_type=%s, training_steps=%d"
-        % (
-            d["id"],
-            d["name"],
-            d["configuration"]["detection_type"],
-            d["configuration"]["output_type"],
-            d["configuration"]["training_steps"],
-        )
+detectors_page_1 = client.list_detectors()
+print("Page has " + str(len(detectors_page_1)) + " elements")
+d = detectors_page_1[0]
+print(
+    "detector id=%s, name=%s, detection_type=%s, output_type=%s, training_steps=%d"
+    % (
+        d["id"],
+        d["name"],
+        d["configuration"]["detection_type"],
+        d["configuration"]["output_type"],
+        d["configuration"]["training_steps"],
     )
+)
