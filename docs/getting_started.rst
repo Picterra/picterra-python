@@ -9,13 +9,27 @@ Install using pip
 
 ::
 
-    pip install git+https://github.com/Picterra/picterra-python.git
+    pip install picterra
 
 Set your Picterra API key through an environment variable
 
 ::
 
     export PICTERRA_API_KEY=<your api key>
+
+Listing entities
+================
+
+When listing entities (eg rasters, detectors) from your account, the Picterra Server uses a *paginated*
+approach; this means that every `list_`-prefixed function returns a special `ResultsPage` class instance
+which has the following properties, similarly to a Python list:
+* is iterable over the elements in the page, eg with a `for`
+* can be applied the builtin `len` to get the number of elements in the page
+* returns the `n`-th element of the page simply accessing with `[n]` (0-indexed)
+* has a `next()` method which returns the following `ResultsPage`, if any, otherwise `None`
+
+.. literalinclude:: ../examples/detectors_management.py
+.. literalinclude:: ../examples/raster_management.py
 
 
 Upload & Detect

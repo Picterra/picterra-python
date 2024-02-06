@@ -9,6 +9,12 @@ APIClient
 .. autoclass:: picterra.client.APIClient
     :members:
 
+Pagination
+----------
+
+.. autoclass:: picterra.client.ResultsPage
+    :members:
+
 
 nongeo
 ------

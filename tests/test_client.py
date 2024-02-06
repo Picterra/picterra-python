@@ -59,9 +59,9 @@ def _add_api_response(
 
 def add_mock_rasters_list_response():
     data1 = {
-        "count": 4,
+        "count": 5,
         "next": api_url("rasters/?page_number=2"),
-        "previous": api_url("rasters/?page_number=1"),
+        "previous": None,
         "page_size": 2,
         "results": [
             {"id": "40", "status": "ready", "name": "raster1"},
@@ -69,13 +69,22 @@ def add_mock_rasters_list_response():
         ],
     }
     data2 = {
-        "count": 4,
-        "next": None,
+        "count": 5,
+        "next": api_url("rasters/?page_number=3"),
         "previous": None,
-        "page_size": 2,
+        "page_size": api_url("rasters/?page_number=1"),
         "results": [
             {"id": "42", "status": "ready", "name": "raster3"},
             {"id": "43", "status": "ready", "name": "raster4"},
+        ],
+    }
+    data3 = {
+        "count": 5,
+        "next": None,
+        "previous": api_url("rasters/?page_number=2"),
+        "page_size": 2,
+        "results": [
+            {"id": "44", "status": "ready", "name": "raster5"},
         ],
     }
     _add_api_response(
@@ -87,6 +96,11 @@ def add_mock_rasters_list_response():
         "rasters/",
         json=data2,
         match=responses.matchers.query_param_matcher({"page_number": "2"}),
+    )
+    _add_api_response(
+        "rasters/",
+        json=data3,
+        match=responses.matchers.query_param_matcher({"page_number": "3"}),
     )
 
 
@@ -112,7 +126,7 @@ def add_mock_rasters_in_folder_list_response(folder_id):
 
 
 def add_mock_rasters_in_filtered_list_response(
-    search=None, tag=None, cloud=None, before=None, after=None, has_layers=None
+    search=None, tag=None, cloud=None, before=None, after=None, has_layers=None, page=1
 ):
     name = (search + "_" if search else "") + "raster" + ("_" + tag if tag else "")
     data = {
@@ -124,7 +138,7 @@ def add_mock_rasters_in_filtered_list_response(
             {"id": "77", "status": "ready", "name": name},
         ],
     }
-    qs = {"page_number": 1}
+    qs = {"page_number": page}
     if search is not None:
         qs["search"] = search
     if tag is not None:
@@ -708,11 +722,23 @@ def test_download_raster():
 def test_list_rasters():
     """Test the list of rasters, both generic and specifying the filters"""
     client = _client()
-    # Generic
+    # Generic (check pagination)
     add_mock_rasters_list_response()
-    rasters = client.list_rasters()
-    assert rasters[0]["name"] == "raster1"
-    assert rasters[2]["name"] == "raster3"
+    page1 = client.list_rasters()
+    assert len(page1) == 2
+    assert page1[0]["name"] == "raster1" and page1[1]["name"] == "raster2"
+    assert len(responses.calls) == 1
+    page2 = page1.next()
+    assert len(page2) == 2
+    assert page2[0]["name"] == "raster3" and page2[1]["name"] == "raster4"
+    page3 = page2.next()
+    assert len(responses.calls) == 3
+    assert len(page3) == 1 and page3.next() is None
+    assert page3[0]["name"] == "raster5"
+    assert len(responses.calls) == 3
+    pairs = zip(list(page2), list(client.list_rasters(page_number=2)))
+    assert all(x == y for x, y in pairs) is True
+    assert len(responses.calls) == 4
     # Folder list
     add_mock_rasters_in_folder_list_response("foobar")
     rasters = client.list_rasters("foobar")
@@ -750,6 +776,14 @@ def test_list_rasters():
         has_vector_layers=True,
     )
     assert rasters[0]["name"] == "bar_raster"
+    # Filter list with pagination
+    add_mock_rasters_in_filtered_list_response(page=3, search="spam")
+    rasters = client.list_rasters(
+        search_string="spam",
+        page_number=3,
+    )
+    assert rasters[0]["id"] == "77"
+    assert len(responses.calls) == 11
 
 
 @responses.activate
@@ -780,17 +814,19 @@ def test_list_detectors():
     # Full list
     add_mock_detectors_list_response()
     detectors = client.list_detectors()
+    assert len(detectors) == 2  # 1st api call
     assert detectors[0]["name"] == "detector1"
     assert detectors[1]["name"] == "detector2"
+    assert detectors.next()[1]["id"] == "43"  # 2nd api call
     # Search list
     add_mock_detectors_list_response("spam")
-    detectors = client.list_detectors("spam")
+    detectors = client.list_detectors("spam")  # 3rd api call
     assert detectors[0]["name"] == "spam"
     # Filter list
     add_mock_detectors_list_response(None, "foobar", True)
-    detectors = client.list_detectors(user_tag="foobar", is_shared=True)
+    detectors = client.list_detectors(user_tag="foobar", is_shared=True)  # 4th api call
     assert detectors[1]["name"] == "detector2"
-    assert len(responses.calls) == 6
+    assert len(responses.calls) == 4
 
 
 @responses.activate
@@ -982,11 +1018,13 @@ def test_list_raster_markers():
     add_mock_raster_markers_list_response("spam")
     rasters = client.list_raster_markers("spam")
     assert rasters[0]["id"] == "1"
-    assert rasters[2]["id"] == "3"
+    rasters = client.list_raster_markers("spam", page_number=2)
+    assert rasters[0]["id"] == "3"
+    assert len(responses.calls) == 2
 
 
 @responses.activate
-def test_list_raster_markers():
+def test_raster_markers_creation():
     client = _client()
     add_mock_marker_creation_response("spam", "foo", "bar", [12.34, 56.78], "foobar")
     marker = client.create_marker("foo", "bar", 12.34, 56.78, "foobar")
@@ -1008,9 +1046,11 @@ def test_list_folder_detectors():
     client = _client()
     add_mock_folder_detector_response("folder_id123")
     detector_list = client.list_folder_detectors("folder_id123")
-    assert len(detector_list) == 4
+    assert len(detector_list) == 2
     assert detector_list[0]["id"] == "id1"
-    assert detector_list[2]["id"] == "id3"
+    detector_list = detector_list.next()
+    assert detector_list[0]["id"] == "id3"
+    assert len(responses.calls) == 2
 
 
 @responses.activate
