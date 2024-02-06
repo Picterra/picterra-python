@@ -4,13 +4,13 @@ import os
 import tempfile
 import time
 import warnings
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from urllib.parse import urlencode, urljoin
 from uuid import UUID
 
 import requests
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3.util.retry import Retry
 
 logger = logging.getLogger()
 
@@ -208,7 +208,7 @@ class APIClient:
         if not resp.ok:
             raise APIError(resp.text)
         data = resp.json()
-        upload_url = data["upload_url"]
+        upload_url = str(data["upload_url"])
         raster_id = data["raster_id"]
         _upload_file_to_blobstore(upload_url, filename)
         resp = self.sess.post(self._api_url("rasters/%s/commit/" % raster_id))
@@ -292,7 +292,7 @@ class APIClient:
                 }
 
         """
-        params = {}
+        params: Dict[str, Any] = {}
         if folder_id:
             params["folder"] = folder_id
         if search_string:
@@ -355,7 +355,7 @@ class APIClient:
         Returns:
             raster_id (str): The id of the edited raster
         """
-        data = {}
+        data: Dict[str, Any] = {}
         if name is not None:
             if len(name) == 0:
                 raise ValueError("Invalid empty name")
@@ -521,7 +521,7 @@ class APIClient:
             APIError: There was an error while creating the detector
         """
         # Build request body
-        body_data = {"configuration": {}}
+        body_data: Dict[str, Any] = {"configuration": {}}
         if name:
             body_data["name"] = name
         for i in (
@@ -577,7 +577,7 @@ class APIClient:
                 }
 
         """
-        data = {}
+        data: Dict[str, Any] = {}
         if search_string is not None:
             data["search"] = search_string.strip()
         if user_tag is not None:
@@ -618,7 +618,7 @@ class APIClient:
             APIError: There was an error while editing the detector
         """
         # Build request body
-        body_data = {"configuration": {}}
+        body_data: Dict[str, Any] = {"configuration": {}}
         if name:
             body_data["name"] = name
         for i in (
@@ -740,7 +740,7 @@ class APIClient:
         with open(filename, "w") as f:
             f.write(data)
 
-    def get_operation_results(self, operation_id: str) -> str:
+    def get_operation_results(self, operation_id: str) -> Dict[str, Any]:
         """
         Return the 'results' dict of an operation
 
@@ -970,7 +970,7 @@ class APIClient:
         if not resp.ok:
             raise APIError(resp.text)
         urls = resp.json()["geojson_urls"]
-        final_fc = {"type": "FeatureCollection", "features": []}
+        final_fc: Dict[str, Any] = {"type": "FeatureCollection", "features": []}
         for url in urls:
             with tempfile.NamedTemporaryFile("w+") as f:
                 _download_to_file(url, f.name)
