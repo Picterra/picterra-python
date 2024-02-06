@@ -4,7 +4,7 @@ import os
 import tempfile
 import time
 import warnings
-from typing import List, Optional
+from typing import List, Optional, TypeVar, Callable, Generic
 from urllib.parse import urlencode, urljoin
 from uuid import UUID
 
@@ -67,6 +67,30 @@ def _upload_file_to_blobstore(upload_url: str, filename: str):
     if not resp.ok:
         logger.error("Error when uploading to blobstore %s" % upload_url)
         raise APIError(resp.text)
+
+T = TypeVar('T')
+
+class ResultsPage(Generic[T]):
+    def __init__(self, url: str, fetch: Callable[[str], requests.Response]):
+        resp = fetch(url)
+        if not resp.ok:
+            raise APIError(resp.text)
+        r = resp.json()
+        next_url = r["next"]
+        results = r["results"]
+
+        self._fetch = fetch
+        self._next_url = next_url
+        self._results = results
+
+    def next(self):
+        return ResultsPage(self._next_url, self._fetch)
+
+    def __len__(self) -> int:
+        return len(self._results)
+
+    def __getitem__(self, key: int) -> T:
+        return self._results[key]
 
 
 class APIClient:
@@ -146,21 +170,14 @@ class APIClient:
             time.sleep(poll_interval)
         return resp.json()
 
-    def _paginate_through_list(self, resource_endpoint: str, params=None):
+    def _return_results_page(self, resource_endpoint: str, params=None):
         if params is None:
             params = {}
-        params["page_number"] = 1
-        data = []
+        if "page_number" not in params:
+            params["page_number"] = 1
+
         url = self._api_url("%s/" % resource_endpoint, params=params)
-        while url:
-            logger.debug("Fetching page url=%s", url)
-            resp = self.sess.get(url)
-            if not resp.ok:
-                raise APIError(resp.text)
-            r = resp.json()
-            url = r["next"]
-            data += r["results"]
-        return data
+        return ResultsPage(url, self.sess.get)
 
     def upload_raster(
         self,
@@ -217,7 +234,7 @@ class APIClient:
         self._wait_until_operation_completes(resp.json())
         return raster_id
 
-    def list_folder_detectors(self, folder_id: str):
+    def list_folder_detectors(self, folder_id: str, page_number: int):
         """
         List of detectors assigned to a given folder
 
@@ -247,7 +264,7 @@ class APIClient:
                 }
 
         """
-        return self._paginate_through_list("folders/%s/detectors" % folder_id)
+        return self._return_results_page("folders/%s/detectors" % folder_id)
 
     def list_rasters(
         self,
@@ -307,7 +324,7 @@ class APIClient:
             params["captured_after"] = captured_after
         if has_vector_layers is not None:
             params["has_vector_layers"] = bool(has_vector_layers)
-        return self._paginate_through_list("rasters", params)
+        return self._return_results_page("rasters", params)
 
     def get_raster(self, raster_id: str):
         """
@@ -584,7 +601,7 @@ class APIClient:
             data["user_tag"] = user_tag.strip()
         if is_shared is not None:
             data["is_shared"] = is_shared
-        return self._paginate_through_list("detectors", data)
+        return self._return_results_page("detectors", data)
 
     def edit_detector(
         self,
@@ -990,7 +1007,7 @@ class APIClient:
             raster_id (str): The id of the raster
         """
         url = "rasters/%s/markers/" % raster_id
-        return self._paginate_through_list(url)
+        return self._return_results_page(url)
 
     def create_marker(
         self,
