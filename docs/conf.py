@@ -49,8 +49,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "venv"]
 #
 html_theme = "sphinx_rtd_theme"
 
-html_theme_options = {
-}
+html_theme_options = {}
 
 
 # Add any paths that contain custom static files (such as style sheets) here,

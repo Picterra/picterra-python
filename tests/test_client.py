@@ -202,8 +202,11 @@ def add_mock_detector_edit_response(d_id, **kwargs):
 def add_mock_detector_train_responses(detector_id):
     _add_api_response("detectors/%s/train/" % detector_id, responses.POST, OP_RESP)
 
+
 def add_mock_run_dataset_recommendation_responses(detector_id):
-    _add_api_response("detectors/%s/dataset_recommendation/" % detector_id, responses.POST, OP_RESP)
+    _add_api_response(
+        "detectors/%s/dataset_recommendation/" % detector_id, responses.POST, OP_RESP
+    )
 
 
 def add_mock_operations_responses(status, **kwargs):
@@ -871,7 +874,7 @@ def test_train_detector():
                 "training_annotations_count": 3,
                 "validation_annotations_count": 1,
             },
-        }
+        },
     )
     client = _client()
     op = client.train_detector(1)
