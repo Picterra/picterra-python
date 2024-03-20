@@ -67,6 +67,7 @@ def _upload_file_to_blobstore(upload_url: str, filename: str):
         logger.error("Error when uploading to blobstore %s" % upload_url)
         raise APIError(resp.text)
 
+
 class Feature(TypedDict):
     type: Literal["Feature"]
     properties: dict[str, Any]
@@ -1033,3 +1034,51 @@ class APIClient:
         if not resp.ok:
             raise APIError(resp.text)
         return resp.json()
+
+    def import_raster_from_remote_source(
+        self,
+        raster_name: str,
+        folder_id: str,
+        source_id: str,
+        aoi_filename: str,
+        method: Literal["streaming"] = "streaming",
+    ) -> str:
+        """
+        This is an experimental feature
+
+        Import a raster from a remote imagery source given a GeoJSON file for the AOI
+
+        Args:
+            raster_name: Name of the new raster
+            folder_id: The id of the folder / project the raster will live in
+            source_id: The id of the remote imagery source to import from
+            filename: The filename of a GeoJSON file. This should contain a FeatureCollection of
+                Polygon/MultiPolygon representing the AOI of the new raster
+
+        Raises:
+            APIError: There was an error during import
+        """
+        # Get upload URL
+        resp = self.sess.post(self._api_url("rasters/import/"))
+        if not resp.ok:
+            raise APIError(resp.text)
+        data = resp.json()
+        upload_url = data["upload_url"]
+        upload_id = data["upload_id"]
+        # Upload to blobstore
+        _upload_file_to_blobstore(upload_url, aoi_filename)
+        # Commit upload
+        resp = self.sess.post(
+            self._api_url(f"rasters/import/{upload_id}/commit/"),
+            json={
+                "method": method,
+                "source_id": source_id,
+                "folder_id": folder_id,
+                "name": raster_name,
+            },
+        )
+        if not resp.ok:
+            raise APIError(resp.text)
+        # Poll operation and get raster identifier
+        operation = self._wait_until_operation_completes(resp.json())
+        return operation["metadata"]["raster_id"]

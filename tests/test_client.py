@@ -312,6 +312,23 @@ def add_mock_detection_areas_upload_responses(raster_id):
     )
 
 
+def add_mock_remote_import_responses(upload_id, post_body):
+    match = responses.json_params_matcher(post_body)
+    # Upload initiation
+    data = {"upload_url": "http://storage.example.com", "upload_id": upload_id}
+    _add_api_response("rasters/import/", responses.POST, data)
+    # Storage PUT
+    responses.add(responses.PUT, "http://storage.example.com", status=200)
+    # Commit
+    _add_api_response(
+        f"rasters/import/{upload_id}/commit/",
+        responses.POST,
+        OP_RESP,
+        match=match,
+        status=200,
+    )
+
+
 def add_mock_detector_run_responses(detector_id):
     op_id = 43
     _add_api_response("detectors/%s/run/" % detector_id, responses.POST, OP_RESP)
@@ -1051,3 +1068,26 @@ def test_run_advanced_tool():
         == "mock_operation_type"
     )
     assert len(responses.calls) == 2
+
+
+@responses.activate
+def test_import_raster_from_remote_source():
+    body = {
+        "method": "streaming",
+        "source_id": "source",
+        "folder_id": "project",
+        "name": "image",
+    }
+    add_mock_remote_import_responses("upload_id", body)
+    add_mock_operations_responses("success")
+
+    client = _client()
+    # This just tests that this doesn't raise
+    with tempfile.NamedTemporaryFile() as f:
+        assert (
+            client.import_raster_from_remote_source(
+                "image", "project", "source", f.name
+            )
+            == "foo"
+        )
+    assert len(responses.calls) == 4
