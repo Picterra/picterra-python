@@ -10,6 +10,7 @@ from picterra.nongeo import _load_polygons, _nongeo_latlng2xy
 # - Download the normalized.tif
 # - Open normalized.tif in QGIS, get the lat/lng coordinates of the 4 corners of the image
 
+
 # In this case, the image is 1520 x 1086
 @pytest.mark.parametrize(
     "latlng,xy",

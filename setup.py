@@ -4,6 +4,7 @@ from setuptools import find_packages, setup
 
 # read the contents of your README file
 from pathlib import Path
+
 this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
@@ -24,7 +25,7 @@ setup(
         "urllib3>=1.26.0",
     ],
     extras_require={
-        'test': test_deps,
-        'lint': lint_deps,
-    }
+        "test": test_deps,
+        "lint": lint_deps,
+    },
 )
