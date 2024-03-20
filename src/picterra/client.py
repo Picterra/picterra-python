@@ -546,6 +546,8 @@ class APIClient:
         is_shared: Optional[bool] = None,
     ) -> List[dict]:
         """
+        List all the detectors the user can access
+
         Args:
             search_string: The term used to filter detectors by name
             user_tag: [beta] User tag to filter detectors by
