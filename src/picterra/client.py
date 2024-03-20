@@ -4,9 +4,8 @@ import os
 import tempfile
 import time
 import warnings
-from typing import List, Optional, Dict, Any
+from typing import Any, Literal, TypedDict
 from urllib.parse import urlencode, urljoin
-from uuid import UUID
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -40,7 +39,7 @@ class _RequestsSession(requests.Session):
         return super().request(*args, **kwargs)
 
 
-def _download_to_file(url, filename):
+def _download_to_file(url: str, filename: str):
     # Given we do not use self.sess the timeout is disabled (requests default), and this
     # is good as file download can take a long time
     with requests.get(url, stream=True) as r:
@@ -67,6 +66,16 @@ def _upload_file_to_blobstore(upload_url: str, filename: str):
     if not resp.ok:
         logger.error("Error when uploading to blobstore %s" % upload_url)
         raise APIError(resp.text)
+
+class Feature(TypedDict):
+    type: Literal["Feature"]
+    properties: dict[str, Any]
+    geometry: dict[str, Any]
+
+
+class FeatureCollection(TypedDict):
+    type: Literal["FeatureCollection"]
+    features: list[Feature]
 
 
 class APIClient:
@@ -116,7 +125,7 @@ class APIClient:
         # Authentication
         self.sess.headers.update({"X-Api-Key": api_key})
 
-    def _api_url(self, path, params=None):
+    def _api_url(self, path: str, params: dict[str, Any] | None = None):
         base_url = urljoin(self.base_url, path)
         if not params:
             return base_url
@@ -124,7 +133,9 @@ class APIClient:
             qstr = urlencode(params)
             return "%s?%s" % (base_url, qstr)
 
-    def _wait_until_operation_completes(self, operation_response: dict) -> dict:
+    def _wait_until_operation_completes(
+        self, operation_response: dict[str, Any]
+    ) -> dict[str, Any]:
         """Polls an operation an returns its data"""
         operation_id = operation_response["operation_id"]
         poll_interval = operation_response["poll_interval"]
@@ -146,7 +157,9 @@ class APIClient:
             time.sleep(poll_interval)
         return resp.json()
 
-    def _paginate_through_list(self, resource_endpoint: str, params=None):
+    def _paginate_through_list(
+        self, resource_endpoint: str, params: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         if params is None:
             params = {}
         params["page_number"] = 1
@@ -166,13 +179,13 @@ class APIClient:
         self,
         filename: str,
         name: str,
-        folder_id: Optional[str] = None,
-        captured_at: Optional[str] = None,
-        identity_key: Optional[str] = None,
+        folder_id: str | None = None,
+        captured_at: str | None = None,
+        identity_key: str | None = None,
         multispectral: bool = False,
-        cloud_coverage: Optional[int] = None,
-        user_tag: Optional[str] = None,
-    ):
+        cloud_coverage: int | None = None,
+        user_tag: str | None = None,
+    ) -> str:
         """
         Upload a raster to picterra.
 
@@ -191,9 +204,9 @@ class APIClient:
             user_tag (beta): Raster tag
 
         Returns:
-            raster_id (str): The id of the uploaded raster
+            raster_id: The id of the uploaded raster
         """
-        data = {"name": name, "multispectral": multispectral}
+        data: dict[str, Any] = {"name": name, "multispectral": multispectral}
         if folder_id is not None:
             data.update({"folder_id": folder_id})
         if captured_at is not None:
@@ -209,7 +222,7 @@ class APIClient:
             raise APIError(resp.text)
         data = resp.json()
         upload_url = str(data["upload_url"])
-        raster_id = data["raster_id"]
+        raster_id: str = data["raster_id"]
         _upload_file_to_blobstore(upload_url, filename)
         resp = self.sess.post(self._api_url("rasters/%s/commit/" % raster_id))
         if not resp.ok:
@@ -224,7 +237,7 @@ class APIClient:
         This a **beta** function, subject to change.
 
         Args:
-            folder_id (str): The id of the folder to obtain the detectors for
+            folder_id: The id of the folder to obtain the detectors for
 
         Returns:
             A list of detector dictionaries
@@ -251,25 +264,25 @@ class APIClient:
 
     def list_rasters(
         self,
-        folder_id: Optional[str] = None,
-        search_string: Optional[str] = None,
-        user_tag: Optional[str] = None,
-        max_cloud_coverage: Optional[int] = None,
-        captured_before: Optional[str] = None,
-        captured_after: Optional[str] = None,
-        has_vector_layers: Optional[bool] = None,
-    ) -> List[dict]:
+        folder_id: str | None = None,
+        search_string: str | None = None,
+        user_tag: str | None = None,
+        max_cloud_coverage: int | None = None,
+        captured_before: str | None = None,
+        captured_after: str | None = None,
+        has_vector_layers: bool | None = None,
+    ) -> list[dict[str, Any]]:
         """
         List of rasters metadata
 
         Args:
-            folder_id (str, optional): The id of the folder to search rasters in
-            search_string (str, optional): The search term used to filter rasters by name
-            user_tag (str, optional): [beta] The user tag to filter rasters by
-            max_cloud_coverage (int, optional): [beta] The max_cloud_coverage of the rasters (between 0 and 100)
-            captured_before (str, optional): ISO 8601 -formatted date / time of capture we want to list the rasters since
-            captured_after (str, optional): ISO 8601 -formatted date / time of capture we want to list the rasters from
-            has_vector_layers (bool, optional): [beta] Whether or not the rasters have at least one vector layer
+            folder_id: The id of the folder to search rasters in
+            search_string: The search term used to filter rasters by name
+            user_tag: [beta] The user tag to filter rasters by
+            max_cloud_coverage: [beta] The max_cloud_coverage of the rasters (between 0 and 100)
+            captured_before: ISO 8601 -formatted date / time of capture we want to list the rasters since
+            captured_after: ISO 8601 -formatted date / time of capture we want to list the rasters from
+            has_vector_layers: [beta] Whether or not the rasters have at least one vector layer
 
         Returns:
             A list of rasters dictionaries
@@ -292,7 +305,7 @@ class APIClient:
                 }
 
         """
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if folder_id:
             params["folder"] = folder_id
         if search_string:
@@ -309,12 +322,12 @@ class APIClient:
             params["has_vector_layers"] = bool(has_vector_layers)
         return self._paginate_through_list("rasters", params)
 
-    def get_raster(self, raster_id: str):
+    def get_raster(self, raster_id: str) -> dict[str, Any]:
         """
         Get raster information
 
         Args:
-            raster_id (str): id of the raster
+            raster_id: id of the raster
 
         Raises:
             APIError: There was an error while getting the raster information
@@ -330,13 +343,13 @@ class APIClient:
     def edit_raster(
         self,
         raster_id: str,
-        name: Optional[str] = None,
-        folder_id: Optional[str] = None,
-        captured_at: Optional[str] = None,
-        identity_key: Optional[str] = None,
-        multispectral_band_specification: Optional[dict] = None,
-        cloud_coverage: Optional[int] = None,
-        user_tag: Optional[str] = None,
+        name: str | None = None,
+        folder_id: str | None = None,
+        captured_at: str | None = None,
+        identity_key: str | None = None,
+        multispectral_band_specification: dict | None = None,
+        cloud_coverage: int | None = None,
+        user_tag: str | None = None,
     ):
         """
         Edits an already existing raster.
@@ -353,12 +366,10 @@ class APIClient:
             user_tag (beta): Raster tag
 
         Returns:
-            raster_id (str): The id of the edited raster
+            raster_id: The id of the edited raster
         """
-        data: Dict[str, Any] = {}
-        if name is not None:
-            if len(name) == 0:
-                raise ValueError("Invalid empty name")
+        data: dict[str, Any] = {}
+        if name:
             data.update({"name": name})
         if folder_id is not None:
             data.update({"folder_id": folder_id})
@@ -372,21 +383,19 @@ class APIClient:
             )
         if cloud_coverage is not None:
             data.update({"cloud_coverage": cloud_coverage})
-        if user_tag is not None:
+        if user_tag:
             data.update({"user_tag": user_tag})
-        if len(data) == 0:
-            raise ValueError("Nothing to edit")
         resp = self.sess.put(self._api_url("rasters/%s/" % raster_id), json=data)
         if not resp.ok:
             raise APIError(resp.text)
         return raster_id
 
-    def delete_raster(self, raster_id):
+    def delete_raster(self, raster_id: str):
         """
         Deletes a given raster by its identifier
 
         Args:
-            raster_id (str): The id of the raster to delete
+            raster_id: The id of the raster to delete
 
         Raises:
             APIError: There was an error while trying to delete the raster
@@ -401,8 +410,8 @@ class APIClient:
         Downloads a raster to a local file
 
         Args:
-            raster_id (str): The id of the raster to download
-            filename (str): The local filename where to save the raster image
+            raster_id: The id of the raster to download
+            filename: The local filename where to save the raster image
 
         Raises:
             APIError: There was an error while trying to download the raster
@@ -414,15 +423,15 @@ class APIClient:
         logger.debug("Trying to download raster %s from %s.." % (raster_id, raster_url))
         _download_to_file(raster_url, filename)
 
-    def set_raster_detection_areas_from_file(self, raster_id, filename):
+    def set_raster_detection_areas_from_file(self, raster_id: str, filename: str):
         """
         This is an experimental feature
 
         Set detection areas from a GeoJSON file
 
         Args:
-            raster_id (str): The id of the raster to which to assign the detection areas
-            filename (str): The filename of a GeoJSON file. This should contain a FeatureCollection
+            raster_id: The id of the raster to which to assign the detection areas
+            filename: The filename of a GeoJSON file. This should contain a FeatureCollection
                             of Polygon/MultiPolygon
 
         Raises:
@@ -456,7 +465,7 @@ class APIClient:
         Remove the detection areas of a raster
 
         Args:
-            raster_id (str): The id of the raster whose detection areas will be removed
+            raster_id: The id of the raster whose detection areas will be removed
 
         Raises:
             APIError: There was an error during the operation
@@ -474,8 +483,8 @@ class APIClient:
         This a **beta** function, subject to change.
 
         Args:
-            detector_id (str): The id of the detector
-            raster_id (str): The id of the raster
+            detector_id: The id of the detector
+            raster_id: The id of the raster
 
         Raises:
             APIError: There was an error uploading the file to cloud storage
@@ -489,7 +498,7 @@ class APIClient:
 
     def create_detector(
         self,
-        name: str = "",
+        name: str | None = None,
         detection_type: str = "count",
         output_type: str = "polygon",
         training_steps: int = 500,
@@ -521,7 +530,7 @@ class APIClient:
             APIError: There was an error while creating the detector
         """
         # Build request body
-        body_data: Dict[str, Any] = {"configuration": {}}
+        body_data: dict[str, Any] = {"configuration": {}}
         if name:
             body_data["name"] = name
         for i in (
@@ -541,10 +550,10 @@ class APIClient:
 
     def list_detectors(
         self,
-        search_string: Optional[str] = None,
-        user_tag: Optional[str] = None,
-        is_shared: Optional[bool] = None,
-    ) -> List[dict]:
+        search_string: str | None = None,
+        user_tag: str | None = None,
+        is_shared: bool | None = None,
+    ) -> list[dict[str, Any]]:
         """
         List all the detectors the user can access
 
@@ -579,7 +588,7 @@ class APIClient:
                 }
 
         """
-        data: Dict[str, Any] = {}
+        data: dict[str, Any] = {}
         if search_string is not None:
             data["search"] = search_string.strip()
         if user_tag is not None:
@@ -591,13 +600,13 @@ class APIClient:
     def edit_detector(
         self,
         detector_id: str,
-        name: Optional[str] = None,
-        detection_type: Optional[str] = None,
-        output_type: Optional[str] = None,
-        training_steps: Optional[int] = None,
-        backbone: Optional[str] = None,
-        tile_size: Optional[int] = None,
-        background_sample_ratio: Optional[float] = None,
+        name: str | None = None,
+        detection_type: str | None = None,
+        output_type: str | None = None,
+        training_steps: int | None = None,
+        backbone: str | None = None,
+        tile_size: int | None = None,
+        background_sample_ratio: float | None = None,
     ):
         """
         Edit a detector
@@ -620,7 +629,7 @@ class APIClient:
             APIError: There was an error while editing the detector
         """
         # Build request body
-        body_data: Dict[str, Any] = {"configuration": {}}
+        body_data: dict[str, Any] = {"configuration": {}}
         if name:
             body_data["name"] = name
         for i in (
@@ -645,7 +654,7 @@ class APIClient:
         Deletes a given detector by its identifier
 
         Args:
-            detector_id (str): The id of the detector to delete
+            detector_id: The id of the detector to delete
 
         Raises:
             APIError: There was an error while trying to delete the detector
@@ -660,11 +669,11 @@ class APIClient:
         Runs a detector on a raster
 
         Args:
-            detector_id (str): The id of the detector
-            raster_id (str): The id of the raster
+            detector_id: The id of the detector
+            raster_id: The id of the raster
 
         Returns:
-            operation_id (str): The id of the operation. You typically want to pass this
+            operation_id: The id of the operation. You typically want to pass this
                 to `download_result_to_feature_collection`
         """
         resp = self.sess.post(
@@ -677,7 +686,7 @@ class APIClient:
         self._wait_until_operation_completes(operation_response)
         return operation_response["operation_id"]
 
-    def download_result_to_file(self, operation_id, filename):
+    def download_result_to_file(self, operation_id: str, filename: str):
         """
         Downloads a set of results to a local GeoJSON file
 
@@ -685,8 +694,8 @@ class APIClient:
            Use `download_result_to_feature_collection` instead
 
         Args:
-            operation_id (str): The id of the operation to download
-            filename (str): The local filename where to save the results
+            operation_id: The id of the operation to download
+            filename: The local filename where to save the results
         """
         warnings.warn(
             "This function is deprecated. Use download_result_to_feature_collection instead",
@@ -696,7 +705,7 @@ class APIClient:
         logger.debug("Trying to download result %s.." % result_url)
         _download_to_file(result_url, filename)
 
-    def download_result_to_feature_collection(self, operation_id, filename):
+    def download_result_to_feature_collection(self, operation_id: str, filename: str):
         """
         Downloads the results from a detection operation to a local GeoJSON file.
 
@@ -704,14 +713,14 @@ class APIClient:
         property indicating the corresponding class name
 
         Args:
-            operation_id (str): The id of the operation to download. This should be a
+            operation_id: The id of the operation to download. This should be a
                 detect operation
-            filename (str): The local filename where to save the results
+            filename: The local filename where to save the results
         """
         results = self.get_operation_results(operation_id)
         # We download results to a temporary directory and then assemble them into a
         # FeatureCollection
-        fc = {"type": "FeatureCollection", "features": []}
+        fc: FeatureCollection = {"type": "FeatureCollection", "features": []}
 
         for i, class_result in enumerate(results["by_class"]):
             with tempfile.NamedTemporaryFile() as f:
@@ -730,26 +739,26 @@ class APIClient:
         with open(filename, "w") as f:
             json.dump(fc, f)
 
-    def download_operation_results_to_file(self, operation_id, filename):
+    def download_operation_results_to_file(self, operation_id: str, filename: str):
         """
         Downloads the results URL to a local GeoJSON file
 
         Args:
-            operation_id (str): The id of the operation to download
-            filename (str): The local filename where to save the results
+            operation_id: The id of the operation to download
+            filename: The local filename where to save the results
         """
         data = self.get_operation_results_url(operation_id)
         with open(filename, "w") as f:
             f.write(data)
 
-    def get_operation_results(self, operation_id: str) -> Dict[str, Any]:
+    def get_operation_results(self, operation_id: str) -> dict[str, Any]:
         """
         Return the 'results' dict of an operation
 
         This a **beta** function, subject to change.
 
         Args:
-            operation_id (str): The id of the operation
+            operation_id: The id of the operation
         """
         resp = self.sess.get(
             self._api_url("operations/%s/" % operation_id),
@@ -758,38 +767,34 @@ class APIClient:
 
     def get_operation_results_url(self, operation_id: str) -> str:
         """
-        Get the URL  of a set of results
+        Get the URL of a set of operation results
 
         This a **beta** function, subject to change.
 
         Args:
-            result_id (str): The id of the result
+            operation_id: The id of the result
         """
         return self.get_operation_results(operation_id)["url"]
 
-    def set_annotations(self, detector_id, raster_id, annotation_type, annotations):
+    def set_annotations(
+        self,
+        detector_id: str,
+        raster_id: str,
+        annotation_type: Literal[
+            "outline", "training_area", "testing_area", "validation_area"
+        ],
+        annotations: dict[str, Any],
+    ):
         """
         Replaces the annotations of type 'annotation_type' with 'annotations', for the
         given raster-detector pair.
 
         Args:
-            detector_id (str): The id of the detector
-            raster_id (str): The id of the raster
-            annotation_type (str): One of (outline, training_area, testing_area, validation_area)
-            annotations (dict): GeoJSON representation of the features to upload
+            detector_id: The id of the detector
+            raster_id: The id of the raster
+            annotation_type: One of (outline, training_area, testing_area, validation_area)
+            annotations: GeoJSON representation of the features to upload
         """
-        annotation_type = annotation_type.lower()
-        valid_annotations = (
-            "outline",
-            "training_area",
-            "testing_area",
-            "validation_area",
-        )
-        if annotation_type not in valid_annotations:
-            raise ValueError(
-                'Invalid annotation type "%s"; allowed values are: %s.'
-                % (annotation_type, ", ".join(valid_annotations))
-            )
         # Get an upload url
         create_upload_resp = self.sess.post(
             self._api_url(
@@ -827,19 +832,19 @@ class APIClient:
         # Poll for operation completion
         self._wait_until_operation_completes(commit_upload_resp.json())
 
-    def train_detector(self, detector_id):
+    def train_detector(self, detector_id: str):
         """
         Start the training of a detector
 
         Args:
-            detector_id (str): The id of the detector
+            detector_id: The id of the detector
         """
         resp = self.sess.post(self._api_url("detectors/%s/train/" % detector_id))
         if not resp.ok:
             raise APIError(resp.text)
         return self._wait_until_operation_completes(resp.json())
 
-    def run_dataset_recommendation(self, detector_id):
+    def run_dataset_recommendation(self, detector_id: str):
         """
         This is an **experimental** feature
 
@@ -847,14 +852,18 @@ class APIClient:
         the UI to be able to view the recommendation markers/report.
 
         Args:
-            detector_id (str): The id of the detector
+            detector_id: The id of the detector
         """
-        resp = self.sess.post(self._api_url("detectors/%s/dataset_recommendation/" % detector_id))
+        resp = self.sess.post(
+            self._api_url("detectors/%s/dataset_recommendation/" % detector_id)
+        )
         if not resp.ok:
             raise APIError(resp.text)
         return self._wait_until_operation_completes(resp.json())
 
-    def run_advanced_tool(self, tool_id: UUID, inputs: dict, outputs: dict):
+    def run_advanced_tool(
+        self, tool_id: str, inputs: dict[str, Any], outputs: dict[str, Any]
+    ):
         """
         This is an experimental feature
 
@@ -878,11 +887,11 @@ class APIClient:
 
     def upload_vector_layer(
         self,
-        raster_id: UUID,
+        raster_id: str,
         filename: str,
-        name: Optional[str] = None,
-        color: Optional[str] = None,
-    ) -> UUID:
+        name: str | None = None,
+        color: str | None = None,
+    ) -> str:
         """
         Uploads a vector layer from a GeoJSON file
 
@@ -919,10 +928,7 @@ class APIClient:
         return op["results"]["vector_layer_id"]
 
     def edit_vector_layer(
-        self,
-        vector_layer_id: UUID,
-        name: Optional[str] = None,
-        color: Optional[str] = None
+        self, vector_layer_id: str, name: str | None = None, color: str | None = None
     ):
         """
         Edits a vector layer
@@ -945,7 +951,7 @@ class APIClient:
         if not resp.ok:
             raise APIError(resp.text)
 
-    def delete_vector_layer(self, vector_layer_id: UUID):
+    def delete_vector_layer(self, vector_layer_id: str):
         """
         Removes a vector layer
 
@@ -958,7 +964,7 @@ class APIClient:
         if not resp.ok:
             raise APIError(resp.text)
 
-    def download_vector_layer_to_file(self, vector_layer_id: UUID, filename: str):
+    def download_vector_layer_to_file(self, vector_layer_id: str, filename: str):
         """
         Downloads a vector layer
 
@@ -972,7 +978,7 @@ class APIClient:
         if not resp.ok:
             raise APIError(resp.text)
         urls = resp.json()["geojson_urls"]
-        final_fc: Dict[str, Any] = {"type": "FeatureCollection", "features": []}
+        final_fc: FeatureCollection = {"type": "FeatureCollection", "features": []}
         for url in urls:
             with tempfile.NamedTemporaryFile("w+") as f:
                 _download_to_file(url, f.name)
@@ -982,26 +988,26 @@ class APIClient:
         with open(filename, "w") as fp:
             json.dump(final_fc, fp)
 
-    def list_raster_markers(self, raster_id):
+    def list_raster_markers(self, raster_id: str):
         """
         This a **beta** function, subject to change.
 
         List all the markers on a raster
 
         Args:
-            raster_id (str): The id of the raster
+            raster_id: The id of the raster
         """
         url = "rasters/%s/markers/" % raster_id
         return self._paginate_through_list(url)
 
     def create_marker(
         self,
-        raster_id: UUID,
-        detector_id: Optional[UUID],
+        raster_id: str,
+        detector_id: str | None,
         lng: float,
         lat: float,
         text: str,
-    ):
+    ) -> dict[str, Any]:
         """
         This is an **experimental** (beta) feature
 

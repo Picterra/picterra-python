@@ -850,8 +850,6 @@ def test_upload_annotations(annotation_type):
     add_mock_operations_responses("running")
     add_mock_operations_responses("success")
     client = _client()
-    with pytest.raises(ValueError):
-        client.set_annotations(1, 2, "foobar", {})
     client.set_annotations(1, 2, annotation_type, {})
     assert len(responses.calls) == 6
 
