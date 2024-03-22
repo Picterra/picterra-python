@@ -667,7 +667,8 @@ class APIClient:
 
     def run_detector(self, detector_id: str, raster_id: str) -> str:
         """
-        Runs a detector on a raster
+        Runs a detector on a raster: predictions are subject to a minimum charge
+        of 10 MP.
 
         Args:
             detector_id: The id of the detector
