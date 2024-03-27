@@ -1025,3 +1025,25 @@ class APIClient:
         if not resp.ok:
             raise APIError(resp.text)
         return resp.json()
+
+    def list_raster_vector_layers(
+        self,
+        raster_id: str,
+        search: Optional[str] = None,
+        detector_id: Optional[UUID] = None,
+    ):
+        """
+        This a **beta** function, subject to change.
+
+        List all the vector layers on a raster
+
+        Args:
+            raster_id (str): The id of the raster
+        """
+        params = {}
+        if search is not None:
+            params["search"] = search
+        if detector_id is not None:
+            params["detector"] = detector_id
+        url = "rasters/%s/vector_layers/" % raster_id
+        return self._paginate_through_list(url, params)
