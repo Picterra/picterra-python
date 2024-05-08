@@ -1114,8 +1114,6 @@ class APIClient:
         method: Literal["streaming"] = "streaming",
     ) -> str:
         """
-        This is an experimental feature
-
         Import a raster from a remote imagery source given a GeoJSON file for the AOI
 
         Args:
