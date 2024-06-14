@@ -605,6 +605,15 @@ class APIClient:
             raise APIError(resp.text)
         return resp.json()["id"]
 
+    def get_detector(
+        self,
+        detector_id: str
+    ):
+        resp = self.sess.get(self._api_url("detectors/%s/" % detector_id))
+        if not resp.status_code == 200:
+            raise APIError(resp.text)
+        return resp.json()
+
     def list_detectors(
         self,
         search_string: str | None = None,
@@ -848,6 +857,7 @@ class APIClient:
             "outline", "training_area", "testing_area", "validation_area"
         ],
         annotations: dict[str, Any],
+        class_id: str | None = None,
     ):
         """
         Replaces the annotations of type 'annotation_type' with 'annotations', for the
@@ -858,6 +868,8 @@ class APIClient:
             raster_id: The id of the raster
             annotation_type: One of (outline, training_area, testing_area, validation_area)
             annotations: GeoJSON representation of the features to upload
+            class_id: The class id to which to associate the new annotations. Only valid if
+                annotation_type is "outline"
         """
         # Get an upload url
         create_upload_resp = self.sess.post(
@@ -884,11 +896,15 @@ class APIClient:
             raise APIError(upload_resp.text)
 
         # Commit upload
+        body = {}
+        if class_id is not None:
+            body["class_id"] = class_id
         commit_upload_resp = self.sess.post(
             self._api_url(
                 "detectors/%s/training_rasters/%s/%s/upload/bulk/%s/commit/"
                 % (detector_id, raster_id, annotation_type, upload_id)
-            )
+            ),
+            json=body
         )
         if not commit_upload_resp.ok:
             raise APIError(commit_upload_resp.text)

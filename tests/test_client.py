@@ -263,7 +263,7 @@ def add_mock_operations_responses(status, **kwargs):
     _add_api_response("operations/%s/" % OPERATION_ID, json=data)
 
 
-def add_mock_annotations_responses(detector_id, raster_id, annotation_type):
+def add_mock_annotations_responses(detector_id, raster_id, annotation_type, class_id=None):
     upload_id = 32
     url = "detectors/%s/training_rasters/%s/%s/upload/bulk/" % (
         detector_id,
@@ -282,7 +282,27 @@ def add_mock_annotations_responses(detector_id, raster_id, annotation_type):
         annotation_type,
         upload_id,
     )
-    _add_api_response(url, responses.POST, OP_RESP)
+    if class_id is None:
+        _add_api_response(
+            url,
+            responses.POST,
+            OP_RESP,
+            # strict_match matters here because we want to disallow sending `class_id: null`
+            # as this would lead to a server-side error. Instead, class_id shouldn't be included
+            # if it is not defined
+            match=responses.matchers.json_params_matcher({}, strict_match=True),
+        )
+    else:
+        _add_api_response(
+            url,
+            responses.POST,
+            json=OP_RESP,
+            match=responses.matchers.json_params_matcher(
+                {
+                    "class_id": class_id
+                }
+            ),
+        )
 
 
 def add_mock_raster_upload_responses(identity_key, multispectral, cloud_coverage, tag):
@@ -928,6 +948,14 @@ def test_upload_annotations(annotation_type):
     client = _client()
     client.set_annotations(1, 2, annotation_type, {})
     assert len(responses.calls) == 6
+
+
+@responses.activate
+def test_upload_annotations_class_id():
+    add_mock_annotations_responses(1, 2, "outline", class_id="42")
+    add_mock_operations_responses("success")
+    client = _client()
+    client.set_annotations(1, 2, "outline", {}, class_id="42")
 
 
 @responses.activate
