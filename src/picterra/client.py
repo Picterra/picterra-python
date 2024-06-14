@@ -1178,3 +1178,23 @@ class APIClient:
             params["page_number"] = page_number
         url = "rasters/%s/vector_layers/" % raster_id
         return self._return_results_page(url, params)
+
+    def list_detector_rasters(
+        self,
+        detector_id: str,
+        page_number: int | None = None,
+    ):
+        """
+        This a **beta** function, subject to change.
+
+        List rasters of a detector, see `ResultsPage` for the pagination access pattern.
+
+        Args:
+            detector_id: The id of the detector
+            page_number: Optional page (from 1) of the list we want to retrieve
+        """
+        params: dict[str, int] = {}
+        if page_number is not None:
+            params["page_number"] = page_number
+        url = "detectors/%s/training_rasters/" % detector_id
+        return self._return_results_page(url, params)

@@ -57,10 +57,10 @@ def _add_api_response(
     )
 
 
-def add_mock_rasters_list_response():
+def add_mock_rasters_list_response(endpoint="rasters/"):
     data1 = {
         "count": 5,
-        "next": api_url("rasters/?page_number=2"),
+        "next": api_url("%s?page_number=2" % endpoint),
         "previous": None,
         "page_size": 2,
         "results": [
@@ -70,7 +70,7 @@ def add_mock_rasters_list_response():
     }
     data2 = {
         "count": 5,
-        "next": api_url("rasters/?page_number=3"),
+        "next": api_url("%s?page_number=3" % endpoint),
         "previous": None,
         "page_size": api_url("rasters/?page_number=1"),
         "results": [
@@ -81,24 +81,24 @@ def add_mock_rasters_list_response():
     data3 = {
         "count": 5,
         "next": None,
-        "previous": api_url("rasters/?page_number=2"),
+        "previous": api_url("%s?page_number=2" % endpoint),
         "page_size": 2,
         "results": [
             {"id": "44", "status": "ready", "name": "raster5"},
         ],
     }
     _add_api_response(
-        "rasters/",
+        endpoint,
         json=data1,
         match=responses.matchers.query_param_matcher({"page_number": "1"}),
     )
     _add_api_response(
-        "rasters/",
+        endpoint,
         json=data2,
         match=responses.matchers.query_param_matcher({"page_number": "2"}),
     )
     _add_api_response(
-        "rasters/",
+        endpoint,
         json=data3,
         match=responses.matchers.query_param_matcher({"page_number": "3"}),
     )
@@ -1166,3 +1166,14 @@ def test_import_raster_from_remote_source():
             == "foo"
         )
     assert len(responses.calls) == 4
+
+
+@responses.activate
+def test_list_detector_rasters():
+    client = _client()
+    add_mock_rasters_list_response("detectors/spam/training_rasters/")
+    page1 = client.list_detector_rasters("spam")
+    assert page1[0]["name"] == "raster1" and page1[1]["name"] == "raster2"
+    page2 = client.list_detector_rasters("spam", page_number=2)
+    assert page2[0]["name"] == "raster3" and page2[1]["name"] == "raster4"
+    assert len(responses.calls) == 2
