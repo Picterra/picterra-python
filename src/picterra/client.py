@@ -203,7 +203,8 @@ class APIClient:
             if status == "success":
                 break
             if status == "failed":
-                raise APIError("Operation %s failed" % operation_id)
+                errors = resp.json()["errors"]
+                raise APIError("Operation %s failed: %s" % (operation_id, json.dumps(errors)))
             time.sleep(poll_interval)
         return resp.json()
 
