@@ -76,16 +76,23 @@ class ResultsPage(Generic[T]):
     """
     Interface for a paginated response from the API
 
-    Typically the endpoint returning list of objects return them splitted
-    in pages (page 1, page 2, etc..) of a fixed dimension (eg 20). Thus
-    each `list_XX` function returns a ResultsPage (by default the first one);
-    once you have a ResultsPage for a given list of objects, you can:
-    * check its length with `len()` (eg `len(page)`)
-    * access a single element with the index operator `[]` (eg `page[5]`)
-    * turn it into a list of dictionaries with  `list()` (eg `list(page)`)
-    * get the next page with `.next()` (eg `page.next()`); this could return
-    None if the list is finished
-    You can also get a specific page passing the page number to the `list_XX` function
+    Typically the Picterra API HTTP endpoints that list objects return
+    them split into 1-based indexed pages of a fixed dimension
+    (see `docs <https://app.picterra.ch/public/apidocs/v2/#section/Pagination>`_
+    for more details).
+    In this library each page is wrapped around a `ResultsPage` object in order to ease access.
+    Once you have a `ResultsPage` instance for a given page, you can:
+
+      * check its length with ``len``
+      * access a single element with the index operator ``[]``
+      * turn it into a list of dictionaries with  ``list``
+      * get the next page with ``.next()`` (return ``None`` if on the last page)
+
+    You can also get a specific page passing the page number to the function listing objects.
+    For some examples about how to use pagination, see:
+
+      * `raster_management <https://github.com/Picterra/picterra-python/blob/master/examples/raster_management.py>`_
+      * `detectors_management <https://github.com/Picterra/picterra-python/blob/master/examples/detectors_management.py>`_
     """
 
     def __init__(self, url: str, fetch: Callable[[str], requests.Response]):
