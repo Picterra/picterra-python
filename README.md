@@ -45,10 +45,23 @@ See the `examples` folder for examples.
 
 ## Development
 
+### Unit tests
+
 In order to test locally, run:
 ```bash
 python setup.py test
 ```
+
+### Documentation
+Run
+
+```bash
+cd docs
+make html
+```
+
+to update the HTML documentation under `_build/html`.
+Spawn an HTTP server in that folder to see how they would look like once deployed on Read the Docs.
 
 ## Release process
 
