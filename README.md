@@ -65,6 +65,17 @@ In order to test locally, run:
 pytest
 ```
 
+### Documentation
+Run
+
+```bash
+cd docs
+make html
+```
+
+to update the HTML documentation under `_build/html`.
+Spawn an HTTP server in that folder to see how they would look like once deployed on Read the Docs.
+
 ## Release process
 
 1. Bump the version number in `setup.py`
