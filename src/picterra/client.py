@@ -737,7 +737,9 @@ class APIClient:
         if not resp.ok:
             raise APIError(resp.text)
 
-    def run_detector(self, detector_id: str, raster_id: str) -> str:
+    def run_detector(
+        self, detector_id: str, raster_id: str, secondary_raster_id: str | None = None
+    ) -> str:
         """
         Runs a detector on a raster: predictions are subject to a minimum charge
         of 10 MP.
@@ -745,6 +747,8 @@ class APIClient:
         Args:
             detector_id: The id of the detector
             raster_id: The id of the raster
+            secondary_raster_id: The id of the secondary raster. This needs to be provided to
+                run change detectors.
 
         Returns:
             operation_id: The id of the operation. You typically want to pass this
@@ -752,7 +756,7 @@ class APIClient:
         """
         resp = self.sess.post(
             self._api_url("detectors/%s/run/" % detector_id),
-            json={"raster_id": raster_id},
+            json={"raster_id": raster_id, "secondary_raster_id": secondary_raster_id},
         )
         if not resp.ok:
             raise APIError(resp.text)

@@ -386,15 +386,20 @@ def add_mock_remote_import_responses(upload_id, post_body):
     )
 
 
-def add_mock_detector_run_responses(detector_id):
-    op_id = 43
-    _add_api_response("detectors/%s/run/" % detector_id, responses.POST, OP_RESP)
+def add_mock_detector_run_responses(detector_id, raster_id, secondary_raster_id=None):
+    _add_api_response(
+        "detectors/%s/run/" % detector_id, responses.POST, OP_RESP,
+        match=responses.matchers.json_params_matcher({
+            "raster_id": raster_id,
+            "secondary_raster_id": secondary_raster_id,
+        }),
+    )
     # First status check
     data = {"status": "running"}
-    _add_api_response("operations/%s/" % op_id, json=data)
+    _add_api_response("operations/%s/" % OPERATION_ID, json=data)
     # Second status check
     data = {"status": "success"}
-    _add_api_response("operations/%s/" % op_id, json=data)
+    _add_api_response("operations/%s/" % OPERATION_ID, json=data)
 
 
 def add_mock_vector_layer_responses(upload_id, raster_id, name, color):
@@ -895,11 +900,18 @@ def test_set_raster_detection_areas_from_file():
 
 @responses.activate
 def test_run_detector():
-    add_mock_detector_run_responses(1)
-    add_mock_operations_responses("success")
+    add_mock_detector_run_responses(1, 2)
     client = _client()
     client.run_detector(1, 2)
-    assert len(responses.calls) == 2
+    assert len(responses.calls) == 3
+
+
+@responses.activate
+def test_run_detector_secondary_raster():
+    add_mock_detector_run_responses(1, 2, 3)
+    client = _client()
+    client.run_detector(1, 2, 3)
+    assert len(responses.calls) == 3
 
 
 @responses.activate
