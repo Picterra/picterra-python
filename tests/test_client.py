@@ -387,12 +387,12 @@ def add_mock_remote_import_responses(upload_id, post_body):
 
 
 def add_mock_detector_run_responses(detector_id, raster_id, secondary_raster_id=None):
+    data = {"raster_id": raster_id}
+    if secondary_raster_id:
+        data["secondary_raster_id"] = secondary_raster_id
     _add_api_response(
         "detectors/%s/run/" % detector_id, responses.POST, OP_RESP,
-        match=responses.matchers.json_params_matcher({
-            "raster_id": raster_id,
-            "secondary_raster_id": secondary_raster_id,
-        }),
+        match=responses.matchers.json_params_matcher(data),
     )
     # First status check
     data = {"status": "running"}

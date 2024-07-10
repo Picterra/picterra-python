@@ -754,9 +754,12 @@ class APIClient:
             operation_id: The id of the operation. You typically want to pass this
                 to `download_result_to_feature_collection`
         """
+        body = {"raster_id": raster_id}
+        if secondary_raster_id is not None:
+            body["secondary_raster_id"] = secondary_raster_id
         resp = self.sess.post(
             self._api_url("detectors/%s/run/" % detector_id),
-            json={"raster_id": raster_id, "secondary_raster_id": secondary_raster_id},
+            json=body,
         )
         if not resp.ok:
             raise APIError(resp.text)
