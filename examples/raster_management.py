@@ -21,8 +21,18 @@ second_page = first_page.next()
 # Get the first page applying a filter
 for raster in client.list_rasters(folder_id):
     pprint("raster %s" % "\n".join(["%s=%s" % item for item in raster.items()]))
-# Upload and removal
+# Upload, edition and removal
 local_raster_id = client.upload_raster("data/raster1.tif", name="A short-lived raster")
 print("Uploaded a second local raster=", local_raster_id)
+# Editing the image's band specification. See https://docs.picterra.ch/imagery/#Multispectral
+client.edit_raster(local_raster_id, multispectral_band_specification={
+    "ranges": [
+        [0, 128], [0, 128], [0, 128]
+    ],
+    "display_bands": [
+        {"type": "multiband", "name": "default", "bands": [2, 1, 0]}
+    ]
+})
+# Deleting the image
 client.delete_raster(local_raster_id)
 print("Deleted raster=", local_raster_id)
