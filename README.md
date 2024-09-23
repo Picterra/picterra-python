@@ -46,6 +46,13 @@ See the `examples` folder for examples.
 ## Development
 
 ### Setup
+Make sure you have `Python` and `pip` in your OS and create a virtual environment in the root folder, eg
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate 
+```
+
 Running
 ```bash
 pip install --editable '.[lint,test]'
