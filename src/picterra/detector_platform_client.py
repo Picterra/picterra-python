@@ -27,7 +27,7 @@ logger = logging.getLogger()
 class DetectorPlatformClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/v2/", **kwargs)
-        
+
     def upload_raster(
         self,
         filename: str,
@@ -831,19 +831,11 @@ class DetectorPlatformClient(BaseAPIClient):
             vector_layer_id: The id of the vector layer to download
             filename: existing file to save the vector layer in
         """
-        resp = self.sess.get(self._full_url("vector_layers/%s/" % vector_layer_id))
+        resp = self.sess.post(self._full_url("vector_layers/%s/download/" % vector_layer_id))
         if not resp.ok:
             raise APIError(resp.text)
-        urls = resp.json()["geojson_urls"]
-        final_fc: FeatureCollection = {"type": "FeatureCollection", "features": []}
-        for url in urls:
-            with tempfile.NamedTemporaryFile("w+") as f:
-                _download_to_file(url, f.name)
-                fc = json.load(f)
-                for feature in fc["features"]:
-                    final_fc["features"].append(feature)
-        with open(filename, "w") as fp:
-            json.dump(final_fc, fp)
+        op = self._wait_until_operation_completes(resp.json())
+        _download_to_file(op["results"]["download_url"], filename)
 
     def list_raster_markers(
         self,

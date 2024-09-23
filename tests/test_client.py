@@ -383,38 +383,32 @@ def add_mock_vector_layer_responses(upload_id, raster_id, name, color):
     )
 
 
-def add_mock_vector_layer_download_responses(layer_id, urls_num=1):
-    url = "vector_layers/%s/" % layer_id
-    data = {
-        "name": "layer%s" % layer_id,
-        "raster_id": "raster-id",
-        "count": 1,
-        "color": "#aa0000",
-        "id": layer_id,
-        "geojson_urls": [
-            "http://layer%s.geojson.example.com" % str(i) for i in range(urls_num)
-        ],
+def add_mock_vector_layer_download_responses(layer_id, num_features):
+    url = "vector_layers/%s/download/" % layer_id
+    data = {"operation_id": OPERATION_ID, "poll_interval": TEST_POLL_INTERVAL}
+    _add_api_response(detector_api_url(url), verb=responses.POST, json=data)
+    results = {
+        "expiration": "2021-11-03T10:55:16.000000Z",
+        "download_url": "http://layer.geojson.example.com",
     }
-    _add_api_response(detector_api_url(url), json=data)
+    add_mock_operations_responses("success", results=results)
     features = []
-    for i in range(urls_num):
-        url = "http://layer%s.geojson.example.com" % str(i)
-        temp_features = [
+    for i in range(num_features):
+        url = results["download_url"]
+        features.append(
             {
                 "type": "Feature",
-                "geometry": make_geojson_multipolygon(j + 1),
+                "geometry": make_geojson_multipolygon(i + 1),
                 "properties": {},
             }
-            for j in range(i + 1)
-        ]
-        for f in temp_features:
-            features.append(f)
-        responses.add(
-            responses.GET,
-            url,
-            body=json.dumps({"type": "FeatureCollection", "features": temp_features}),
         )
-    return {"type": "FeatureCollection", "features": features}
+    fc = {"type": "FeatureCollection", "features": features}
+    responses.add(
+        responses.GET,
+        url,
+        body=json.dumps(fc),
+    )
+    return fc
 
 
 def make_geojson_multipolygon(npolygons=1):
@@ -1015,11 +1009,11 @@ def test_download_vector_layer_to_file(monkeypatch):
     with tempfile.NamedTemporaryFile() as fp:
         client.download_vector_layer_to_file("foobar", fp.name)
         fc = json.load(fp)
-        assert fc == expected_content and len(fc["features"]) == 3
+        assert fc == expected_content and len(fc["features"]) == 2
         assert (
             fc["type"] == "FeatureCollection" and fc["features"][0]["type"] == "Feature"
         )
-    assert len(responses.calls) == 3
+    assert len(responses.calls) == 3 # POST /download, GET /operations, GET url
 
 
 @responses.activate
