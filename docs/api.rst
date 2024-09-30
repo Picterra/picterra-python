@@ -3,16 +3,16 @@ API
 ===
 
 
-APIClient
----------
+DetectorPlatformClient
+----------------------
 
-.. autoclass:: picterra.client.APIClient
+.. autoclass:: picterra.APIClient
     :members:
 
 Pagination
 ----------
 
-.. autoclass:: picterra.client.ResultsPage
+.. autoclass:: picterra.ResultsPage
     :members:
 
 
@@ -26,5 +26,5 @@ nongeo
 Exceptions
 ----------
 
-.. autoclass:: picterra.client.APIError
+.. autoclass:: picterra.APIError
     :members:
