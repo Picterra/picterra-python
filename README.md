@@ -48,14 +48,14 @@ See the `examples` folder for examples.
 ### Setup
 Running
 ```bash
-pip install --editable "[lint,test]"
+pip install --editable '.[lint,test]'
 ```
 would allow to run test and linting locally, and also avoid re-installing the library every time you change the code.
 
 ### Running tests
 In order to test locally, run:
 ```bash
-python setup.py test
+pytest
 ```
 
 ## Release process
