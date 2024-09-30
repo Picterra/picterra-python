@@ -1,224 +1,33 @@
+"""
+Handles interfacing with the detection platform api v2 documented at:
+https://app.picterra.ch/public/apidocs/v2/
+
+Note that that Detector platform is a separate product from the Plots Analysis platform and so
+an API key which is valid for one may encounter permissions issues if used with the other
+"""
 import json
 import logging
-import os
 import tempfile
-import time
 import warnings
-from collections.abc import Callable
-from typing import Any, Generic, Iterator, Literal, TypedDict, TypeVar
-from urllib.parse import urlencode, urljoin
+from typing import Any, Literal
 
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+
+from picterra.base_client import (
+    APIError,
+    BaseAPIClient,
+    FeatureCollection,
+    _download_to_file,
+    _upload_file_to_blobstore,
+)
 
 logger = logging.getLogger()
 
-CHUNK_SIZE_BYTES = 8192  # 8 KiB
 
-
-class APIError(Exception):
-    """Generic API error exception"""
-
-    pass
-
-
-class _RequestsSession(requests.Session):
-    """
-    Override requests session to to implement a global session timeout
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.timeout = kwargs.pop("timeout")
-        super().__init__(*args, **kwargs)
-        self.headers.update(
-            {"User-Agent": "picterra-python %s" % self.headers["User-Agent"]}
-        )
-
-    def request(self, *args, **kwargs):
-        kwargs.setdefault("timeout", self.timeout)
-        return super().request(*args, **kwargs)
-
-
-def _download_to_file(url: str, filename: str):
-    # Given we do not use self.sess the timeout is disabled (requests default), and this
-    # is good as file download can take a long time
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(filename, "wb+") as f:
-            logger.debug("Downloading to file %s.." % filename)
-            for chunk in r.iter_content(chunk_size=CHUNK_SIZE_BYTES):
-                if chunk:  # filter out keep-alive new chunks
-                    f.write(chunk)
-
-
-def _upload_file_to_blobstore(upload_url: str, filename: str):
-    if not (os.path.exists(filename) and os.path.isfile(filename)):
-        raise ValueError("Invalid file: " + filename)
-    with open(
-        filename, "rb"
-    ) as f:  # binary recommended by requests stream upload (see link below)
-        logger.debug("Opening and streaming to upload file %s" % filename)
-        # Given we do not use self.sess the timeout is disabled (requests default), and this
-        # is good as file upload can take a long time. Also we use requests streaming upload
-        # (https://requests.readthedocs.io/en/latest/user/advanced/#streaming-uploads) to avoid
-        # reading the (potentially large) layer GeoJSON in memory
-        resp = requests.put(upload_url, data=f)
-    if not resp.ok:
-        logger.error("Error when uploading to blobstore %s" % upload_url)
-        raise APIError(resp.text)
-
-
-T = TypeVar("T")
-
-
-class ResultsPage(Generic[T]):
-    """
-    Interface for a paginated response from the API
-
-    Typically the endpoint returning list of objects return them splitted
-    in pages (page 1, page 2, etc..) of a fixed dimension (eg 20). Thus
-    each `list_XX` function returns a ResultsPage (by default the first one);
-    once you have a ResultsPage for a given list of objects, you can:
-    * check its length with `len()` (eg `len(page)`)
-    * access a single element with the index operator `[]` (eg `page[5]`)
-    * turn it into a list of dictionaries with  `list()` (eg `list(page)`)
-    * get the next page with `.next()` (eg `page.next()`); this could return
-    None if the list is finished
-    You can also get a specific page passing the page number to the `list_XX` function
-    """
-
-    def __init__(self, url: str, fetch: Callable[[str], requests.Response]):
-        resp = fetch(url)
-        if not resp.ok:
-            raise APIError(resp.text)
-        r: dict[str, Any] = resp.json()
-        next_url: str | None = r["next"]
-        results: list[T] = r["results"]
-
-        self._fetch = fetch
-        self._next_url = next_url
-        self._results = results
-        self._url = url
-
-    def next(self):
-        return ResultsPage(self._next_url, self._fetch) if self._next_url else None
-
-    def __len__(self) -> int:
-        return len(self._results)
-
-    def __getitem__(self, key: int) -> T:
-        return self._results[key]
-
-    def __iter__(self) -> Iterator[T]:
-        return iter([self._results[i] for i in range(len(self._results))])
-
-    def __str__(self) -> str:
-        return f"{len(self._results)} results from {self._url}"
-
-
-class Feature(TypedDict):
-    type: Literal["Feature"]
-    properties: dict[str, Any]
-    geometry: dict[str, Any]
-
-
-class FeatureCollection(TypedDict):
-    type: Literal["FeatureCollection"]
-    features: list[Feature]
-
-
-class APIClient:
-    """Main client class for the Picterra API"""
-
-    def __init__(
-        self, timeout: int = 30, max_retries: int = 3, backoff_factor: int = 10
-    ):
-        """
-        Args:
-            timeout: number of seconds before the request times out
-            max_retries: max attempts when ecountering gateway issues or throttles; see
-                         retry_strategy comment below
-            backoff_factor: factor used nin the backoff algorithm; see retry_strategy comment below
-        """
-        base_url = os.environ.get(
-            "PICTERRA_BASE_URL", "https://app.picterra.ch/public/api/v2/"
-        )
-        api_key = os.environ.get("PICTERRA_API_KEY", None)
-        if not api_key:
-            raise APIError("PICTERRA_API_KEY environment variable is not defined")
-        logger.info(
-            "Using base_url=%s; %d max retries, %d backoff and %s timeout.",
-            base_url,
-            max_retries,
-            backoff_factor,
-            timeout,
-        )
-        self.base_url = base_url
-        # Create the session with a default timeout (30 sec), that we can then
-        # override on a per-endpoint basis (will be disabled for file uploads and downloads)
-        self.sess = _RequestsSession(timeout=timeout)
-        # Retry: we set the HTTP codes for our throttle (429) plus possible gateway problems (50*),
-        # and for polling methods (GET), as non-idempotent ones should be addressed via idempotency
-        # key mechanism; given the algorithm is {<backoff_factor> * (2 **<retries-1>}, and we
-        # default to 30s for polling and max 30 req/min, the default 5-10-20 sequence should
-        # provide enough room for recovery
-        retry_strategy = Retry(
-            total=max_retries,
-            status_forcelist=[429, 502, 503, 504],
-            backoff_factor=backoff_factor,
-            allowed_methods=["GET"],
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.sess.mount("https://", adapter)
-        self.sess.mount("http://", adapter)
-        # Authentication
-        self.sess.headers.update({"X-Api-Key": api_key})
-
-    def _api_url(self, path: str, params: dict[str, Any] | None = None):
-        base_url = urljoin(self.base_url, path)
-        if not params:
-            return base_url
-        else:
-            qstr = urlencode(params)
-            return "%s?%s" % (base_url, qstr)
-
-    def _wait_until_operation_completes(
-        self, operation_response: dict[str, Any]
-    ) -> dict[str, Any]:
-        """Polls an operation an returns its data"""
-        operation_id = operation_response["operation_id"]
-        poll_interval = operation_response["poll_interval"]
-        # Just sleep for a short while the first time
-        time.sleep(poll_interval * 0.1)
-        while True:
-            logger.info("Polling operation id %s" % operation_id)
-            resp = self.sess.get(
-                self._api_url("operations/%s/" % operation_id),
-            )
-            if not resp.ok:
-                raise APIError(resp.text)
-            status = resp.json()["status"]
-            logger.info("status=%s" % status)
-            if status == "success":
-                break
-            if status == "failed":
-                errors = resp.json()["errors"]
-                raise APIError("Operation %s failed: %s" % (operation_id, json.dumps(errors)))
-            time.sleep(poll_interval)
-        return resp.json()
-
-    def _return_results_page(
-        self, resource_endpoint: str, params: dict[str, Any] | None = None
-    ) -> ResultsPage:
-        if params is None:
-            params = {}
-        if "page_number" not in params:
-            params["page_number"] = 1
-
-        url = self._api_url("%s/" % resource_endpoint, params=params)
-        return ResultsPage(url, self.sess.get)
-
+class DetectorPlatformClient(BaseAPIClient):
+    def __init__(self, **kwargs):
+        super().__init__("public/api/v2/", **kwargs)
+        
     def upload_raster(
         self,
         filename: str,
@@ -262,14 +71,14 @@ class APIClient:
             data.update({"cloud_coverage": cloud_coverage})
         if user_tag is not None:
             data.update({"user_tag": user_tag})
-        resp = self.sess.post(self._api_url("rasters/upload/file/"), json=data)
+        resp = self.sess.post(self._full_url("rasters/upload/file/"), json=data)
         if not resp.ok:
             raise APIError(resp.text)
         data = resp.json()
         upload_url = str(data["upload_url"])
         raster_id: str = data["raster_id"]
         _upload_file_to_blobstore(upload_url, filename)
-        resp = self.sess.post(self._api_url("rasters/%s/commit/" % raster_id))
+        resp = self.sess.post(self._full_url("rasters/%s/commit/" % raster_id))
         if not resp.ok:
             raise APIError(resp.text)
         self._wait_until_operation_completes(resp.json())
@@ -392,7 +201,7 @@ class APIClient:
         Returns:
             dict: Dictionary of the information
         """
-        resp = self.sess.get(self._api_url("rasters/%s/" % raster_id))
+        resp = self.sess.get(self._full_url("rasters/%s/" % raster_id))
         if not resp.ok:
             raise APIError(resp.text)
         return resp.json()
@@ -443,7 +252,7 @@ class APIClient:
             data.update({"cloud_coverage": cloud_coverage})
         if user_tag:
             data.update({"user_tag": user_tag})
-        resp = self.sess.put(self._api_url("rasters/%s/" % raster_id), json=data)
+        resp = self.sess.put(self._full_url("rasters/%s/" % raster_id), json=data)
         if not resp.ok:
             raise APIError(resp.text)
         return raster_id
@@ -459,7 +268,7 @@ class APIClient:
             APIError: There was an error while trying to delete the raster
         """
 
-        resp = self.sess.delete(self._api_url("rasters/%s/" % raster_id))
+        resp = self.sess.delete(self._full_url("rasters/%s/" % raster_id))
         if not resp.ok:
             raise APIError(resp.text)
 
@@ -474,7 +283,7 @@ class APIClient:
         Raises:
             APIError: There was an error while trying to download the raster
         """
-        resp = self.sess.get(self._api_url("rasters/%s/download/" % raster_id))
+        resp = self.sess.get(self._full_url("rasters/%s/download/" % raster_id))
         if not resp.ok:
             raise APIError(resp.text)
         raster_url = resp.json()["download_url"]
@@ -497,7 +306,7 @@ class APIClient:
         """
         # Get upload URL
         resp = self.sess.post(
-            self._api_url("rasters/%s/detection_areas/upload/file/" % raster_id)
+            self._full_url("rasters/%s/detection_areas/upload/file/" % raster_id)
         )
         if not resp.ok:
             raise APIError(resp.text)
@@ -508,7 +317,7 @@ class APIClient:
         _upload_file_to_blobstore(upload_url, filename)
         # Commit upload
         resp = self.sess.post(
-            self._api_url(
+            self._full_url(
                 "rasters/%s/detection_areas/upload/%s/commit/" % (raster_id, upload_id)
             )
         )
@@ -529,7 +338,7 @@ class APIClient:
             APIError: There was an error during the operation
         """
         resp = self.sess.delete(
-            self._api_url("rasters/%s/detection_areas/" % raster_id)
+            self._full_url("rasters/%s/detection_areas/" % raster_id)
         )
         if not resp.ok:
             raise APIError(resp.text)
@@ -548,7 +357,7 @@ class APIClient:
             APIError: There was an error uploading the file to cloud storage
         """
         resp = self.sess.post(
-            self._api_url("detectors/%s/training_rasters/" % detector_id),
+            self._full_url("detectors/%s/training_rasters/" % detector_id),
             json={"raster_id": raster_id},
         )
         if not resp.status_code == 201:
@@ -601,16 +410,13 @@ class APIClient:
         ):
             body_data["configuration"][i] = locals()[i]
         # Call API and check response
-        resp = self.sess.post(self._api_url("detectors/"), json=body_data)
+        resp = self.sess.post(self._full_url("detectors/"), json=body_data)
         if not resp.status_code == 201:
             raise APIError(resp.text)
         return resp.json()["id"]
 
-    def get_detector(
-        self,
-        detector_id: str
-    ):
-        resp = self.sess.get(self._api_url("detectors/%s/" % detector_id))
+    def get_detector(self, detector_id: str):
+        resp = self.sess.get(self._full_url("detectors/%s/" % detector_id))
         if not resp.status_code == 200:
             raise APIError(resp.text)
         return resp.json()
@@ -717,7 +523,7 @@ class APIClient:
                 body_data["configuration"][i] = locals()[i]
         # Call API and check response
         resp = self.sess.put(
-            self._api_url("detectors/%s/" % detector_id), json=body_data
+            self._full_url("detectors/%s/" % detector_id), json=body_data
         )
         if not resp.status_code == 204:
             raise APIError(resp.text)
@@ -733,7 +539,7 @@ class APIClient:
             APIError: There was an error while trying to delete the detector
         """
 
-        resp = self.sess.delete(self._api_url("detectors/%s/" % detector_id))
+        resp = self.sess.delete(self._full_url("detectors/%s/" % detector_id))
         if not resp.ok:
             raise APIError(resp.text)
 
@@ -758,7 +564,7 @@ class APIClient:
         if secondary_raster_id is not None:
             body["secondary_raster_id"] = secondary_raster_id
         resp = self.sess.post(
-            self._api_url("detectors/%s/run/" % detector_id),
+            self._full_url("detectors/%s/run/" % detector_id),
             json=body,
         )
         if not resp.ok:
@@ -766,25 +572,6 @@ class APIClient:
         operation_response = resp.json()
         self._wait_until_operation_completes(operation_response)
         return operation_response["operation_id"]
-
-    def download_result_to_file(self, operation_id: str, filename: str):
-        """
-        Downloads a set of results to a local GeoJSON file
-
-        .. deprecated:: 1.0.0
-           Use `download_result_to_feature_collection` instead
-
-        Args:
-            operation_id: The id of the operation to download
-            filename: The local filename where to save the results
-        """
-        warnings.warn(
-            "This function is deprecated. Use download_result_to_feature_collection instead",
-            DeprecationWarning,
-        )
-        result_url = self.get_operation_results(operation_id)["url"]
-        logger.debug("Trying to download result %s.." % result_url)
-        _download_to_file(result_url, filename)
 
     def download_result_to_feature_collection(self, operation_id: str, filename: str):
         """
@@ -820,42 +607,24 @@ class APIClient:
         with open(filename, "w") as f:
             json.dump(fc, f)
 
-    def download_operation_results_to_file(self, operation_id: str, filename: str):
+    def download_result_to_file(self, operation_id: str, filename: str):
         """
-        Downloads the results URL to a local GeoJSON file
+        Downloads a set of results to a local GeoJSON file
+
+        .. deprecated:: 1.0.0
+           Use `download_result_to_feature_collection` instead
 
         Args:
             operation_id: The id of the operation to download
             filename: The local filename where to save the results
         """
-        data = self.get_operation_results_url(operation_id)
-        with open(filename, "w") as f:
-            f.write(data)
-
-    def get_operation_results(self, operation_id: str) -> dict[str, Any]:
-        """
-        Return the 'results' dict of an operation
-
-        This a **beta** function, subject to change.
-
-        Args:
-            operation_id: The id of the operation
-        """
-        resp = self.sess.get(
-            self._api_url("operations/%s/" % operation_id),
+        warnings.warn(
+            "This function is deprecated. Use download_result_to_feature_collection instead",
+            DeprecationWarning,
         )
-        return resp.json()["results"]
-
-    def get_operation_results_url(self, operation_id: str) -> str:
-        """
-        Get the URL of a set of operation results
-
-        This a **beta** function, subject to change.
-
-        Args:
-            operation_id: The id of the result
-        """
-        return self.get_operation_results(operation_id)["url"]
+        result_url = self.get_operation_results(operation_id)["url"]
+        logger.debug("Trying to download result %s.." % result_url)
+        _download_to_file(result_url, filename)
 
     def set_annotations(
         self,
@@ -881,7 +650,7 @@ class APIClient:
         """
         # Get an upload url
         create_upload_resp = self.sess.post(
-            self._api_url(
+            self._full_url(
                 "detectors/%s/training_rasters/%s/%s/upload/bulk/"
                 % (detector_id, raster_id, annotation_type)
             )
@@ -908,11 +677,11 @@ class APIClient:
         if class_id is not None:
             body["class_id"] = class_id
         commit_upload_resp = self.sess.post(
-            self._api_url(
+            self._full_url(
                 "detectors/%s/training_rasters/%s/%s/upload/bulk/%s/commit/"
                 % (detector_id, raster_id, annotation_type, upload_id)
             ),
-            json=body
+            json=body,
         )
         if not commit_upload_resp.ok:
             raise APIError(commit_upload_resp.text)
@@ -927,7 +696,7 @@ class APIClient:
         Args:
             detector_id: The id of the detector
         """
-        resp = self.sess.post(self._api_url("detectors/%s/train/" % detector_id))
+        resp = self.sess.post(self._full_url("detectors/%s/train/" % detector_id))
         if not resp.ok:
             raise APIError(resp.text)
         return self._wait_until_operation_completes(resp.json())
@@ -943,7 +712,7 @@ class APIClient:
             detector_id: The id of the detector
         """
         resp = self.sess.post(
-            self._api_url("detectors/%s/dataset_recommendation/" % detector_id)
+            self._full_url("detectors/%s/dataset_recommendation/" % detector_id)
         )
         if not resp.ok:
             raise APIError(resp.text)
@@ -966,7 +735,7 @@ class APIClient:
             APIError: There was an error while launching and executing the tool
         """
         resp = self.sess.post(
-            self._api_url("advanced_tools/%s/run/" % tool_id),
+            self._full_url("advanced_tools/%s/run/" % tool_id),
             json={"inputs": inputs, "outputs": outputs},
         )
         if not resp.ok:
@@ -993,7 +762,7 @@ class APIClient:
         Returns;
             the vector layer unique identifier
         """
-        resp = self.sess.post(self._api_url("vector_layers/%s/upload/" % raster_id))
+        resp = self.sess.post(self._full_url("vector_layers/%s/upload/" % raster_id))
         if not resp.ok:
             raise APIError(resp.text)
         upload = resp.json()
@@ -1005,7 +774,7 @@ class APIClient:
         if color is not None:
             data["color"] = color
         resp = self.sess.post(
-            self._api_url(
+            self._full_url(
                 "vector_layers/%s/upload/%s/commit/" % (raster_id, upload_id)
             ),
             json=data,
@@ -1034,7 +803,7 @@ class APIClient:
         if color is not None:
             data.update({"color": color})
         resp = self.sess.put(
-            self._api_url("vector_layers/%s/" % vector_layer_id), json=data
+            self._full_url("vector_layers/%s/" % vector_layer_id), json=data
         )
         if not resp.ok:
             raise APIError(resp.text)
@@ -1048,7 +817,7 @@ class APIClient:
         Args:
             vector_layer_id: The id of the vector layer to remove
         """
-        resp = self.sess.delete(self._api_url("vector_layers/%s/" % vector_layer_id))
+        resp = self.sess.delete(self._full_url("vector_layers/%s/" % vector_layer_id))
         if not resp.ok:
             raise APIError(resp.text)
 
@@ -1062,7 +831,7 @@ class APIClient:
             vector_layer_id: The id of the vector layer to download
             filename: existing file to save the vector layer in
         """
-        resp = self.sess.get(self._api_url("vector_layers/%s/" % vector_layer_id))
+        resp = self.sess.get(self._full_url("vector_layers/%s/" % vector_layer_id))
         if not resp.ok:
             raise APIError(resp.text)
         urls = resp.json()["geojson_urls"]
@@ -1124,7 +893,7 @@ class APIClient:
             "marker": {"type": "Point", "coordinates": [lng, lat]},
             "text": text,
         }
-        resp = self.sess.post(self._api_url(url), json=data)
+        resp = self.sess.post(self._full_url(url), json=data)
         if not resp.ok:
             raise APIError(resp.text)
         return resp.json()
@@ -1151,7 +920,7 @@ class APIClient:
             APIError: There was an error during import
         """
         # Get upload URL
-        resp = self.sess.post(self._api_url("rasters/import/"))
+        resp = self.sess.post(self._full_url("rasters/import/"))
         if not resp.ok:
             raise APIError(resp.text)
         data = resp.json()
@@ -1161,7 +930,7 @@ class APIClient:
         _upload_file_to_blobstore(upload_url, aoi_filename)
         # Commit upload
         resp = self.sess.post(
-            self._api_url(f"rasters/import/{upload_id}/commit/"),
+            self._full_url(f"rasters/import/{upload_id}/commit/"),
             json={
                 "method": method,
                 "source_id": source_id,
