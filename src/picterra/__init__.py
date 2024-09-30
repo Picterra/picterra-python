@@ -6,5 +6,6 @@ from .base_client import APIError, ResultsPage
 from .detector_platform_client import DetectorPlatformClient as APIClient
 from .detector_platform_client import DetectorPlatformClient
 from .nongeo import nongeo_result_to_pixel
+from .plots_analysis_platform_client import PlotsAnalysisPlatformClient
 
-__all__ = ["APIClient", "DetectorPlatformClient", "nongeo_result_to_pixel", "APIError", "ResultsPage"]
+__all__ = ["APIClient", "DetectorPlatformClient", "PlotsAnalysisPlatformClient", "nongeo_result_to_pixel", "APIError", "ResultsPage"]

@@ -2,7 +2,7 @@ from urllib.parse import urljoin
 
 import responses
 
-from picterra.detector_platform_client import DetectorPlatformClient
+from picterra import DetectorPlatformClient, PlotsAnalysisPlatformClient
 
 
 def _add_api_response(
@@ -37,6 +37,8 @@ def _client(monkeypatch, platform="detector", max_retries=0, timeout=1, **kwargs
     monkeypatch.setenv("PICTERRA_API_KEY", "1234")
     if platform == "detector":
         client = DetectorPlatformClient(timeout=timeout, max_retries=max_retries, **kwargs)
+    elif platform == "plots_analysis":
+        client = PlotsAnalysisPlatformClient(timeout=timeout, max_retries=max_retries, **kwargs)
     else:
         raise NotImplementedError(f"Unrecognised API platform {platform}")
     return client
@@ -44,6 +46,10 @@ def _client(monkeypatch, platform="detector", max_retries=0, timeout=1, **kwargs
 
 def detector_api_url(path):
     return urljoin(TEST_API_URL, urljoin("public/api/v2/", path))
+
+
+def plots_analysis_api_url(path):
+    return urljoin(TEST_API_URL, urljoin("public/api/plots_analysis/v1/", path))
 
 
 TEST_API_URL = "http://example.com/"

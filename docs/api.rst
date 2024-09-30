@@ -9,6 +9,14 @@ DetectorPlatformClient
 .. autoclass:: picterra.APIClient
     :members:
 
+
+PlotsAnalysisPlatformClient
+---------------------------
+
+.. autoclass:: picterra.PlotsAnalysisPlatformClient
+    :members:
+
+
 Pagination
 ----------
 
