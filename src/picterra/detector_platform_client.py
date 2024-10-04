@@ -5,11 +5,18 @@ https://app.picterra.ch/public/apidocs/v2/
 Note that that Detector platform is a separate product from the Plots Analysis platform and so
 an API key which is valid for one may encounter permissions issues if used with the other
 """
+from __future__ import annotations
+
 import json
 import logging
+import sys
 import tempfile
 import warnings
-from typing import Any, Literal
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
+from typing import Any
 
 import requests
 

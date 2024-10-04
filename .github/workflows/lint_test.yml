@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.12']
+        python-version: ['3.7', '3.10', '3.12']
 
     steps:
     - uses: actions/checkout@v2
@@ -38,6 +38,8 @@ jobs:
     # therefore fail on warnings that could be ignored by readthedocs and
     # lead to half-broken docs
     - name: build docs
+      # This should make the version in .readthedocs.yaml in the repository root
+      if: matrix.python-version == '3.12'
       run: |
         cd docs
         python -m pip install -r requirements.txt
