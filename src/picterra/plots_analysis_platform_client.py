@@ -6,7 +6,12 @@ Note that that Plots Analysis Platform is a separate product from the Detector p
 an API key which is valid for one may encounter permissions issues if used with the other
 """
 import datetime
-from typing import Literal
+import sys
+
+if sys.version_info >= (3, 8):
+    from typing import Literal
+else:
+    from typing_extensions import Literal
 
 import requests
 from requests.exceptions import RequestException
