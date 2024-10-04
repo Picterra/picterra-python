@@ -16,7 +16,7 @@ test_deps = ["pytest==7.1", "responses==0.22", "httpretty"]
 
 setup(
     name="picterra",
-    version="2.0.0",
+    version="2.0.1",
     description="Picterra API client",
     long_description=long_description,
     long_description_content_type="text/markdown",
