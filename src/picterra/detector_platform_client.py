@@ -12,10 +12,12 @@ import logging
 import sys
 import tempfile
 import warnings
+
 if sys.version_info >= (3, 8):
     from typing import Literal
 else:
     from typing_extensions import Literal
+
 from typing import Any
 
 import requests
@@ -26,6 +28,7 @@ from picterra.base_client import (
     FeatureCollection,
     _download_to_file,
     _upload_file_to_blobstore,
+    multipolygon_to_feature_collection,
 )
 
 logger = logging.getLogger()
@@ -836,13 +839,19 @@ class DetectorPlatformClient(BaseAPIClient):
 
         Args:
             vector_layer_id: The id of the vector layer to download
-            filename: existing file to save the vector layer in
+            filename: existing file to save the vector layer in, as a feature collection
         """
         resp = self.sess.post(self._full_url("vector_layers/%s/download/" % vector_layer_id))
         if not resp.ok:
             raise APIError(resp.text)
         op = self._wait_until_operation_completes(resp.json())
-        _download_to_file(op["results"]["download_url"], filename)
+        # The operation results is a multipolygon that we convert to a feature collection
+        with tempfile.NamedTemporaryFile() as tmp:
+            _download_to_file(op["results"]["download_url"], tmp.name)
+            with open(tmp.name) as f:
+                mp = json.load(f)
+        with open(filename, "wt") as out_f:
+            json.dump(multipolygon_to_feature_collection(mp), out_f)
 
     def list_raster_markers(
         self,
