@@ -392,23 +392,14 @@ def add_mock_vector_layer_download_responses(layer_id, num_features):
         "download_url": "http://layer.geojson.example.com",
     }
     add_mock_operations_responses("success", results=results)
-    features = []
-    for i in range(num_features):
-        url = results["download_url"]
-        features.append(
-            {
-                "type": "Feature",
-                "geometry": make_geojson_multipolygon(i + 1),
-                "properties": {},
-            }
-        )
-    fc = {"type": "FeatureCollection", "features": features}
+    url = results["download_url"]
+    mp = make_geojson_multipolygon(2)
     responses.add(
         responses.GET,
         url,
-        body=json.dumps(fc),
+        body=json.dumps(mp),
     )
-    return fc
+    return mp
 
 
 def make_geojson_multipolygon(npolygons=1):
@@ -1008,11 +999,11 @@ def test_download_vector_layer_to_file(monkeypatch):
     client = _client(monkeypatch)
     with tempfile.NamedTemporaryFile() as fp:
         client.download_vector_layer_to_file("foobar", fp.name)
-        fc = json.load(fp)
-        assert fc == expected_content and len(fc["features"]) == 2
+        mp = json.load(fp)
         assert (
-            fc["type"] == "FeatureCollection" and fc["features"][0]["type"] == "Feature"
+            mp["type"] == "MultiPolygon"
         )
+        assert mp == expected_content and len(mp["coordinates"]) == 2
     assert len(responses.calls) == 3 # POST /download, GET /operations, GET url
 
 
