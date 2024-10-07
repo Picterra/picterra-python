@@ -6,10 +6,12 @@ import os
 import sys
 import time
 from collections.abc import Callable
+
 if sys.version_info >= (3, 8):
     from typing import Literal, TypedDict
 else:
     from typing_extensions import Literal, TypedDict
+
 from typing import Any, Generic, Iterator, TypeVar
 from urllib.parse import urlencode, urljoin
 
@@ -73,6 +75,19 @@ def _upload_file_to_blobstore(upload_url: str, filename: str):
         logger.error("Error when uploading to blobstore %s" % upload_url)
         raise APIError(resp.text)
 
+
+def multipolygon_to_feature_collection(mp):
+    return {
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": p
+            }
+        } for p in mp]
+    }
 
 T = TypeVar("T")
 

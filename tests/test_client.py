@@ -7,6 +7,7 @@ import pytest
 import responses
 from requests.exceptions import ConnectionError
 
+from picterra.base_client import multipolygon_to_feature_collection
 from picterra.detector_platform_client import DetectorPlatformClient
 from tests.utils import (
     OP_RESP,
@@ -399,7 +400,7 @@ def add_mock_vector_layer_download_responses(layer_id, num_features):
         url,
         body=json.dumps(mp),
     )
-    return mp
+    return multipolygon_to_feature_collection(mp)
 
 
 def make_geojson_multipolygon(npolygons=1):
@@ -999,11 +1000,11 @@ def test_download_vector_layer_to_file(monkeypatch):
     client = _client(monkeypatch)
     with tempfile.NamedTemporaryFile() as fp:
         client.download_vector_layer_to_file("foobar", fp.name)
-        mp = json.load(fp)
+        fc = json.load(fp)
         assert (
-            mp["type"] == "MultiPolygon"
+            fc["type"] == "FeatureCollection"
         )
-        assert mp == expected_content and len(mp["coordinates"]) == 2
+        assert fc == expected_content and len(fc["features"]) == 2
     assert len(responses.calls) == 3 # POST /download, GET /operations, GET url
 
 
