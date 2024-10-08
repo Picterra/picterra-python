@@ -394,7 +394,7 @@ def add_mock_vector_layer_download_responses(layer_id, num_features):
     }
     add_mock_operations_responses("success", results=results)
     url = results["download_url"]
-    mp = make_geojson_multipolygon(2)
+    mp = make_geojson_multipolygon(num_features)
     responses.add(
         responses.GET,
         url,
@@ -601,6 +601,35 @@ def add_mock_folder_detector_response(folder_id: str):
         json=data2,
         match=responses.matchers.query_param_matcher({"page_number": "2"}),
     )
+
+
+def test_multipolygon_to_feature_collection():
+    mp = {
+        "type": "MultiPolygon",
+        "coordinates": [
+            [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]],
+            [[[1, 1], [1, 2], [2, 2], [2, 1], [1, 1]]]
+        ]
+    }
+    fc = multipolygon_to_feature_collection(mp)
+    assert fc == {
+        "type": "FeatureCollection",
+        "features": [{
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]]
+            }
+        },  {
+            "type": "Feature",
+            "properties": {},
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[1, 1], [1, 2], [2, 2], [2, 1], [1, 1]]]
+            }
+        }]
+    }
 
 
 def test_detector_platform_client_base_url(monkeypatch):

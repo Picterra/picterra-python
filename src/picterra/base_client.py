@@ -86,7 +86,7 @@ def multipolygon_to_feature_collection(mp):
                 "type": "Polygon",
                 "coordinates": p
             }
-        } for p in mp]
+        } for p in mp["coordinates"]]
     }
 
 T = TypeVar("T")
