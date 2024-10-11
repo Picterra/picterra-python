@@ -25,10 +25,11 @@ import requests
 from picterra.base_client import (
     APIError,
     BaseAPIClient,
+    Feature,
     FeatureCollection,
     _download_to_file,
     _upload_file_to_blobstore,
-    multipolygon_to_feature_collection,
+    multipolygon_to_polygon_feature_collection,
 )
 
 logger = logging.getLogger()
@@ -600,20 +601,25 @@ class DetectorPlatformClient(BaseAPIClient):
         # FeatureCollection
         fc: FeatureCollection = {"type": "FeatureCollection", "features": []}
 
-        for i, class_result in enumerate(results["by_class"]):
+        for class_result in results["by_class"]:
             with tempfile.NamedTemporaryFile() as f:
-                _download_to_file(class_result["result"]["url"], f.name)
-                # Reopen in read text
+                self.download_vector_layer_to_file(
+                    class_result["result"]["vector_layer_id"], f.name)
                 with open(f.name) as fr:
-                    multipolygon = json.load(fr)
-                    fc["features"].append(
-                        {
-                            "type": "Feature",
-                            "properties": {"class_name": class_result["class"]["name"]},
-                            "geometry": multipolygon,
-                        }
+                    vl_polygon_fc: FeatureCollection = json.load(fr)
+                mp_feature: Feature = {
+                    "type": "Feature",
+                    "properties": {"class_name": class_result["class"]["name"]},
+                    "geometry": {
+                        "type": "MultiPolygon",
+                        "coordinates": []
+                    }
+                }
+                for poly_feat in vl_polygon_fc["features"]:
+                    mp_feature["geometry"]["coordinates"].append(
+                        poly_feat["geometry"]["coordinates"]
                     )
-
+                fc["features"].append(mp_feature)
         with open(filename, "w") as f:
             json.dump(fc, f)
 
@@ -839,19 +845,13 @@ class DetectorPlatformClient(BaseAPIClient):
 
         Args:
             vector_layer_id: The id of the vector layer to download
-            filename: existing file to save the vector layer in, as a feature collection
+            filename: existing file to save the vector layer in, as a feature collection of polygons
         """
         resp = self.sess.post(self._full_url("vector_layers/%s/download/" % vector_layer_id))
         if not resp.ok:
             raise APIError(resp.text)
         op = self._wait_until_operation_completes(resp.json())
-        # The operation results is a multipolygon that we convert to a feature collection
-        with tempfile.NamedTemporaryFile() as tmp:
-            _download_to_file(op["results"]["download_url"], tmp.name)
-            with open(tmp.name) as f:
-                mp = json.load(f)
-        with open(filename, "wt") as out_f:
-            json.dump(multipolygon_to_feature_collection(mp), out_f)
+        _download_to_file(op["results"]["download_url"], filename)
 
     def list_raster_markers(
         self,

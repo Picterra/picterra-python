@@ -76,7 +76,7 @@ def _upload_file_to_blobstore(upload_url: str, filename: str):
         raise APIError(resp.text)
 
 
-def multipolygon_to_feature_collection(mp):
+def multipolygon_to_polygon_feature_collection(mp):
     return {
         "type": "FeatureCollection",
         "features": [{

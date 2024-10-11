@@ -7,7 +7,7 @@ import pytest
 import responses
 from requests.exceptions import ConnectionError
 
-from picterra.base_client import multipolygon_to_feature_collection
+from picterra.base_client import multipolygon_to_polygon_feature_collection
 from picterra.detector_platform_client import DetectorPlatformClient
 from tests.utils import (
     OP_RESP,
@@ -384,7 +384,7 @@ def add_mock_vector_layer_responses(upload_id, raster_id, name, color):
     )
 
 
-def add_mock_vector_layer_download_responses(layer_id, num_features):
+def add_mock_vector_layer_download_responses(layer_id, polygons_num):
     url = "vector_layers/%s/download/" % layer_id
     data = {"operation_id": OPERATION_ID, "poll_interval": TEST_POLL_INTERVAL}
     _add_api_response(detector_api_url(url), verb=responses.POST, json=data)
@@ -394,63 +394,53 @@ def add_mock_vector_layer_download_responses(layer_id, num_features):
     }
     add_mock_operations_responses("success", results=results)
     url = results["download_url"]
-    mp = make_geojson_multipolygon(num_features)
+    polygons_fc = multipolygon_to_polygon_feature_collection(make_geojson_multipolygon(polygons_num))
+    assert len(polygons_fc["features"]) == polygons_num
     responses.add(
         responses.GET,
         url,
-        body=json.dumps(mp),
+        body=json.dumps(polygons_fc),
     )
-    return multipolygon_to_feature_collection(mp)
+    return polygons_fc
+
+
+def make_geojson_polygon(base=1):
+    return {"type": "Polygon", "coordinates": [[[0, 0], [base, 0], [base, base], [0, base], [0, 0]]]}
 
 
 def make_geojson_multipolygon(npolygons=1):
     coords = []
     for i in range(npolygons):
-        coords.append([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]])
+        coords.append(make_geojson_polygon(i + 1)["coordinates"])
     return {"type": "MultiPolygon", "coordinates": coords}
 
 
-def add_mock_download_result_response(op_id):
+def add_mock_download_result_response(op_id, num_classes):
     data = {
         "results": {
-            "url": "http://storage.example.com/42.geojson",
+            "url": "http://storage.example.com/result_for_class_1.geojson",
             "by_class": [
                 {
-                    "class": {"name": "class_1"},
+                    "class": {"name": f"class_{i + 1}"},
                     "result": {
-                        "url": "http://storage.example.com/result_for_class_1.geojson"
+                        "url": f"http://storage.example.com/result_for_class_{i + 1}.geojson",
+                        "vector_layer_id": f"layer_{i + 1}"
                     },
-                },
-                {
-                    "class": {"name": "class_2"},
-                    "result": {
-                        "url": "http://storage.example.com/result_for_class_2.geojson"
-                    },
-                },
+                } for i in range(num_classes)
             ],
         },
     }
     _add_api_response(detector_api_url("operations/%s/" % op_id), json=data, status=201)
     mock_contents = {
-        "single_class": json.dumps(make_geojson_multipolygon(npolygons=1)),
-        "class_1": json.dumps(make_geojson_multipolygon(npolygons=2)),
-        "class_2": json.dumps(make_geojson_multipolygon(npolygons=3)),
+        f"class_{i + 1}": json.dumps(make_geojson_multipolygon(npolygons=i + 2))
+        for i in range(num_classes)
     }
-    responses.add(
-        responses.GET,
-        "http://storage.example.com/42.geojson",
-        body=mock_contents["single_class"],
-    )
-    responses.add(
-        responses.GET,
-        "http://storage.example.com/result_for_class_1.geojson",
-        body=mock_contents["class_1"],
-    )
-    responses.add(
-        responses.GET,
-        "http://storage.example.com/result_for_class_2.geojson",
-        body=mock_contents["class_2"],
-    )
+    for i in range(num_classes):
+        responses.add(
+            responses.GET,
+            f"http://storage.example.com/result_for_class_{i + 1}.geojson",
+            body=mock_contents[f"class_{i + 1}"],
+        )
     return mock_contents
 
 
@@ -603,7 +593,7 @@ def add_mock_folder_detector_response(folder_id: str):
     )
 
 
-def test_multipolygon_to_feature_collection():
+def test_multipolygon_to_polygon_feature_collection():
     mp = {
         "type": "MultiPolygon",
         "coordinates": [
@@ -611,7 +601,7 @@ def test_multipolygon_to_feature_collection():
             [[[1, 1], [1, 2], [2, 2], [2, 1], [1, 1]]]
         ]
     }
-    fc = multipolygon_to_feature_collection(mp)
+    fc = multipolygon_to_polygon_feature_collection(mp)
     assert fc == {
         "type": "FeatureCollection",
         "features": [{
@@ -901,7 +891,7 @@ def test_run_detector_secondary_raster(monkeypatch):
 
 @responses.activate
 def test_download_result_to_file(monkeypatch):
-    expected_content = add_mock_download_result_response(101)["single_class"]
+    expected_content = add_mock_download_result_response(101, 1)["class_1"]
     client = _client(monkeypatch)
     with tempfile.NamedTemporaryFile() as f:
         client.download_result_to_file(101, f.name)
@@ -911,26 +901,30 @@ def test_download_result_to_file(monkeypatch):
 
 @responses.activate
 def test_download_result_to_feature_collection(monkeypatch):
-    expected_contents = add_mock_download_result_response(101)
+    add_mock_download_result_response(101, 2)
+    add_mock_vector_layer_download_responses("layer_1", 10)
+    add_mock_vector_layer_download_responses("layer_2", 20)
     client = _client(monkeypatch)
     with tempfile.NamedTemporaryFile() as f:
         client.download_result_to_feature_collection(101, f.name)
         with open(f.name) as fr:
             fc = json.load(fr)
-        assert fc["type"] == "FeatureCollection"
-        assert len(fc["features"]) == 2
+        assert fc["type"] == "FeatureCollection" and len(fc["features"]) == 2
         class_1_index = (
             0 if fc["features"][0]["properties"]["class_name"] == "class_1" else 1
         )
         feat1 = fc["features"][class_1_index]
         assert feat1["type"] == "Feature"
         assert feat1["properties"]["class_name"] == "class_1"
-        assert feat1["geometry"] == json.loads(expected_contents["class_1"])
+        assert feat1["geometry"] == make_geojson_multipolygon(10)
+        assert len(feat1["geometry"]["coordinates"]) == 10
+        assert isinstance(feat1["geometry"]["coordinates"][0][0][0][0], (int, float))
         feat2 = fc["features"][(class_1_index + 1) % 2]
-        assert feat2["type"] == "Feature"
+        assert feat2["type"] == "Feature" and feat2["geometry"]["type"] == "MultiPolygon"
         assert feat2["properties"]["class_name"] == "class_2"
-        assert feat2["geometry"] == json.loads(expected_contents["class_2"])
-    assert len(responses.calls) == 3
+        assert len(feat2["geometry"]["coordinates"]) == 20
+        assert isinstance(feat2["geometry"]["coordinates"][0][0][0][0], (int, float))
+    assert len(responses.calls) == 7
 
 
 @responses.activate
@@ -1025,16 +1019,16 @@ def test_edit_vector_layer(monkeypatch):
 
 @responses.activate
 def test_download_vector_layer_to_file(monkeypatch):
-    expected_content = add_mock_vector_layer_download_responses("foobar", 2)
+    polygons_fc = add_mock_vector_layer_download_responses("foobar", 2)
     client = _client(monkeypatch)
     with tempfile.NamedTemporaryFile() as fp:
         client.download_vector_layer_to_file("foobar", fp.name)
         fc = json.load(fp)
-        assert (
-            fc["type"] == "FeatureCollection"
-        )
-        assert fc == expected_content and len(fc["features"]) == 2
-    assert len(responses.calls) == 3 # POST /download, GET /operations, GET url
+    assert fc["type"] == "FeatureCollection"
+    assert fc == polygons_fc and len(fc["features"]) == 2
+    assert fc["features"][0]["geometry"]["type"] == "Polygon"
+    assert isinstance(fc["features"][1]["geometry"]["coordinates"][0][0][0], (int, float))
+    assert len(responses.calls) == 3  # POST /download, GET /operations, GET url
 
 
 @responses.activate
