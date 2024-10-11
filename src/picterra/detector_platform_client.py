@@ -25,6 +25,7 @@ import requests
 from picterra.base_client import (
     APIError,
     BaseAPIClient,
+    Feature,
     FeatureCollection,
     _download_to_file,
     _upload_file_to_blobstore,
@@ -600,20 +601,23 @@ class DetectorPlatformClient(BaseAPIClient):
         # FeatureCollection
         fc: FeatureCollection = {"type": "FeatureCollection", "features": []}
 
-        for i, class_result in enumerate(results["by_class"]):
+        for class_result in results["by_class"]:
             with tempfile.NamedTemporaryFile() as f:
-                _download_to_file(class_result["result"]["url"], f.name)
-                # Reopen in read text
+                self.download_vector_layer_to_file(
+                    class_result["result"]["vector_layer_id"], f.name)
                 with open(f.name) as fr:
-                    multipolygon = json.load(fr)
-                    fc["features"].append(
-                        {
-                            "type": "Feature",
-                            "properties": {"class_name": class_result["class"]["name"]},
-                            "geometry": multipolygon,
-                        }
-                    )
-
+                    vl_fc: FeatureCollection = json.load(fr)
+                mp_feature: Feature = {
+                    "type": "Feature",
+                    "properties": {"class_name": class_result["class"]["name"]},
+                    "geometry": {
+                        "type": "MultiPolygon",
+                        "coordinates": []
+                    }
+                }
+                for feat in vl_fc["features"]:
+                    mp_feature["geometry"]["coordinates"].append(feat["geometry"]["coordinates"])
+            fc["features"].append(mp_feature)
         with open(filename, "w") as f:
             json.dump(fc, f)
 

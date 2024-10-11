@@ -384,7 +384,7 @@ def add_mock_vector_layer_responses(upload_id, raster_id, name, color):
     )
 
 
-def add_mock_vector_layer_download_responses(layer_id, num_features):
+def add_mock_vector_layer_download_responses(layer_id, multipolygon):
     url = "vector_layers/%s/download/" % layer_id
     data = {"operation_id": OPERATION_ID, "poll_interval": TEST_POLL_INTERVAL}
     _add_api_response(detector_api_url(url), verb=responses.POST, json=data)
@@ -394,23 +394,22 @@ def add_mock_vector_layer_download_responses(layer_id, num_features):
     }
     add_mock_operations_responses("success", results=results)
     url = results["download_url"]
-    mp = make_geojson_multipolygon(num_features)
     responses.add(
         responses.GET,
         url,
-        body=json.dumps(mp),
+        body=json.dumps(multipolygon),
     )
-    return multipolygon_to_feature_collection(mp)
+    return multipolygon_to_feature_collection(multipolygon)
 
 
 def make_geojson_multipolygon(npolygons=1):
     coords = []
-    for i in range(npolygons):
+    for _ in range(npolygons):
         coords.append([[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]])
     return {"type": "MultiPolygon", "coordinates": coords}
 
 
-def add_mock_download_result_response(op_id):
+def add_mock_download_result_response(op_id, layer_ids=[0, 1]):
     data = {
         "results": {
             "url": "http://storage.example.com/42.geojson",
@@ -418,13 +417,15 @@ def add_mock_download_result_response(op_id):
                 {
                     "class": {"name": "class_1"},
                     "result": {
-                        "url": "http://storage.example.com/result_for_class_1.geojson"
+                        "url": "http://storage.example.com/result_for_class_1.geojson",
+                        "vector_layer_id": layer_ids[0]
                     },
                 },
                 {
                     "class": {"name": "class_2"},
                     "result": {
-                        "url": "http://storage.example.com/result_for_class_2.geojson"
+                        "url": "http://storage.example.com/result_for_class_2.geojson",
+                        "vector_layer_id": layer_ids[1]
                     },
                 },
             ],
@@ -911,7 +912,9 @@ def test_download_result_to_file(monkeypatch):
 
 @responses.activate
 def test_download_result_to_feature_collection(monkeypatch):
-    expected_contents = add_mock_download_result_response(101)
+    expected_contents = add_mock_download_result_response(101, [222, 333])
+    add_mock_vector_layer_download_responses(222, json.loads(expected_contents["class_1"]))
+    add_mock_vector_layer_download_responses(333, json.loads(expected_contents["class_2"]))
     client = _client(monkeypatch)
     with tempfile.NamedTemporaryFile() as f:
         client.download_result_to_feature_collection(101, f.name)
@@ -930,7 +933,7 @@ def test_download_result_to_feature_collection(monkeypatch):
         assert feat2["type"] == "Feature"
         assert feat2["properties"]["class_name"] == "class_2"
         assert feat2["geometry"] == json.loads(expected_contents["class_2"])
-    assert len(responses.calls) == 3
+    assert len(responses.calls) == 7
 
 
 @responses.activate
@@ -1025,7 +1028,8 @@ def test_edit_vector_layer(monkeypatch):
 
 @responses.activate
 def test_download_vector_layer_to_file(monkeypatch):
-    expected_content = add_mock_vector_layer_download_responses("foobar", 2)
+    expected_content = add_mock_vector_layer_download_responses(
+        "foobar", make_geojson_multipolygon(2))
     client = _client(monkeypatch)
     with tempfile.NamedTemporaryFile() as fp:
         client.download_vector_layer_to_file("foobar", fp.name)
@@ -1034,7 +1038,7 @@ def test_download_vector_layer_to_file(monkeypatch):
             fc["type"] == "FeatureCollection"
         )
         assert fc == expected_content and len(fc["features"]) == 2
-    assert len(responses.calls) == 3 # POST /download, GET /operations, GET url
+    assert len(responses.calls) == 3  # POST /download, GET /operations, GET url
 
 
 @responses.activate
