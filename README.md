@@ -50,7 +50,7 @@ Make sure you have `Python` and `pip` in your OS and create a virtual environmen
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate 
+source . venv/bin/activate 
 ```
 
 Running
