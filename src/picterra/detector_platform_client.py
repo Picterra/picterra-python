@@ -373,6 +373,68 @@ class DetectorPlatformClient(BaseAPIClient):
         if not resp.status_code == 201:
             raise APIError(resp.text)
 
+    def list_folders(
+        self,
+        search_string: str | None = None,
+    ):
+        """"
+        Lists folders, see `ResultsPage` for explanations on pagination
+
+        Args:
+            search_string: A search string to use to search by folder name
+
+        Returns:
+            A list of folders dictionaries
+
+        Example:
+
+            ::
+
+                {
+                    'id' :'42',
+                    'name': 'project 1',
+                    'created_at': '2024-10-14T07:05:59.070698Z'
+                },
+                {
+                    'id' :'43',
+                    'name': 'project 2',
+                    'created_at': '2023-10-14T07:05:59.070698Z'
+                }
+
+        """
+        params: dict[str, Any] = {}
+        if search_string:
+            params["search"] = search_string
+        return self._return_results_page("folders", params)
+
+    def get_folder(self, folder_id: str) -> dict[str, Any]:
+        """
+        Returns metadata about a folder
+
+        Args:
+            folder_id: The id of the folder
+
+        Returns:
+            A dictionary containing metadata about the folder
+
+        Example:
+
+            ::
+
+                {
+                }
+        """
+        resp = self.sess.get(self._full_url("folders/%s/" % folder_id))
+        if not resp.ok:
+            raise APIError(resp.text)
+        return resp.json()
+
+    def create_folder(self, name: str):
+        resp = self.sess.post(self._full_url("folders/"), { "name": name })
+        if not resp.ok:
+            raise APIError(resp.text)
+        return resp.json()
+
     def create_detector(
         self,
         name: str | None = None,
