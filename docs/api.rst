@@ -3,36 +3,31 @@ API
 ===
 
 
-DetectorPlatformClient
-----------------------
+Detector Platform
+-----------------
+
+.. autoclass:: picterra.DetectorPlatformClient
+    :members:
 
 .. autoclass:: picterra.APIClient
     :members:
-
-
-PlotsAnalysisPlatformClient
----------------------------
-
-.. autoclass:: picterra.PlotsAnalysisPlatformClient
-    :members:
-
-
-Pagination
-----------
-
-.. autoclass:: picterra.ResultsPage
-    :members:
-
-
-nongeo
-------
 
 .. automodule:: picterra.nongeo
     :members:
 
 
-Exceptions
-----------
+Plots Analysis Platform
+-----------------------
+
+.. autoclass:: picterra.PlotsAnalysisPlatformClient
+    :members:
+
+
+Utility classes
+---------------
+
+.. autoclass:: picterra.ResultsPage
+    :members:
 
 .. autoclass:: picterra.APIError
     :members:
