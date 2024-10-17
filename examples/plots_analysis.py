@@ -16,7 +16,7 @@ print("Starting analysis...")
 results = client.batch_analyze_plots(
     plots_feature_collection_filename,
     "eudr_cocoa",
-    datetime.datetime.fromisoformat("2022-01-01")
+    datetime.date.fromisoformat("2022-01-01")
 )
 
 # The output of the analysis is a JSON file containing the input plots and their
