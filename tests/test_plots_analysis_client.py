@@ -59,6 +59,6 @@ def test_analyse_plots(monkeypatch):
         results = client.batch_analyze_plots(
             tmp.name,
             methodology="eudr_cocoa",
-            assessment_date=datetime.datetime.fromisoformat("2020-01-01"),
+            assessment_date=datetime.date.fromisoformat("2020-01-01"),
         )
     assert results == fake_analysis_results

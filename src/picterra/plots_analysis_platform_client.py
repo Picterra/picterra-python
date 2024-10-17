@@ -25,7 +25,7 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/plots_analysis/v1/", **kwargs)
 
-    def batch_analyze_plots(self, plots_geometries_filename: str, methodology: AnalysisMethodology, assessment_date: datetime.datetime):
+    def batch_analyze_plots(self, plots_geometries_filename: str, methodology: AnalysisMethodology, assessment_date: datetime.date):
         """
         Runs the specified methodology against the plot geometries stored in the provided file and
         returns the analysis results.
