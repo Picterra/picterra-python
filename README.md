@@ -71,6 +71,10 @@ pytest
 2. Manually run the [publish to testpypi workflow](https://github.com/Picterra/picterra-python/actions/workflows/python-publish-testpypi.yml)
 3. Check the publication result on [testpypi](https://test.pypi.org/project/picterra/)
 4. Create a release through github
+  4.1. Make sure you create a new tag vX.Y.Z through the release UI
+  4.2. Click the "generate release notes" button in the UI to get release notes
 5. The 'publish to pypi' workflow should automatically run
+  5.1. Note this will *not* work if you create the release first as a draft - you
+       have to create it immediatly
 6. Updated package should be available on [pypi](https://pypi.org/project/picterra/)
 
