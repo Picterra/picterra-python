@@ -3,7 +3,7 @@
   "features": [
     {
       "type": "Feature",
-      "properties": { "id": "PLOT-1"},
+      "properties": { "plot_id": "PLOT-1"},
       "geometry": {
         "coordinates": [
           [
@@ -34,7 +34,7 @@
     },
     {
       "type": "Feature",
-      "properties": { "id": "PLOT-2"},
+      "properties": { "plot_id": "PLOT-2"},
       "geometry": {
         "coordinates": [
           [
