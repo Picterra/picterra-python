@@ -7,13 +7,17 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
-        # We still support python 3.7 for entreprise customers running on legacy
-        # Python versions
-        python-version: ['3.7', '3.10', '3.12']
-
+        os: [ubuntu-24.04]
+        python-version: ['3.10', '3.12']
+        include:
+          # We still support python 3.7 for entreprise customers running on legacy
+          # Python versions. We have to run it on ubuntu 22.04 because it is
+          # EOL and not available on 24.04
+          - os: ubuntu-22.04
+            python-version: '3.7'
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
     - name: setup python ${{ matrix.python-version }}
