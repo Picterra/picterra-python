@@ -5,14 +5,14 @@ import logging
 import os
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 if sys.version_info >= (3, 8):
     from typing import Literal, TypedDict
 else:
     from typing_extensions import Literal, TypedDict
 
-from typing import Any, Generic, Iterator, TypeVar
+from typing import Any, Generic, TypeVar
 from urllib.parse import urlencode, urljoin
 
 import requests
