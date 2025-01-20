@@ -24,6 +24,33 @@ logger = logging.getLogger()
 CHUNK_SIZE_BYTES = 8192  # 8 KiB
 
 
+# allow injecting an non-existing package name to test the fallback behavior
+# of _get_ua in tests (see test_headers_user_agent_version__fallback)
+def _get_distr_name():
+    return 'picterra'
+
+
+def _get_ua():
+    import platform
+    pkg = _get_distr_name()
+    if sys.version_info >= (3, 8):
+        from importlib.metadata import PackageNotFoundError, version
+        try:
+            ver = version(pkg)
+        except PackageNotFoundError:
+            ver = 'no_version'
+    else:
+        import pkg_resources  # type: ignore[import]
+        try:
+            ver = pkg_resources.require(pkg)[0].version
+        except pkg_resources.DistributionNotFound:
+            ver = 'no_version'
+    o_s = " ".join([os.name, platform.system(), platform.release()])
+    v_info = sys.version_info
+    py = "Python " + str(v_info.major) + "." + str(v_info.minor)
+    return "picterra-python/%s (%s %s)" % (ver, py, o_s,)
+
+
 class APIError(Exception):
     """Generic API error exception"""
 
@@ -39,7 +66,9 @@ class _RequestsSession(requests.Session):
         self.timeout = kwargs.pop("timeout")
         super().__init__(*args, **kwargs)
         self.headers.update(
-            {"User-Agent": "picterra-python %s" % self.headers["User-Agent"]}
+            {
+                "User-Agent": "%s - %s" % (_get_ua(), self.headers["User-Agent"])
+            }
         )
 
     def request(self, *args, **kwargs):
