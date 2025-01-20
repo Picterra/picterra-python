@@ -1,12 +1,15 @@
 import json
+import re
 import time
 
 import httpretty
 import pytest
+import responses
 from requests.exceptions import ConnectionError
 
+from picterra import base_client
 from picterra.detector_platform_client import DetectorPlatformClient
-from tests.utils import _client, detector_api_url
+from tests.utils import _add_api_response, _client, detector_api_url
 
 
 def test_detector_platform_client_base_url(monkeypatch):
@@ -72,3 +75,26 @@ def test_timeout(monkeypatch):
     assert "timeout" in full_error
     assert "read timeout=%d" % timeout in full_error
     assert len(httpretty.latest_requests()) == 1
+
+
+@responses.activate
+def test_headers_user_agent_version(monkeypatch):
+    _add_api_response(detector_api_url("detectors/"), responses.POST, json={"id": "foobar"})
+    client = _client(monkeypatch)
+    client.create_detector()
+    assert len(responses.calls) == 1
+    ua = responses.calls[0].request.headers["User-Agent"]
+    regex = "^picterra-python/\d+\.\d+"
+    assert re.compile(regex).match(ua) is not None
+
+
+@responses.activate
+def test_headers_user_agent_version__fallback(monkeypatch):
+    _add_api_response(detector_api_url("detectors/"), responses.POST, json={"id": "foobar"},)
+    monkeypatch.setattr(base_client, '_get_distr_name', lambda: 'foobar')
+    client = _client(monkeypatch)
+    client.create_detector()
+    assert len(responses.calls) == 1
+    ua = responses.calls[0].request.headers["User-Agent"]
+    regex = "^picterra-python/no_version"
+    assert re.compile(regex).match(ua) is not None
