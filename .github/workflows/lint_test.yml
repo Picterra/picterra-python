@@ -25,8 +25,9 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: install deps
+      # We pin twine to 6.0.1 because 6.1.0 is breaking our build, see #148
       run: |
-        python -m pip install --upgrade pip setuptools wheel flake8 twine
+        python -m pip install --upgrade pip setuptools wheel flake8 "twine<=6.0.1"
         python setup.py develop
         pip install -e .[test,lint]
     - name: lint
@@ -50,4 +51,3 @@ jobs:
         cd docs
         python -m pip install -r requirements.txt
         make html
-
