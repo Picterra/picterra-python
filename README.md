@@ -76,6 +76,22 @@ make html
 to update the HTML documentation under `_build/html`.
 Spawn an HTTP server in that folder to see how they would look like once deployed on Read the Docs.
 
+### Checkling linting
+Run
+```bash
+scripts/lint.sh
+```
+####
+
+#### Sphinx docs
+Run
+```bash
+cd docs
+python -m pip install -r requirements.txt
+make html
+```
+and verify no errors are output
+
 ## Release process
 
 1. Bump the version number in `setup.py`
