@@ -10,10 +10,10 @@ import json
 import sys
 
 if sys.version_info >= (3, 8):
-    from typing import Dict, Literal
+    from typing import Dict, List, Literal
 else:
     from typing_extensions import Literal
-    from typing import Dict
+    from typing import Dict, List
 
 import requests
 from requests.exceptions import RequestException
@@ -157,3 +157,55 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         except RequestException as err:
             raise APIError(f"Failure starting plots group update: {err}")
         self._wait_until_operation_completes(resp.json())
+
+    def group_analyze_plots(
+        self,
+        plots_group_id: str,
+        plots_analysis_name: str,
+        plot_ids: List[str],
+        assessment_date: datetime.date
+    ) -> str:
+        """
+        Runs the analysis for a given date over the plot ids of the specified plot group,
+        and returns the URL where we can see the analysis in the Picterra platform.
+
+        Args:
+        - plots_group_id: id of the plots group on which we want to run the new analysis
+        - plots_analysis_name: name to give to the new analysis
+        - plot_ids: list of the plot ids of the plots group to select for the analysis
+        - assessment_date: the point in time at which the analysis should be evaluated.
+
+        Returns: the analysis results URL.
+        """
+        resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/upload/"))
+        try:
+            resp.raise_for_status()
+        except RequestException as err:
+            raise APIError(f"Failure obtaining an upload: {err}")
+        upload_id, upload_url = resp.json()["upload_id"], resp.json()["upload_url"]
+        resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
+        try:
+            resp.raise_for_status()
+        except RequestException as err:
+            raise APIError(f"Failure uploading plots file for analysis: {err}")
+        data = {
+            "analysis_name": plots_analysis_name,
+            "upload_id": upload_id,
+            "assessment_date": assessment_date.isoformat()
+        }
+        resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/"), json=data)
+        try:
+            resp.raise_for_status()
+        except RequestException as err:
+            raise APIError(f"Couldn't start analysis: {err}")
+        op_result = self._wait_until_operation_completes(resp.json())
+        analysis_id = op_result["results"]["analysis_id"]
+        resp = self.sess.get(
+            self._full_url(f"plots_groups/{plots_group_id}/analysis/{analysis_id}/")
+        )
+        try:
+            resp.raise_for_status()
+        except RequestException as err:
+            raise APIError(f"Failure to get analysis {analysis_id}: {err}")
+        analysis_data = resp.json()
+        return analysis_data["url"]
