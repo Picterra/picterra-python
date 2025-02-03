@@ -129,3 +129,47 @@ def test_replace_plots_group_plots(monkeypatch):
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
         client.replace_plots_group_plots("group-id", tmp.name)
+
+
+@responses.activate
+def test_group_analyze_plots(monkeypatch):
+    _add_api_response(
+        plots_analysis_api_url("plots_groups/a-group-id/analysis/upload/"),
+        responses.POST,
+        {
+            "upload_id": "an-upload-id",
+            "upload_url": "https://upload.example.com/",
+        },
+    )
+    responses.put("https://upload.example.com/", match=[responses.matchers.json_params_matcher({
+        "plot_ids": ["uno", "dos"],
+    })])
+    _add_api_response(plots_analysis_api_url(
+        "plots_groups/a-group-id/analysis/"),
+        responses.POST,
+        OP_RESP,
+        match=responses.matchers.json_params_matcher({
+            "analysis_name": "foobar",
+            "upload_id": "an-upload-id",
+            "assessment_date": "2025-01-01",
+        }),
+    )
+    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
+        "status": "success",
+        "results": {"analysis_id": "an-analysis-id"}
+    })
+    _add_api_response(
+        plots_analysis_api_url("plots_groups/a-group-id/analysis/an-analysis-id/"),
+        responses.GET,
+        {"url": "http://analysis.example.com"}
+    )
+    client: PlotsAnalysisPlatformClient = _client(monkeypatch, platform="plots_analysis")
+    with tempfile.NamedTemporaryFile() as tmp:
+        with open(tmp.name, "w") as f:
+            json.dump({"type": "FeatureCollection", "features": []}, f)
+    assert client.group_analyze_plots(
+        "a-group-id",
+        "foobar",
+        ["uno", "dos"],
+        datetime.date.fromisoformat("2025-01-01")
+    ) == "http://analysis.example.com"
