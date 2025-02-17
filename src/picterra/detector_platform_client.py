@@ -29,7 +29,6 @@ from picterra.base_client import (
     FeatureCollection,
     _download_to_file,
     _upload_file_to_blobstore,
-    multipolygon_to_polygon_feature_collection,
 )
 
 logger = logging.getLogger()
