@@ -42,11 +42,9 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         """
         # Get an upload URL and analysis ID
         resp = self.sess.post(self._full_url("batch_analysis/upload/"))
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
+        if not resp.ok:
             raise APIError(
-                f"Failure obtaining an upload url and plots analysis ID: {err}"
+                f"Failure obtaining an upload url and plots analysis ID: {resp.text}"
             )
 
         analysis_id = resp.json()["analysis_id"]
@@ -55,30 +53,24 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         # Upload the provided file
         with open(plots_geometries_filename, "rb") as fh:
             resp = requests.put(upload_url, data=fh.read())
-            try:
-                resp.raise_for_status()
-            except RequestException as err:
-                raise APIError(f"Failure uploading plots file for analysis: {err}")
+            if not resp.ok:
+                raise APIError(f"Failure uploading plots file for analysis: {resp.text}")
 
         # Start the analysis
         data = {"methodology": methodology, "assessment_date": assessment_date.isoformat()}
         resp = self.sess.post(
             self._full_url(f"batch_analysis/start/{analysis_id}/"), data=data
         )
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
-            raise APIError(f"Couldn't start analysis for id: {analysis_id}: {err}")
+        if not resp.ok:
+            raise APIError(f"Couldn't start analysis for id: {analysis_id}: {resp.text}")
 
         # Wait for the operation to succeed
         op_result = self._wait_until_operation_completes(resp.json())
         download_url = op_result["results"]["download_url"]
         resp = requests.get(download_url)
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
+        if not resp.ok:
             raise APIError(
-                f"Failure to download results file from operation id {op_result['id']}: {err}"
+                f"Failure to download results file from operation id {op_result['id']}: {resp.text}"
             )
         results = resp.json()
 
@@ -97,20 +89,16 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         Returns: the id of the new group.
         """
         resp = self.sess.post(self._full_url("plots_groups/upload/"))
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
+        if not resp.ok:
             raise APIError(
-                f"Failure obtaining upload URL and ID: {err}"
+                f"Failure obtaining upload URL and ID: {resp.text}"
             )
         upload_id = resp.json()["upload_id"]
         upload_url = resp.json()["upload_url"]
         with open(plots_geometries_filename, "rb") as fh:
             resp = requests.put(upload_url, data=fh.read())
-            try:
-                resp.raise_for_status()
-            except RequestException as err:
-                raise APIError(f"Failure uploading plots file for group: {err}")
+            if not resp.ok:
+                raise APIError(f"Failure uploading plots file for group: {resp.text}")
         data = {
             "name": plots_group_name,
             "methodology": methodology,
@@ -118,10 +106,8 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
             "custom_columns_values": columns
         }
         resp = self.sess.post(self._full_url("plots_groups/commit/"), json=data)
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
-            raise APIError(f"Failure starting plots group commit: {err}")
+        if not resp.ok:
+            raise APIError(f"Failure starting plots group commit: {resp.text}")
         op_result = self._wait_until_operation_completes(resp.json())["results"]
         return op_result["plots_group_id"]
 
@@ -136,26 +122,20 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         Returns: the analysis results as a dict.
         """
         resp = self.sess.post(self._full_url("plots_groups/upload/"))
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
+        if not resp.ok:
             raise APIError(
-                f"Failure obtaining upload URL and ID: {err}"
+                f"Failure obtaining upload URL and ID: {resp.text}"
             )
         upload_id = resp.json()["upload_id"]
         upload_url = resp.json()["upload_url"]
         with open(plots_geometries_filename, "rb") as fh:
             resp = requests.put(upload_url, data=fh.read())
-            try:
-                resp.raise_for_status()
-            except RequestException as err:
-                raise APIError(f"Failure uploading plots file for group: {err}")
+            if not resp.ok:
+                raise APIError(f"Failure uploading plots file for group: {resp.text}")
         data = {"upload_id": upload_id}
         resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/replace/"), json=data)
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
-            raise APIError(f"Failure starting plots group update: {err}")
+        if not resp.ok:
+            raise APIError(f"Failure starting plots group update: {resp.text}")
         self._wait_until_operation_completes(resp.json())
 
     def group_analyze_plots(
@@ -178,34 +158,26 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         Returns: the analysis results URL.
         """
         resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/upload/"))
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
-            raise APIError(f"Failure obtaining an upload: {err}")
+        if not resp.ok:
+            raise APIError(f"Failure obtaining an upload: {resp.text}")
         upload_id, upload_url = resp.json()["upload_id"], resp.json()["upload_url"]
         resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
-            raise APIError(f"Failure uploading plots file for analysis: {err}")
+        if not resp.ok:
+            raise APIError(f"Failure uploading plots file for analysis: {resp.text}")
         data = {
             "analysis_name": plots_analysis_name,
             "upload_id": upload_id,
             "assessment_date": assessment_date.isoformat()
         }
         resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/"), json=data)
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
-            raise APIError(f"Couldn't start analysis: {err}")
+        if not resp.ok:
+            raise APIError(f"Couldn't start analysis: {resp.text}")
         op_result = self._wait_until_operation_completes(resp.json())
         analysis_id = op_result["results"]["analysis_id"]
         resp = self.sess.get(
             self._full_url(f"plots_groups/{plots_group_id}/analysis/{analysis_id}/")
         )
-        try:
-            resp.raise_for_status()
-        except RequestException as err:
-            raise APIError(f"Failure to get analysis {analysis_id}: {err}")
+        if not resp.ok:
+            raise APIError(f"Failure to get analysis {analysis_id}: {resp.text}")
         analysis_data = resp.json()
         return analysis_data["url"]
