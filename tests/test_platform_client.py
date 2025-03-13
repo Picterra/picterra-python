@@ -399,6 +399,10 @@ def add_mock_vector_layer_download_responses(layer_id, polygons_num):
     )
     return polygons_fc
 
+def add_mock_folder_creation_response(id, name):
+    match = responses.matchers.json_params_matcher({"name": name})
+    _add_api_response(detector_api_url("folders/"), responses.POST, json={"id": id}, match=match)
+
 
 def make_geojson_polygon(base=1):
     return {"type": "Polygon", "coordinates": [[[0, 0], [base, 0], [base, base], [0, base], [0, 0]]]}
@@ -1127,3 +1131,10 @@ def test_list_detector_rasters(monkeypatch):
     page2 = client.list_detector_rasters("spam", page_number=2)
     assert page2[0]["name"] == "raster3" and page2[1]["name"] == "raster4"
     assert len(responses.calls) == 2
+
+
+@responses.activate
+def test_folder_creation(monkeypatch):
+    client = _client(monkeypatch)
+    add_mock_folder_creation_response("folder-id", "folder-name")
+    assert client.create_folder("folder-name") == "folder-id"

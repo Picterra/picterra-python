@@ -998,3 +998,22 @@ class DetectorPlatformClient(BaseAPIClient):
             params["page_number"] = page_number
         url = "detectors/%s/training_rasters/" % detector_id
         return self._return_results_page(url, params)
+
+
+    def create_folder(self, name: str) -> str:
+        """
+        Creates a new folder with the given name
+
+        Args:
+            name: Name of the new folder
+
+        Returns:
+            The id of the folder
+
+        Raises:
+            APIError: There was an error while creating the folder
+        """
+        resp = self.sess.post(self._full_url("folders/"), json={"name": name})
+        if not resp.status_code == 201:
+            raise APIError(resp.text)
+        return resp.json()["id"]
