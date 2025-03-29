@@ -6,7 +6,6 @@ Note that that Plots Analysis Platform is a separate product from the Detector p
 an API key which is valid for one may encounter permissions issues if used with the other
 """
 import datetime
-import json
 import sys
 
 if sys.version_info >= (3, 8):
@@ -16,7 +15,6 @@ else:
     from typing import Dict, List
 
 import requests
-from requests.exceptions import RequestException
 
 from picterra.base_client import APIError, BaseAPIClient
 
@@ -27,7 +25,7 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/plots_analysis/v1/", **kwargs)
 
-    def batch_analyze_plots(self, plots_geometries_filename: str, methodology: AnalysisMethodology, assessment_date: datetime.date):
+    def batch_analyze_plots(self, plots_geometries_filename: str, methodology: AnalysisMethodology, assessment_date: datetime.date) -> dict:
         """
         Runs the specified methodology against the plot geometries stored in the provided file and
         returns the analysis results.
@@ -118,8 +116,6 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         Args:
         - plots_group_id: identifier for the plots group to replace
         - plots_geometries_filename: Path to a file containing the geometries of the plots the group will have
-
-        Returns: the analysis results as a dict.
         """
         resp = self.sess.post(self._full_url("plots_groups/upload/"))
         if not resp.ok:

@@ -38,6 +38,12 @@ class DetectorPlatformClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/v2/", **kwargs)
 
+    def who_am_i(self):
+        resp = self.sess.get(self._full_url("users/me/"))
+        if not resp.ok:
+            raise APIError(resp.text)
+        return resp.json()
+
     def upload_raster(
         self,
         filename: str,
