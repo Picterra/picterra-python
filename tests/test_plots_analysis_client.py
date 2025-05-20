@@ -1,6 +1,5 @@
 import datetime
 import json
-import os
 import tempfile
 
 import responses
@@ -77,34 +76,22 @@ def test_create_plots_group(monkeypatch):
     )
     responses.put("https://upload.example.com/")
     _add_api_response(
-        plots_analysis_api_url("plots_groups/"),
+        plots_analysis_api_url("plots_groups/commit/"),
         responses.POST,
         OP_RESP,
         match=responses.matchers.json_params_matcher({
             "name": "name of my plot group",
             "methodology": "eudr_cocoa",
+            "upload_id": "an-upload",
             "custom_columns_values": {"foo": "bar"}
         }),
     )
     _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "id": OPERATION_ID,
         "status": "success",
         "results": {"plots_group_id": "a-plots-group"}
     })
-    _add_api_response(
-        plots_analysis_api_url(f"plots_groups/a-plots-group/upload/ingest/{OPERATION_ID}/"),
-        responses.POST,
-        OP_RESP
-    )
     client: PlotsAnalysisPlatformClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
-        _add_api_response(
-            plots_analysis_api_url("plots_groups/a-plots-group/upload/parse/"),
-            responses.POST,
-            OP_RESP,
-            match=responses.matchers.json_params_matcher({
-                "files": [{"upload_id": "an-upload", "filename": os.path.basename(tmp.name)}]
-            }))
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
         assert client.create_plots_group(
@@ -135,26 +122,13 @@ def test_replace_plots_group_plots(monkeypatch):
         }),
     )
     _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "id": OPERATION_ID,
         "status": "success",
     })
-    _add_api_response(
-        plots_analysis_api_url(f"plots_groups/group-id/upload/ingest/{OPERATION_ID}/"),
-        responses.POST,
-        OP_RESP
-    )
     client: PlotsAnalysisPlatformClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
-        _add_api_response(
-            plots_analysis_api_url("plots_groups/group-id/upload/parse/"),
-            responses.POST,
-            OP_RESP,
-            match=responses.matchers.json_params_matcher({
-                "files": [{"upload_id": "an-upload", "filename": os.path.basename(tmp.name)}]
-            }))
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
-        client.replace_plots_group_plots("group-id", [tmp.name])
+        client.replace_plots_group_plots("group-id", tmp.name)
 
 
 @responses.activate

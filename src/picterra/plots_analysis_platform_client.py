@@ -7,14 +7,13 @@ an API key which is valid for one may encounter permissions issues if used with 
 """
 import datetime
 import json
-import os
 import sys
 
 if sys.version_info >= (3, 8):
-    from typing import Dict, List, Literal, Optional
+    from typing import Dict, List, Literal
 else:
     from typing_extensions import Literal
-    from typing import Dict, List, Optional
+    from typing import Dict, List
 
 import requests
 from requests.exceptions import RequestException
@@ -77,7 +76,7 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
 
         return results
 
-    def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filename: Optional[str]) -> str:
+    def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filename: str) -> str:
         """
         Creates a new plots group.
 
@@ -85,57 +84,59 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         - plots_group_name: user friendly name for the group
         - methodology: plots group methodology
         - columns: columns to add to the group
-        - plots_geometries_filename: Path to a file containing the geometries of the plots the group
-        will have, or None to create an empty plots group
+        - plots_geometries_filename: Path to a file containing the geometries of the plots the group will have
 
         Returns: the id of the new group.
         """
+        resp = self.sess.post(self._full_url("plots_groups/upload/"))
+        if not resp.ok:
+            raise APIError(
+                f"Failure obtaining upload URL and ID: {resp.text}"
+            )
+        upload_id = resp.json()["upload_id"]
+        upload_url = resp.json()["upload_url"]
+        with open(plots_geometries_filename, "rb") as fh:
+            resp = requests.put(upload_url, data=fh.read())
+            if not resp.ok:
+                raise APIError(f"Failure uploading plots file for group: {resp.text}")
         data = {
             "name": plots_group_name,
             "methodology": methodology,
+            "upload_id": upload_id,
             "custom_columns_values": columns
         }
-        resp = self.sess.post(self._full_url("plots_groups/"), json=data)
+        resp = self.sess.post(self._full_url("plots_groups/commit/"), json=data)
         if not resp.ok:
-            raise APIError(f"Failure creating plots group: {resp.text}")
-        create_op_result = self._wait_until_operation_completes(resp.json())["results"]
-        if plots_geometries_filename:
-            self.replace_plots_group_plots(create_op_result["plots_group_id"], [plots_geometries_filename,])
-        return create_op_result["plots_group_id"]
+            raise APIError(f"Failure starting plots group commit: {resp.text}")
+        op_result = self._wait_until_operation_completes(resp.json())["results"]
+        return op_result["plots_group_id"]
 
-    def replace_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: List[str]) -> None:
+    def replace_plots_group_plots(self, plots_group_id: str, plots_geometries_filename: str) -> None:
         """
-        Updates the geometries of a given plots group from one or more files
+        Updates the geometries of a given plots group
 
         Args:
         - plots_group_id: identifier for the plots group to replace
-        - plots_geometries_filenames: List of paths to files containing the geometries of the plots
-        the group will have
-        """
-        uploaded_files = []
-        for filename in plots_geometries_filenames:
-            resp = self.sess.post(self._full_url("plots_groups/upload/"))
-            if not resp.ok:
-                raise APIError(
-                    f"Failure obtaining upload URL and ID: {resp.text}"
-                )
-            upload_id = resp.json()["upload_id"]
-            upload_url = resp.json()["upload_url"]
-            with open(filename, "rb") as fh:
-                resp = requests.put(upload_url, data=fh.read())
-                if not resp.ok:
-                    raise APIError(f"Failure uploading plots file for group: {resp.text}")
-            uploaded_files.append({ "upload_id": upload_id, "filename": os.path.basename(filename) })
-        data = {"files": uploaded_files}
-        resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/upload/parse/"), json=data)
-        if not resp.ok:
-            raise APIError(f"Failure starting data ingestion parsing: {resp.text}")
-        op = self._wait_until_operation_completes(resp.json())
-        resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/upload/ingest/{op['id']}/"))
-        if not resp.ok:
-            raise APIError(f"Failure starting data ingestion commit: {resp.text}")
-        self._wait_until_operation_completes(resp.json())
+        - plots_geometries_filename: Path to a file containing the geometries of the plots the group will have
 
+        Returns: the analysis results as a dict.
+        """
+        resp = self.sess.post(self._full_url("plots_groups/upload/"))
+        if not resp.ok:
+            raise APIError(
+                f"Failure obtaining upload URL and ID: {resp.text}"
+            )
+        upload_id = resp.json()["upload_id"]
+        upload_url = resp.json()["upload_url"]
+        with open(plots_geometries_filename, "rb") as fh:
+            resp = requests.put(upload_url, data=fh.read())
+            if not resp.ok:
+                raise APIError(f"Failure uploading plots file for group: {resp.text}")
+        data = {"upload_id": upload_id}
+        resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/replace/"), json=data)
+        if not resp.ok:
+            raise APIError(f"Failure starting plots group update: {resp.text}")
+        self._wait_until_operation_completes(resp.json())
 
     def group_analyze_plots(
         self,
