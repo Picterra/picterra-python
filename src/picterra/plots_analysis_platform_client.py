@@ -11,13 +11,12 @@ import os.path
 import sys
 
 if sys.version_info >= (3, 8):
-    from typing import Dict, List, Literal, Any
+    from typing import Dict, List, Literal, Any, Optional
 else:
     from typing_extensions import Literal
-    from typing import Dict, List
+    from typing import Dict, List, Any, Optional
 
 import requests
-from requests.exceptions import RequestException
 
 from picterra.base_client import APIError, BaseAPIClient
 
@@ -77,12 +76,12 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
 
         return results
 
-    def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filenames: list[str] | None = None) -> str:
+    def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filenames: Optional[list[str]] = None) -> str:
         """
         Creates a new plots group.
 
         Args:
-        - plots_group_name: user friendly name for the group
+        - plots_group_name: user-friendly name for the group
         - methodology: plots group methodology
         - columns: columns to add to the group
         - plots_geometries_filenames: Paths to files containing the geometries of the plots the group will have
