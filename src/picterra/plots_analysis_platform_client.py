@@ -77,7 +77,7 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
 
         return results
 
-    def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filename: str | None = None) -> str:
+    def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filenames: list[str] | None = None) -> str:
         """
         Creates a new plots group.
 
@@ -85,7 +85,7 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         - plots_group_name: user friendly name for the group
         - methodology: plots group methodology
         - columns: columns to add to the group
-        - plots_geometries_filename: Path to a file containing the geometries of the plots the group will have
+        - plots_geometries_filenames: Paths to files containing the geometries of the plots the group will have
 
         Returns: the id of the new group.
         """
@@ -98,8 +98,8 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         if not resp.ok:
             raise APIError(f"Failure starting plots group commit: {resp.text}")
         op_result = self._wait_until_operation_completes(resp.json())["results"]
-        if plots_geometries_filename:
-            self.upload_plots_group_plots(op_result["plots_group_id"], plots_geometries_filename)
+        if plots_geometries_filenames:
+            self.upload_plots_group_plots(op_result["plots_group_id"], plots_geometries_filenames)
         return op_result["plots_group_id"]
 
     def upload_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: list[str], delete_existing_plots: bool = False) -> dict[str, Any]:
