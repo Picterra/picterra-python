@@ -124,7 +124,7 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
             resp = requests.put(upload_url, data=fh.read())
             if not resp.ok:
                 raise APIError(f"Failure uploading plots file for group: {resp.text}")
-        data = {"upload_id": upload_id}
+        data = {"upload_id": upload_id, "overwrite": delete_existing_plots}
         resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/upload/commit/"), json=data)
         if not resp.ok:
             raise APIError(f"Failure starting plots group update: {resp.text}")
