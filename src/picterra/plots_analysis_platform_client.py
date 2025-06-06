@@ -76,7 +76,7 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
 
         return results
 
-    def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filenames: Optional[list[str]] = None) -> str:
+    def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filenames: Optional[List[str]] = None) -> str:
         """
         Creates a new plots group.
 
@@ -101,7 +101,7 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
             self.upload_plots_group_plots(op_result["plots_group_id"], plots_geometries_filenames)
         return op_result["plots_group_id"]
 
-    def upload_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: list[str], delete_existing_plots: bool = False) -> dict[str, Any]:
+    def upload_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: List[str], delete_existing_plots: bool = False) -> dict[str, Any]:
         """
         Updates the geometries of a given plots group
 
