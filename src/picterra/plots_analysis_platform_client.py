@@ -101,7 +101,7 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
             self.upload_plots_group_plots(op_result["plots_group_id"], plots_geometries_filenames)
         return op_result["plots_group_id"]
 
-    def upload_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: List[str], delete_existing_plots: bool = False) -> dict[str, Any]:
+    def upload_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: List[str], delete_existing_plots: bool = False) -> Dict[str, Any]:
         """
         Updates the geometries of a given plots group
 
