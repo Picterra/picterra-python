@@ -129,10 +129,12 @@ class ResultsPage(Generic[T]):
     in pages (page 1, page 2, etc..) of a fixed dimension (eg 20). Thus
     each `list_XX` function returns a ResultsPage (by default the first one);
     once you have a ResultsPage for a given list of objects, you can:
+
     * check its length with `len()` (eg `len(page)`)
     * access a single element with the index operator `[]` (eg `page[5]`)
     * turn it into a list of dictionaries with  `list()` (eg `list(page)`)
     * get the next page with `.next()` (eg `page.next()`); this could return
+
     None if the list is finished
     You can also get a specific page passing the page number to the `list_XX` function
     """
