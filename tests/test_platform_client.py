@@ -1,5 +1,6 @@
 import json
 import tempfile
+from unittest.mock import Mock
 
 import pytest
 import responses
@@ -225,11 +226,7 @@ def add_mock_annotations_responses(
     detector_id, raster_id, annotation_type, class_id=None
 ):
     upload_id = 32
-    url = "detectors/%s/training_rasters/%s/%s/upload/bulk/" % (
-        detector_id,
-        raster_id,
-        annotation_type,
-    )
+    url = "upload/file/"
     responses.add(responses.PUT, "http://storage.example.com", status=200)
     _add_api_response(
         detector_api_url(url),
@@ -302,7 +299,7 @@ def add_mock_detection_areas_upload_responses(raster_id):
     # Upload initiation
     data = {"upload_url": "http://storage.example.com", "upload_id": upload_id}
     _add_api_response(
-        detector_api_url("rasters/%s/detection_areas/upload/file/" % raster_id), responses.POST, data
+        detector_api_url("/upload/file/"), responses.POST, data
     )
     # Storage PUT
     responses.add(responses.PUT, "http://storage.example.com", status=200)
@@ -362,7 +359,7 @@ def add_mock_detector_run_responses(detector_id, raster_id, secondary_raster_id=
 
 def add_mock_vector_layer_responses(upload_id, raster_id, name, color):
     _add_api_response(
-        detector_api_url("vector_layers/%s/upload/" % raster_id),
+        detector_api_url("upload/file"),
         responses.POST,
         json={"upload_url": "http://storage.example.com", "upload_id": upload_id},
     )
@@ -1138,3 +1135,54 @@ def test_folder_creation(monkeypatch):
     client = _client(monkeypatch)
     add_mock_folder_creation_response("folder-id", "folder-name")
     assert client.create_folder("folder-name") == "folder-id"
+
+
+@responses.activate
+def test_download_gee_image(monkeypatch):
+    client = _client(monkeypatch)
+
+    def mock_serialize(for_cloud_api):
+        assert for_cloud_api is True
+        return "gee-foobar"
+    mock_gee = Mock(serialize=mock_serialize)
+    data = {"upload_url": "http://1.storage.example.com", "upload_id": "upload-1"}
+    _add_api_response(
+        detector_api_url("upload/file/"), responses.POST, data
+    )
+    data = {"upload_url": "http://2.storage.example.com", "upload_id": "upload-2"}
+    _add_api_response(
+        detector_api_url("upload/file/"), responses.POST, data
+    )
+    def file_matcher(r, s):
+        d = json.loads(s.body.read())
+        return (r == d, f"{r} != {d}")
+    match_1 = [lambda r: file_matcher({
+        "type": "gee_layer",
+        "gee_image_str": "gee-foobar",
+        "viz_params": {"foo": "bar"}
+    }, r)]
+    match_2 = [lambda r: file_matcher(make_geojson_multipolygon(), r)]
+    responses.put("http://1.storage.example.com", status=200, match=match_1)
+    responses.put("http://2.storage.example.com", status=200, match=match_2)
+    _add_api_response(
+        detector_api_url("rasters/import/upload-2/commit/"),
+        responses.POST,
+        match=responses.matchers.json_params_matcher({
+            "method": "download",
+            "source_data": {
+                "type": "gee",
+                "res_m": 10,
+                "layer_data_upload_id": "upload-1"
+            },
+            "folder_id": "folder-id",
+            "name": "my-image",
+        }),
+        json={"operation_id": OPERATION_ID, "poll_interval": TEST_POLL_INTERVAL},)
+    add_mock_operations_responses("success", results={"raster_ids": ["r-1", "r-2"]})
+    assert client.download_gee_image(
+        mock_gee,
+        make_geojson_multipolygon(),
+        "folder-id",
+        {"foo": "bar"},
+        "my-image"
+    ) == ["r-1", "r-2"]
