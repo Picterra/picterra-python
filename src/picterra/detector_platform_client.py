@@ -38,6 +38,18 @@ class DetectorPlatformClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/v2/", **kwargs)
 
+    def _new_upload(self, filename: str) -> str:
+        url = self._full_url("upload/file/")
+        # Get upload URL
+        resp = self.sess.post(url)
+        if not resp.ok:
+            raise APIError(str(resp.status_code) + ' for ' + url + ": " + resp.text)
+        data = resp.json()
+        upload_url = data["upload_url"]
+        upload_id = data["upload_id"]
+        _upload_file_to_blobstore(upload_url, filename)
+        return upload_id
+
     def upload_raster(
         self,
         filename: str,
@@ -315,16 +327,7 @@ class DetectorPlatformClient(BaseAPIClient):
             APIError: There was an error uploading the file to cloud storage
         """
         # Get upload URL
-        resp = self.sess.post(
-            self._full_url("rasters/%s/detection_areas/upload/file/" % raster_id)
-        )
-        if not resp.ok:
-            raise APIError(resp.text)
-        data = resp.json()
-        upload_url = data["upload_url"]
-        upload_id = data["upload_id"]
-        # Upload to blobstore
-        _upload_file_to_blobstore(upload_url, filename)
+        upload_id = self._new_upload(filename)
         # Commit upload
         resp = self.sess.post(
             self._full_url(
@@ -777,12 +780,7 @@ class DetectorPlatformClient(BaseAPIClient):
         Returns;
             the vector layer unique identifier
         """
-        resp = self.sess.post(self._full_url("vector_layers/%s/upload/" % raster_id))
-        if not resp.ok:
-            raise APIError(resp.text)
-        upload = resp.json()
-        upload_id, upload_url = upload["upload_id"], upload["upload_url"]
-        _upload_file_to_blobstore(upload_url, filename)
+        upload_id = self._new_upload(filename)
         data = {}
         if name is not None:
             data["name"] = name
@@ -1017,3 +1015,47 @@ class DetectorPlatformClient(BaseAPIClient):
         if not resp.status_code == 201:
             raise APIError(resp.text)
         return resp.json()["id"]
+
+
+    def download_gee_image(
+        self,
+        gee_image: "ee.Image",  # type: ignore[name-defined]
+        aoi_multipolygon_geojson: dict,
+        folder_id: str,
+        viz_params: dict | None = None,
+        base_name: str = "GEE_image",
+    ) -> list[str]:
+        """TODO alpha"""
+        assert aoi_multipolygon_geojson["type"] == "MultiPolygon"
+        assert len(aoi_multipolygon_geojson["coordinates"][0][0][0]) >= 2
+        layer_data = {
+            "type": "gee_layer",
+            "gee_image_str": gee_image.serialize(for_cloud_api=True),
+            "viz_params": viz_params
+        }
+        with tempfile.NamedTemporaryFile() as tmp:
+            with open(tmp.name, "w") as f:
+                json.dump(layer_data, f)
+            layer_data_upload_id = self._new_upload(tmp.name)
+        source_data = {
+            "type": "gee",
+            "res_m": 10,
+            "layer_data_upload_id": layer_data_upload_id
+        }
+        with tempfile.NamedTemporaryFile() as tmp:
+            with open(tmp.name, "w") as f:
+                json.dump(aoi_multipolygon_geojson, f)
+            aoi_upload_id = self._new_upload(tmp.name)
+        resp = self.sess.post(
+            self._full_url(f"rasters/import/{aoi_upload_id}/commit/"),
+            json={
+                "method": "download",
+                "source_data": source_data,
+                "folder_id": folder_id,
+                "name": base_name,
+            },
+        )
+        if not resp.ok:
+            raise APIError(resp.text)
+        operation = self._wait_until_operation_completes(resp.json())
+        return operation["results"]["raster_ids"]
