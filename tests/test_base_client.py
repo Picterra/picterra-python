@@ -4,8 +4,8 @@ import time
 
 import httpretty
 import pytest
+import requests
 import responses
-from requests.exceptions import ConnectionError
 
 from picterra import base_client
 from picterra.detector_platform_client import DetectorPlatformClient
@@ -54,7 +54,7 @@ def test_backoff_failure(monkeypatch):
         ],
     )
     client = _client(monkeypatch, max_retries=1)
-    with pytest.raises(ConnectionError):
+    with pytest.raises(requests.exceptions.ConnectionError):
         client.list_rasters()
     assert len(httpretty.latest_requests()) == 2
 
@@ -68,7 +68,7 @@ def test_timeout(monkeypatch):
     httpretty.register_uri(httpretty.GET, detector_api_url("rasters/"), body=request_callback)
     timeout = 1
     client = _client(monkeypatch, timeout=timeout)
-    with pytest.raises(ConnectionError) as e:
+    with pytest.raises(requests.exceptions.ConnectionError) as e:
         client.list_rasters()
     full_error = str(e.value)
     assert "MaxRetryError" not in full_error
@@ -98,3 +98,38 @@ def test_headers_user_agent_version__fallback(monkeypatch):
     ua = responses.calls[0].request.headers["User-Agent"]
     regex = "^picterra-python/no_version"
     assert re.compile(regex).match(ua) is not None
+
+
+@responses.activate
+def test_results_page():
+    responses.add(
+        method=responses.GET,
+        url="http://example.com/page/1",
+        json={
+            "count": 2,
+            "next": "http://example.com/page/2",
+            "previous": None,
+            "results": ["one", "two"],
+        },
+        status=200,
+    )
+    responses.add(
+        method=responses.GET,
+        url="http://example.com/page/2",
+        json={
+            "count": 1, "next": None, "previous": "http://example.com/page/1",
+            "results": ["three"],
+        },
+        status=200,
+    )
+    page1 = base_client.ResultsPage("http://example.com/page/1", requests.get)
+    assert isinstance(page1, base_client.ResultsPage)
+    assert len(page1) == 2
+    assert page1[0] == "one" and page1[1] == "two"
+    assert list(page1)[0] == "one" and list(page1)[1] == "two"
+    assert str(page1) == "2 results from http://example.com/page/1"
+    page2 = page1.next()
+    assert str(page2) == "1 results from http://example.com/page/2"
+    assert isinstance(page2, base_client.ResultsPage)
+    assert len(page2) == 1 and page2[0] == "three"
+    assert page2.next() is None
