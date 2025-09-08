@@ -1,9 +1,8 @@
 """
-Handles interfacing with the detection platform api v2 documented at:
-https://app.picterra.ch/public/apidocs/v2/
+Handles interfacing with the API documented at https://app.picterra.ch/public/apidocs/v2/
 
-Note that that Detector platform is a separate product from the Plots Analysis platform and so
-an API key which is valid for one may encounter permissions issues if used with the other
+Note that Forge is separate from Tracer and so an API key which is valid for
+one may encounter permissions issues if used with the other
 """
 from __future__ import annotations
 
@@ -34,7 +33,7 @@ from picterra.base_client import (
 logger = logging.getLogger()
 
 
-class DetectorPlatformClient(BaseAPIClient):
+class ForgeClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/v2/", **kwargs)
 

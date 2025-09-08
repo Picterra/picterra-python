@@ -24,7 +24,7 @@ When listing entities (eg rasters, detectors) from your account, the Picterra Se
 approach; this means that every `list_`-prefixed function returns a special :class:`picterra.ResultsPage` class instance
 which can be used like a Python list.
 
-Here are some examples, but look at the doc for :class:`picterra.DetectorPlatformClient` and :class:`picterra.PlotsAnalysisPlatformClient`
+Here are some examples, but look at the doc for :class:`picterra.ForgeClient` and :class:`picterra.TracerClient`
 for all the entities you can list.
 
 .. literalinclude:: ../examples/detectors_management.py
