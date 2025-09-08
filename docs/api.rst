@@ -3,10 +3,10 @@ API
 ===
 
 
-Detector Platform
+Forge
 -----------------
 
-.. autoclass:: picterra.DetectorPlatformClient
+.. autoclass:: picterra.ForgeClient
     :members:
 
 .. autoclass:: picterra.APIClient
@@ -16,10 +16,10 @@ Detector Platform
     :members:
 
 
-Plots Analysis Platform
+Tracer
 -----------------------
 
-.. autoclass:: picterra.PlotsAnalysisPlatformClient
+.. autoclass:: picterra.TracerClient
     :members:
 
 

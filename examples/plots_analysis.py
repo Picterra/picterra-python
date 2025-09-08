@@ -1,14 +1,14 @@
 import datetime
 import json
 
-from picterra import PlotsAnalysisPlatformClient
+from picterra import TracerClient
 
 # Replace this with the path to a GeoJSON file containing plot geometries
 # as a GeoJSON FeatureCollection of Polygons. In particular, each Feature
 # should have a unique "id" property.
 plots_feature_collection_filename = "data/plots_analysis/example_plots.geojson"
 
-client = PlotsAnalysisPlatformClient()
+client = TracerClient()
 
 # This will run the "EUDR Cocoa" deforestation risk analysis, discarding any
 # deforestation alerts happening after 2022-01-01.

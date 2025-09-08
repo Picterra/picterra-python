@@ -5,7 +5,7 @@ import tempfile
 
 import responses
 
-from picterra import PlotsAnalysisPlatformClient
+from picterra import TracerClient
 from tests.utils import (
     OP_RESP,
     OPERATION_ID,
@@ -20,7 +20,7 @@ def test_plots_analysis_platform_client_base_url(monkeypatch):
     Sanity-check that the client defaults to the correct base url
     """
     monkeypatch.setenv("PICTERRA_API_KEY", "1234")
-    client = PlotsAnalysisPlatformClient()
+    client = TracerClient()
     assert client.base_url == "https://app.picterra.ch/public/api/plots_analysis/v1/"
 
 
@@ -53,7 +53,7 @@ def test_analyse_plots(monkeypatch):
         json.dumps(fake_analysis_results)
     )
 
-    client: PlotsAnalysisPlatformClient = _client(monkeypatch, platform="plots_analysis")
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
         with open(tmp.name, "w") as f:
             json.dump({"foo": "bar"}, f)
@@ -90,7 +90,7 @@ def test_create_plots_group(monkeypatch):
         "status": "success",
         "results": {"plots_group_id": "a-plots-group"}
     })
-    client: PlotsAnalysisPlatformClient = _client(monkeypatch, platform="plots_analysis")
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
         _add_api_response(plots_analysis_api_url(
             "plots_groups/a-plots-group/upload/commit/"),
@@ -133,7 +133,7 @@ def test_upload_plots_group_plots(monkeypatch):
             "plots_group_id": "group-id",
         }
     })
-    client: PlotsAnalysisPlatformClient = _client(monkeypatch, platform="plots_analysis")
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
         _add_api_response(plots_analysis_api_url(
             "plots_groups/group-id/upload/commit/"),
@@ -186,7 +186,7 @@ def test_group_analyze_plots(monkeypatch):
         responses.GET,
         {"url": "http://analysis.example.com"}
     )
-    client: PlotsAnalysisPlatformClient = _client(monkeypatch, platform="plots_analysis")
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)

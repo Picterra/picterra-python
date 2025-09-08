@@ -8,16 +8,16 @@ import requests
 import responses
 
 from picterra import base_client
-from picterra.detector_platform_client import DetectorPlatformClient
+from picterra.forge_client import ForgeClient
 from tests.utils import _add_api_response, _client, detector_api_url
 
 
-def test_detector_platform_client_base_url(monkeypatch):
+def test_forge_client_base_url(monkeypatch):
     """
     Sanity-check that the client defaults to the correct base url
     """
     monkeypatch.setenv("PICTERRA_API_KEY", "1234")
-    client = DetectorPlatformClient()
+    client = ForgeClient()
     assert client.base_url == "https://app.picterra.ch/public/api/v2/"
 
 

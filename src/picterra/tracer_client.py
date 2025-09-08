@@ -1,9 +1,8 @@
 """
-Handles interfacing with the plots analysis api v1 documented at:
-https://app.picterra.ch/public/apidocs/plots_analysis/v1/
+Handles interfacing with the API documented at https://app.picterra.ch/public/apidocs/plots_analysis/v1/
 
-Note that that Plots Analysis Platform is a separate product from the Detector platform and so
-an API key which is valid for one may encounter permissions issues if used with the other
+Note that Tracer is separate from Forge and so an API key which is valid for
+one may encounter permissions issues if used with the other
 """
 import datetime
 import json
@@ -23,7 +22,7 @@ from picterra.base_client import APIError, BaseAPIClient
 AnalysisMethodology = Literal["eudr_cocoa", "eudr_soy"]
 
 
-class PlotsAnalysisPlatformClient(BaseAPIClient):
+class TracerClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/plots_analysis/v1/", **kwargs)
 
