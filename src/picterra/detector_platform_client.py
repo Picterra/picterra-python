@@ -68,7 +68,7 @@ class DetectorPlatformClient(BaseAPIClient):
             user_tag (beta): Raster tag
 
         Returns:
-            raster_id: The id of the uploaded raster
+            str: The id of the uploaded raster
         """
         data: dict[str, Any] = {"name": name, "multispectral": multispectral}
         if folder_id is not None:
@@ -106,7 +106,7 @@ class DetectorPlatformClient(BaseAPIClient):
             page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
-            A ResultsPage object that contains a slice of the list of detector dictionaries,
+            ResultsPage: a ResultsPage object that contains a slice of the list of detector dictionaries,
             plus methods to retrieve the other pages
 
         Example:
@@ -159,7 +159,7 @@ class DetectorPlatformClient(BaseAPIClient):
             page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
-            A list of rasters dictionaries
+            ResultsPage: a ResultsPage object that contains a slice of the list of raster dictionaries
 
         Example:
 
@@ -243,7 +243,7 @@ class DetectorPlatformClient(BaseAPIClient):
             user_tag (beta): Raster tag
 
         Returns:
-            raster_id: The id of the edited raster
+            str: The id of the edited raster
         """
         data: dict[str, Any] = {}
         if name:
@@ -401,7 +401,7 @@ class DetectorPlatformClient(BaseAPIClient):
             background_sample_ratio: bg sample ratio (between 0 and 1)
 
         Returns:
-            The id of the detector
+            str: The id of the detector
 
         Raises:
             APIError: There was an error while creating the detector
@@ -449,7 +449,7 @@ class DetectorPlatformClient(BaseAPIClient):
             page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
-            A list of detectors dictionaries
+            ResultsPage: A ResultsPage object that contains a slice of the list of detector dictionaries
 
         Example:
 
@@ -567,7 +567,7 @@ class DetectorPlatformClient(BaseAPIClient):
                 run change detectors.
 
         Returns:
-            operation_id: The id of the operation. You typically want to pass this
+            str: The id of the operation. You typically want to pass this
                 to `download_result_to_feature_collection`
         """
         body = {"raster_id": raster_id}
@@ -774,8 +774,8 @@ class DetectorPlatformClient(BaseAPIClient):
             filename: Path to the local GeoJSOn file we want to upload
             name: Optional name to give to the vector layer
             color: Optional color of the vector layer, has an HTML hex color code (eg "#aabbcc")
-        Returns;
-            the vector layer unique identifier
+        Returns:
+            str: the vector layer unique identifier
         """
         resp = self.sess.post(self._full_url("vector_layers/%s/upload/" % raster_id))
         if not resp.ok:
@@ -1008,7 +1008,7 @@ class DetectorPlatformClient(BaseAPIClient):
             name: Name of the new folder
 
         Returns:
-            The id of the folder
+            str: The id of the folder
 
         Raises:
             APIError: There was an error while creating the folder

@@ -130,13 +130,16 @@ class ResultsPage(Generic[T]):
     each `list_XX` function returns a ResultsPage (by default the first one);
     once you have a ResultsPage for a given list of objects, you can:
 
-    * check its length with `len()` (eg `len(page)`)
-    * access a single element with the index operator `[]` (eg `page[5]`)
-    * turn it into a list of dictionaries with  `list()` (eg `list(page)`)
-    * get the next page with `.next()` (eg `page.next()`); this could return
+    * check its length with ``len()``
+      - example: ``len(page)``
+    * access a single element with the index operator ``[]``
+      - example: ``page[5]``
+    * turn it into a list of dictionaries with ``list()``
+      - example: ``list(page)``
+    * get the next page with ``.next()``; this could return None if the list is finished;
+      - example: ``page.next()``
 
-    None if the list is finished
-    You can also get a specific page passing the page number to the `list_XX` function
+    You can also get a specific page passing the page number to the ``list_XX`` function
     """
 
     def __init__(self, url: str, fetch: Callable[[str], requests.Response]):

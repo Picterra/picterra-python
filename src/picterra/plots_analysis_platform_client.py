@@ -11,7 +11,7 @@ import os.path
 import sys
 
 if sys.version_info >= (3, 8):
-    from typing import Dict, List, Literal, Any, Optional
+    from typing import Any, Dict, List, Literal, Optional
 else:
     from typing_extensions import Literal
     from typing import Dict, List, Any, Optional
@@ -33,12 +33,12 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         returns the analysis results.
 
         Args:
-        - plots_geometries_filename: Path to a file containing the geometries of the plots to run the
-        analysis against.
-        - methodology: which analysis to run.
-        - assessment_date: the point in time at which the analysis should be evaluated.
+            plots_geometries_filename: Path to a file containing the geometries of the plots to run the analysis against.
+            methodology: which analysis to run.
+            assessment_date: the point in time at which the analysis should be evaluated.
 
-        Returns: the analysis results as a dict.
+        Returns:
+            dict: the analysis results as a dict.
         """
         # Get an upload URL and analysis ID
         resp = self.sess.post(self._full_url("batch_analysis/upload/"))
@@ -81,12 +81,13 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         Creates a new plots group.
 
         Args:
-        - plots_group_name: user-friendly name for the group
-        - methodology: plots group methodology
-        - columns: columns to add to the group
-        - plots_geometries_filenames: Paths to files containing the geometries of the plots the group will have
+            plots_group_name: user-friendly name for the group
+            methodology: plots group methodology
+            columns: columns to add to the group
+            plots_geometries_filenames: Paths to files containing the geometries of the plots the group will have
 
-        Returns: the id of the new group.
+        Returns:
+            str: the id of the new group.
         """
         data = {
             "name": plots_group_name,
@@ -106,12 +107,13 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         Updates the geometries of a given plots group
 
         Args:
-        - plots_group_id: identifier for the plots group to replace
-        - plots_geometries_filenames: List of paths to files containing the geometries of the plots the group will have
-        - delete_existing_plots: If true, will remove all existing plots in the plots group before uploading new ones.
-        If False (default), plot data uploaded is merged with existing plots.
+            plots_group_id: identifier for the plots group to replace
+            plots_geometries_filenames: List of paths to files containing the geometries of the plots the group will have
+            delete_existing_plots: If true, will remove all existing plots in the plots group before uploading new ones.
+                If False (default), plot data uploaded is merged with existing plots.
 
-        Returns: The creation operation result, which includes the plot group id
+        Returns:
+            dict: The creation operation result, which includes the plot group id
         """
         files = []
         for filename in plots_geometries_filenames:
@@ -145,12 +147,13 @@ class PlotsAnalysisPlatformClient(BaseAPIClient):
         and returns the URL where we can see the analysis in the Picterra platform.
 
         Args:
-        - plots_group_id: id of the plots group on which we want to run the new analysis
-        - plots_analysis_name: name to give to the new analysis
-        - plot_ids: list of the plot ids of the plots group to select for the analysis
-        - assessment_date: the point in time at which the analysis should be evaluated.
+            plots_group_id: id of the plots group on which we want to run the new analysis
+            plots_analysis_name: name to give to the new analysis
+            plot_ids: list of the plot ids of the plots group to select for the analysis
+            assessment_date: the point in time at which the analysis should be evaluated.
 
-        Returns: the analysis results URL.
+        Returns:
+            str: the analysis results URL.
         """
         resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/upload/"))
         if not resp.ok:

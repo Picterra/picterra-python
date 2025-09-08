@@ -17,7 +17,7 @@
 # -- Project information -----------------------------------------------------
 
 project = "Picterra Python API"
-copyright = "2020, Picterra Team"
+copyright = "2025, Picterra Team"
 author = "Picterra Team"
 
 
@@ -58,3 +58,5 @@ html_theme_options = {}
 html_static_path = ["_static"]
 
 master_doc = "index"
+
+autodoc_typehints = "both"
