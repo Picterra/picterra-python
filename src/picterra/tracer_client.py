@@ -67,7 +67,7 @@ class TracerClient(BaseAPIClient):
         """
         files = []
         for filename in plots_geometries_filenames:
-            resp = self.sess.post(self._full_url("plots_groups/upload/"))
+            resp = self.sess.post(self._full_url("/upload/file/"))
             if not resp.ok:
                 raise APIError(
                     f"Failure obtaining upload URL and ID: {resp.text}"
@@ -107,7 +107,7 @@ class TracerClient(BaseAPIClient):
         Returns:
             dict: the analysis metadata.
         """
-        resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/upload/"))
+        resp = self.sess.post(self._full_url("/upload/file/"))
         if not resp.ok:
             raise APIError(f"Failure obtaining an upload: {resp.text}")
         upload_id, upload_url = resp.json()["upload_id"], resp.json()["upload_url"]

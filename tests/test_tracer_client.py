@@ -27,7 +27,7 @@ def test_plots_analysis_platform_client_base_url(monkeypatch):
 @responses.activate
 def test_create_plots_group(monkeypatch):
     _add_api_response(
-        plots_analysis_api_url("plots_groups/upload/"),
+        plots_analysis_api_url("upload/file/"),
         responses.POST,
         {
             "upload_id": "an-upload",
@@ -78,7 +78,7 @@ def test_create_plots_group(monkeypatch):
 @responses.activate
 def test_upload_plots_group_plots(monkeypatch):
     _add_api_response(
-        plots_analysis_api_url("plots_groups/upload/"),
+        plots_analysis_api_url("upload/file/"),
         responses.POST,
         {
             "upload_id": "an-upload",
@@ -116,7 +116,7 @@ def test_upload_plots_group_plots(monkeypatch):
 @responses.activate
 def test_analyse_plots(monkeypatch):
     _add_api_response(
-        plots_analysis_api_url("plots_groups/a-group-id/analysis/upload/"),
+        plots_analysis_api_url("upload/file/"),
         responses.POST,
         {
             "upload_id": "an-upload-id",
