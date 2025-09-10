@@ -85,6 +85,46 @@ class TracerClient(BaseAPIClient):
             raise APIError(f"Failure starting plots group update: {resp.text}")
         return self._wait_until_operation_completes(resp.json())
 
+    def analyze_plots_precheck(
+        self,
+        plots_group_id: str,
+        plots_analysis_name: str,
+        plot_ids: List[str],
+        date_from: datetime.date,
+        date_to: datetime.date
+    ) -> str:
+        """
+        Check the analysis for a given date over the plot ids of the specified plot group has no errors
+
+        Args:
+            plots_group_id: id of the plots group on which we want to run the new analysis
+            plots_analysis_name: name to give to the new analysis
+            plot_ids: list of the plot ids of the plots group to select for the analysis
+            date_from: start point in time at which the analysis should be evaluated.
+            date_to: end point in time at which the analysis should be evaluated.
+
+        Returns:
+            str: the analysis precheck data URL.
+        """
+        resp = self.sess.post(self._full_url("upload/file/"))
+        if not resp.ok:
+            raise APIError(f"Failure obtaining an upload: {resp.text}")
+        upload_id, upload_url = resp.json()["upload_id"], resp.json()["upload_url"]
+        resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
+        if not resp.ok:
+            raise APIError(f"Failure uploading plots file for analysis: {resp.text}")
+        data = {
+            "analysis_name": plots_analysis_name,
+            "upload_id": upload_id,
+            "date_from": date_from.isoformat(),
+            "date_to": date_to.isoformat()
+        }
+        resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/precheck/"), json=data)
+        if not resp.ok:
+            raise APIError(f"Couldn't start analysis precheck: {resp.text}")
+        op_result = self._wait_until_operation_completes(resp.json())
+        return op_result["results"]["precheck_data_url"]
+
     def analyze_plots(
         self,
         plots_group_id: str,
