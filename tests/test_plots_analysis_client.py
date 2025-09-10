@@ -25,47 +25,6 @@ def test_plots_analysis_platform_client_base_url(monkeypatch):
 
 
 @responses.activate
-def test_analyse_plots(monkeypatch):
-    # Setup the fake api responses
-    fake_analysis_id = "1234-4321-5678"
-    fake_analysis_results = { "foo": "bar" }
-    _add_api_response(
-        plots_analysis_api_url("batch_analysis/upload/"),
-        responses.POST,
-        {
-            "analysis_id": fake_analysis_id,
-            "upload_url": "https://example.com/upload/to/blobstore?key=123567",
-        },
-    )
-
-    responses.put("https://example.com/upload/to/blobstore?key=123567")
-
-    _add_api_response(plots_analysis_api_url(f"batch_analysis/start/{fake_analysis_id}/"), responses.POST, OP_RESP)
-    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "status": "success",
-        "results": {
-            "download_url": "https://example.com/blobstore/results",
-            "expiration": "2022-12-31",
-        }
-    })
-    responses.get(
-        "https://example.com/blobstore/results",
-        json.dumps(fake_analysis_results)
-    )
-
-    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
-    with tempfile.NamedTemporaryFile() as tmp:
-        with open(tmp.name, "w") as f:
-            json.dump({"foo": "bar"}, f)
-        results = client.batch_analyze_plots(
-            tmp.name,
-            methodology="eudr_cocoa",
-            assessment_date=datetime.date.fromisoformat("2020-01-01"),
-        )
-    assert results == fake_analysis_results
-
-
-@responses.activate
 def test_create_plots_group(monkeypatch):
     _add_api_response(
         plots_analysis_api_url("plots_groups/upload/"),
@@ -155,7 +114,7 @@ def test_upload_plots_group_plots(monkeypatch):
 
 
 @responses.activate
-def test_group_analyze_plots(monkeypatch):
+def test_analyse_plots(monkeypatch):
     _add_api_response(
         plots_analysis_api_url("plots_groups/a-group-id/analysis/upload/"),
         responses.POST,
@@ -174,7 +133,8 @@ def test_group_analyze_plots(monkeypatch):
         match=responses.matchers.json_params_matcher({
             "analysis_name": "foobar",
             "upload_id": "an-upload-id",
-            "assessment_date": "2025-01-01",
+            "date_from": "2023-01-01",
+            "date_to": "2025-01-01",
         }),
     )
     _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
@@ -190,9 +150,10 @@ def test_group_analyze_plots(monkeypatch):
     with tempfile.NamedTemporaryFile() as tmp:
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
-    assert client.group_analyze_plots(
+    assert client.analyze_plots(
         "a-group-id",
         "foobar",
         ["uno", "dos"],
+        datetime.date.fromisoformat("2023-01-01"),
         datetime.date.fromisoformat("2025-01-01")
-    ) == "http://analysis.example.com"
+    )["url"] == "http://analysis.example.com"
