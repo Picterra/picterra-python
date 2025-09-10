@@ -27,14 +27,14 @@ which can be used like a Python list.
 Here are some examples, but look at the doc for :class:`picterra.ForgeClient` and :class:`picterra.TracerClient`
 for all the entities you can list.
 
-.. literalinclude:: ../examples/detectors_management.py
-.. literalinclude:: ../examples/raster_management.py
+.. literalinclude:: ../examples/forge/detectors_management.py
+.. literalinclude:: ../examples/forge/raster_management.py
 
 
 Upload & Detect
 ===============
 
-.. literalinclude:: ../examples/upload_and_detect.py
+.. literalinclude:: ../examples/forge/upload_and_detect.py
 
 Training
 ========
@@ -43,7 +43,7 @@ Training
 
   **Please note the below endpoints are still in beta and thus may be subject to change**
 
-.. literalinclude:: ../examples/training.py
+.. literalinclude:: ../examples/forge/training.py
 
 Detections in image coordinates
 ===============================
