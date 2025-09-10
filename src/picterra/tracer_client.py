@@ -26,55 +26,6 @@ class TracerClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/plots_analysis/v1/", **kwargs)
 
-    def batch_analyze_plots(self, plots_geometries_filename: str, methodology: AnalysisMethodology, assessment_date: datetime.date):
-        """
-        Runs the specified methodology against the plot geometries stored in the provided file and
-        returns the analysis results.
-
-        Args:
-            plots_geometries_filename: Path to a file containing the geometries of the plots to run the analysis against.
-            methodology: which analysis to run.
-            assessment_date: the point in time at which the analysis should be evaluated.
-
-        Returns:
-            dict: the analysis results as a dict.
-        """
-        # Get an upload URL and analysis ID
-        resp = self.sess.post(self._full_url("batch_analysis/upload/"))
-        if not resp.ok:
-            raise APIError(
-                f"Failure obtaining an upload url and plots analysis ID: {resp.text}"
-            )
-
-        analysis_id = resp.json()["analysis_id"]
-        upload_url = resp.json()["upload_url"]
-
-        # Upload the provided file
-        with open(plots_geometries_filename, "rb") as fh:
-            resp = requests.put(upload_url, data=fh.read())
-            if not resp.ok:
-                raise APIError(f"Failure uploading plots file for analysis: {resp.text}")
-
-        # Start the analysis
-        data = {"methodology": methodology, "assessment_date": assessment_date.isoformat()}
-        resp = self.sess.post(
-            self._full_url(f"batch_analysis/start/{analysis_id}/"), data=data
-        )
-        if not resp.ok:
-            raise APIError(f"Couldn't start analysis for id: {analysis_id}: {resp.text}")
-
-        # Wait for the operation to succeed
-        op_result = self._wait_until_operation_completes(resp.json())
-        download_url = op_result["results"]["download_url"]
-        resp = requests.get(download_url)
-        if not resp.ok:
-            raise APIError(
-                f"Failure to download results file from operation id {op_result['id']}: {resp.text}"
-            )
-        results = resp.json()
-
-        return results
-
     def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filenames: Optional[List[str]] = None) -> str:
         """
         Creates a new plots group.
@@ -134,13 +85,14 @@ class TracerClient(BaseAPIClient):
             raise APIError(f"Failure starting plots group update: {resp.text}")
         return self._wait_until_operation_completes(resp.json())
 
-    def group_analyze_plots(
+    def analyze_plots(
         self,
         plots_group_id: str,
         plots_analysis_name: str,
         plot_ids: List[str],
-        assessment_date: datetime.date
-    ) -> str:
+        date_from: datetime.date,
+        date_to: datetime.date
+    ) -> dict:
         """
         Runs the analysis for a given date over the plot ids of the specified plot group,
         and returns the URL where we can see the analysis in the Picterra platform.
@@ -149,10 +101,11 @@ class TracerClient(BaseAPIClient):
             plots_group_id: id of the plots group on which we want to run the new analysis
             plots_analysis_name: name to give to the new analysis
             plot_ids: list of the plot ids of the plots group to select for the analysis
-            assessment_date: the point in time at which the analysis should be evaluated.
+            date_from: start point in time at which the analysis should be evaluated.
+            date_to: end point in time at which the analysis should be evaluated.
 
         Returns:
-            str: the analysis results URL.
+            dict: the analysis metadata.
         """
         resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/upload/"))
         if not resp.ok:
@@ -164,7 +117,8 @@ class TracerClient(BaseAPIClient):
         data = {
             "analysis_name": plots_analysis_name,
             "upload_id": upload_id,
-            "assessment_date": assessment_date.isoformat()
+            "date_from": date_from.isoformat(),
+            "date_to": date_to.isoformat()
         }
         resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/"), json=data)
         if not resp.ok:
@@ -177,4 +131,4 @@ class TracerClient(BaseAPIClient):
         if not resp.ok:
             raise APIError(f"Failure to get analysis {analysis_id}: {resp.text}")
         analysis_data = resp.json()
-        return analysis_data["url"]
+        return analysis_data
