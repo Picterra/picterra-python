@@ -26,15 +26,21 @@ class TracerClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/plots_analysis/v1/", **kwargs)
 
-    def create_plots_group(self, plots_group_name: str, methodology: AnalysisMethodology, columns: Dict[str, str], plots_geometries_filenames: Optional[List[str]] = None) -> str:
+    def create_plots_group(
+            self,
+            plots_group_name: str,
+            methodology: AnalysisMethodology,
+            plots_geometries_filenames: List[str],
+            columns: Optional[Dict[str, str]] = None
+    ) -> str:
         """
         Creates a new plots group.
 
         Args:
             plots_group_name: user-friendly name for the group
             methodology: plots group methodology
-            columns: columns to add to the group
             plots_geometries_filenames: Paths to files containing the geometries of the plots the group will have
+            columns: columns to add to the group. if any
 
         Returns:
             str: the id of the new group.
@@ -48,11 +54,10 @@ class TracerClient(BaseAPIClient):
         if not resp.ok:
             raise APIError(f"Failure starting plots group commit: {resp.text}")
         op_result = self._wait_until_operation_completes(resp.json())["results"]
-        if plots_geometries_filenames:
-            self.upload_plots_group_plots(op_result["plots_group_id"], plots_geometries_filenames)
+        self.update_plots_group_plots(op_result["plots_group_id"], plots_geometries_filenames)
         return op_result["plots_group_id"]
 
-    def upload_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: List[str], delete_existing_plots: bool = False) -> Dict[str, Any]:
+    def update_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: List[str], delete_existing_plots: bool = False) -> Dict[str, Any]:
         """
         Updates the geometries of a given plots group
 

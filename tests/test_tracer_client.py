@@ -70,13 +70,13 @@ def test_create_plots_group(monkeypatch):
         assert client.create_plots_group(
             "name of my plot group",
             "eudr_cocoa",
-            {"foo": "bar"},
             [tmp.name],
+            {"foo": "bar"},
         ) == "a-plots-group"
 
 
 @responses.activate
-def test_upload_plots_group_plots(monkeypatch):
+def test_update_plots_group_plots(monkeypatch):
     _add_api_response(
         plots_analysis_api_url("upload/file/"),
         responses.POST,
@@ -110,7 +110,7 @@ def test_upload_plots_group_plots(monkeypatch):
         )
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
-        client.upload_plots_group_plots("group-id", [tmp.name])
+        client.update_plots_group_plots("group-id", [tmp.name])
 
 
 @responses.activate
