@@ -17,9 +17,7 @@ else:
 
 import requests
 
-from picterra.base_client import APIError, BaseAPIClient
-
-AnalysisMethodology = Literal["eudr_cocoa", "eudr_soy"]
+from picterra.base_client import APIError, BaseAPIClient, ResultsPage
 
 
 def _check_resp_is_ok(resp: requests.Response, msg: str) -> None:
@@ -31,19 +29,68 @@ class TracerClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/plots_analysis/v1/", **kwargs)
 
+    def _return_results_page(
+        self, resource_endpoint: str, params: Optional[Dict[str, Any]] = None
+    ) -> ResultsPage:
+        if params is None:
+            params = {}
+        if "page_number" not in params:
+            params["page_number"] = 1
+
+        url = self._full_url("%s/" % resource_endpoint, params=params)
+        return ResultsPage(url, self.sess.get)
+
+    def list_methodologies(
+        self,
+        search_string: Optional[str] = None,
+        page_number: Optional[int] = None,
+    ):
+        """
+        List all the methodologies the user can access, see `ResultsPage`
+            for the pagination access pattern.
+
+        Args:
+            search_string: The term used to filter methodologies by name
+            page_number: Optional page (from 1) of the list we want to retrieve
+
+        Returns:
+            ResultsPage: A ResultsPage object that contains a slice of the list
+                of methodologies dictionaries
+
+        Example:
+
+            ::
+
+                {
+                    'id': '42',
+                    'name': 'Coffee - EUDR',
+                },
+                {
+                    'id': '43',
+                    'name': 'Cattle - EUDR'
+                }
+
+        """
+        data: Dict[str, Any] = {}
+        if search_string is not None:
+            data["search"] = search_string.strip()
+        if page_number is not None:
+            data["page_number"] = int(page_number)
+        return self._return_results_page("methodologies", data)
+
     def create_plots_group(
-            self,
-            plots_group_name: str,
-            methodology: AnalysisMethodology,
-            plots_geometries_filenames: List[str],
-            columns: Optional[Dict[str, str]] = None
+        self,
+        plots_group_name: str,
+        methodology_id: str,
+        plots_geometries_filenames: List[str],
+        columns: Optional[Dict[str, str]] = None
     ) -> str:
         """
         Creates a new plots group.
 
         Args:
             plots_group_name: user-friendly name for the group
-            methodology: plots group methodology
+            methodology_id: id of the methodology to use, retrieved via list_methodologies
             plots_geometries_filenames: Paths to files containing the geometries of the plots the group will have
             columns: columns to add to the group. if any
 
@@ -52,8 +99,8 @@ class TracerClient(BaseAPIClient):
         """
         data = {
             "name": plots_group_name,
-            "methodology": methodology,
-            "custom_columns_values": columns
+            "methodology_id": methodology_id,
+            "custom_columns_values": columns or {}
         }
         resp = self.sess.post(self._full_url("plots_groups/"), json=data)
         _check_resp_is_ok(resp, "Failure starting plots group commit")
