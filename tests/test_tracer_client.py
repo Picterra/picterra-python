@@ -11,6 +11,7 @@ from tests.utils import (
     OPERATION_ID,
     _add_api_response,
     _client,
+    add_mock_paginated_list_response,
     plots_analysis_api_url,
 )
 
@@ -41,7 +42,7 @@ def test_create_plots_group(monkeypatch):
         OP_RESP,
         match=responses.matchers.json_params_matcher({
             "name": "name of my plot group",
-            "methodology": "eudr_cocoa",
+            "methodology_id": "eudr-cocoa-id",
             "custom_columns_values": {"foo": "bar"}
         }),
     )
@@ -69,7 +70,7 @@ def test_create_plots_group(monkeypatch):
             json.dump({"type": "FeatureCollection", "features": []}, f)
         assert client.create_plots_group(
             "name of my plot group",
-            "eudr_cocoa",
+            "eudr-cocoa-id",
             [tmp.name],
             {"foo": "bar"},
         ) == "a-plots-group"
@@ -199,3 +200,19 @@ def test_analyse_precheck(monkeypatch):
         datetime.date.fromisoformat("2023-01-01"),
         datetime.date.fromisoformat("2025-01-01")
     ) == "https://precheck_data_url.example.com/"
+
+
+@responses.activate
+def test_list_methodologies(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    url = plots_analysis_api_url("methodologies/")
+    # Full list
+    add_mock_paginated_list_response(url)
+    methodologies = client.list_methodologies()
+    assert len(methodologies) == 2  # 1st api call
+    assert methodologies[0]["name"] == "a_1"
+    assert methodologies[1]["name"] == "a_2"
+    # Search list
+    add_mock_paginated_list_response(url, 2, "m_2", "spam")
+    methodologies = client.list_methodologies("m_2", 2)  # 3rd api call
+    assert methodologies[0]["name"] == "spam_1"
