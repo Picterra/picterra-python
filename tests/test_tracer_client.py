@@ -6,6 +6,7 @@ import tempfile
 import responses
 
 from picterra import TracerClient
+from picterra.base_client import multipolygon_to_polygon_feature_collection
 from tests.utils import (
     OP_RESP,
     OPERATION_ID,
@@ -15,6 +16,16 @@ from tests.utils import (
     plots_analysis_api_url,
 )
 
+
+def make_geojson_polygon(base=1):
+    return {"type": "Polygon", "coordinates": [[[0, 0], [base, 0], [base, base], [0, base], [0, 0]]]}
+
+
+def make_geojson_multipolygon(npolygons=1):
+    coords = []
+    for i in range(npolygons):
+        coords.append(make_geojson_polygon(i + 1)["coordinates"])
+    return {"type": "MultiPolygon", "coordinates": coords}
 
 def test_plots_analysis_platform_client_base_url(monkeypatch):
     """
@@ -216,4 +227,60 @@ def test_list_methodologies(monkeypatch):
     add_mock_paginated_list_response(url, 2, "m_2", "spam")
     methodologies = client.list_methodologies(search="m_2", page_number=2)
     assert methodologies[0]["name"] == "spam_1"
-\
+
+
+@responses.activate
+def test_list_plots_groups(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    url = plots_analysis_api_url("plots_groups/")
+    # Full list
+    add_mock_paginated_list_response(url)
+    plots_groups = client.list_plots_groups()
+    assert len(plots_groups) == 2
+    assert plots_groups[0]["name"] == "a_1"
+    assert plots_groups[1]["name"] == "a_2"
+    # Search list
+    add_mock_paginated_list_response(url, 2, "m_2", "spam")
+    plots_groups = client.list_plots_groups(search="m_2", page_number=2)
+    assert plots_groups[0]["name"] == "spam_1"
+
+
+@responses.activate
+def test_list_plots_analyses(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    url = plots_analysis_api_url("plots_groups/spam/analysis/")
+    # Full list
+    add_mock_paginated_list_response(url)
+    plots_analyses = client.list_plots_analyses("spam")
+    assert len(plots_analyses) == 2
+    assert plots_analyses[0]["name"] == "a_1"
+    assert plots_analyses[1]["name"] == "a_2"
+    # Search list
+    add_mock_paginated_list_response(url, 2, "m_2", "spam")
+    plots_analyses = client.list_plots_analyses("spam", search="m_2", page_number=2)
+    assert plots_analyses[0]["name"] == "spam_1"
+
+
+@responses.activate
+def test_download_plots_group(monkeypatch):
+    _add_api_response(plots_analysis_api_url(
+        "plots_groups/a-group-id/export/"),
+        responses.POST,
+        OP_RESP,
+        match=responses.matchers.json_params_matcher({"format": "geojson"}),
+    )
+    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
+        "status": "success",
+        "results": {"download_url": "https://a-group-id.example.com/geojson"}
+    })
+    polygons_fc = multipolygon_to_polygon_feature_collection(make_geojson_multipolygon())
+    responses.add(
+        responses.GET,
+        "https://a-group-id.example.com/geojson",
+        body=json.dumps(polygons_fc),
+    )
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    with tempfile.NamedTemporaryFile() as f:
+        client.download_plots_group_to_file("a-group-id", "geojson", f.name)
+        assert json.load(f) == polygons_fc
+    assert len(responses.calls) == 3

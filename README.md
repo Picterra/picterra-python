@@ -59,6 +59,13 @@ pip install --editable '.[lint,test]'
 ```
 would allow to run test and linting locally, and also avoid re-installing the library every time you change the code.
 
+If you want to install from a given branch, simply do
+
+```bash
+pip uninstall picterra
+pip install git+https://github.com/Picterra/picterra-python.git@<branch_name>
+```
+
 ### Running tests
 In order to test locally, run:
 ```bash
