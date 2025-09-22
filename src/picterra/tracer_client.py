@@ -17,7 +17,7 @@ else:
 
 import requests
 
-from picterra.base_client import APIError, BaseAPIClient, ResultsPage
+from picterra.base_client import APIError, BaseAPIClient, ResultsPage, _download_to_file
 
 
 def _check_resp_is_ok(resp: requests.Response, msg: str) -> None:
@@ -136,6 +136,50 @@ class TracerClient(BaseAPIClient):
         _check_resp_is_ok(resp, "Failure starting plots group update:")
         return self._wait_until_operation_completes(resp.json())
 
+    def download_plots_group_to_file(self, plots_group_id: str, format: Literal["excel", "geojson"], filename: str):
+        """
+        Downloads a plots group to a local file
+
+        Args:
+            plots_group_id: The id of the plots group to download
+            filename: The local filename where to save the plots group
+
+        Raises:
+            APIError: There was an error while trying to download the plots group id
+        """
+        data = {"format": format}
+        resp = self.sess.post(self._full_url("plots_groups/%s/export/" % plots_group_id), json=data)
+        _check_resp_is_ok(resp, "Failure starting plots group download")
+        op = self._wait_until_operation_completes(resp.json())
+        _download_to_file(op["results"]["download_url"], filename)
+
+    def list_plots_groups(
+        self,
+        search: Optional[str] = None,
+        page_number: Optional[int] = None,
+    ):
+        """
+        List all the plots group the user can access, see `ResultsPage`
+            for the pagination access pattern.
+
+        This function is still **beta** and subject to change.
+
+
+        Args:
+            search: The term used to filter by name
+            page_number: Optional page (from 1) of the list we want to retrieve
+
+        Returns:
+            ResultsPage: A ResultsPage object that contains a slice of the list
+                of plots group dictionaries
+        """
+        data: Dict[str, Any] = {}
+        if search is not None:
+            data["search"] = search.strip()
+        if page_number is not None:
+            data["page_number"] = int(page_number)
+        return self._return_results_page("plots_groups", data)
+
     def analyze_plots_precheck(
         self,
         plots_group_id: str,
@@ -216,3 +260,31 @@ class TracerClient(BaseAPIClient):
         _check_resp_is_ok(resp, f"Failure to get analysis {analysis_id}")
         analysis_data = resp.json()
         return analysis_data
+
+    def list_plots_analyses(
+        self,
+        plots_group_id: str,
+        search: Optional[str] = None,
+        page_number: Optional[int] = None,
+    ):
+        """
+        List all the plots analyses the user can access, see `ResultsPage`
+            for the pagination access pattern.
+
+        This function is still **beta** and subject to change.
+
+        Args:
+            plots_group_id: id of the plots group on which we want to list the analyses
+            search: The term used to filter by name
+            page_number: Optional page (from 1) of the list we want to retrieve
+
+        Returns:
+            ResultsPage: A ResultsPage object that contains a slice of the list
+                of plots analyses dictionaries
+        """
+        data: Dict[str, Any] = {}
+        if search is not None:
+            data["search"] = search.strip()
+        if page_number is not None:
+            data["page_number"] = int(page_number)
+        return self._return_results_page(f"plots_groups/{plots_group_id}/analysis/", data)
