@@ -209,10 +209,11 @@ def test_list_methodologies(monkeypatch):
     # Full list
     add_mock_paginated_list_response(url)
     methodologies = client.list_methodologies()
-    assert len(methodologies) == 2  # 1st api call
+    assert len(methodologies) == 2
     assert methodologies[0]["name"] == "a_1"
     assert methodologies[1]["name"] == "a_2"
     # Search list
     add_mock_paginated_list_response(url, 2, "m_2", "spam")
-    methodologies = client.list_methodologies("m_2", 2)  # 3rd api call
+    methodologies = client.list_methodologies(search="m_2", page_number=2)
     assert methodologies[0]["name"] == "spam_1"
+\

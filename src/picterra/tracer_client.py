@@ -42,7 +42,7 @@ class TracerClient(BaseAPIClient):
 
     def list_methodologies(
         self,
-        search_string: Optional[str] = None,
+        search: Optional[str] = None,
         page_number: Optional[int] = None,
     ):
         """
@@ -50,7 +50,7 @@ class TracerClient(BaseAPIClient):
             for the pagination access pattern.
 
         Args:
-            search_string: The term used to filter methodologies by name
+            search: The term used to filter methodologies by name
             page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
@@ -72,8 +72,8 @@ class TracerClient(BaseAPIClient):
 
         """
         data: Dict[str, Any] = {}
-        if search_string is not None:
-            data["search"] = search_string.strip()
+        if search is not None:
+            data["search"] = search.strip()
         if page_number is not None:
             data["page_number"] = int(page_number)
         return self._return_results_page("methodologies", data)
