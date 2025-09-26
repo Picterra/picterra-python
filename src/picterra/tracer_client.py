@@ -287,3 +287,131 @@ class TracerClient(BaseAPIClient):
         if page_number is not None:
             data["page_number"] = int(page_number)
         return self._return_results_page(f"plots_groups/{plots_group_id}/analysis/", data)
+
+    def list_plots_analysis_reports(
+        self,
+        plots_group_id: str,
+        plots_analysis_id: str,
+    ):
+        """
+        List all the reports belonging to a given plots analysis
+
+        Args:
+            plots_group_id: id of the plots group on which we want to list the analyses
+            plots_analysis_id: id of the plots analysis for which we want to list the reports
+
+        Returns:
+            ResultsPage: A ResultsPage object that contains a slice of the list
+                of plots analyses reports dictionaries
+        """
+        return self._return_results_page(
+            f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/"
+        )
+
+    def list_plots_analyses_report_types(
+        self,
+        plots_group_id: str,
+        plots_analysis_id: str
+    ):
+        """
+        List all the plots analyses report types the user can use (see create_plots_analysis_report)
+
+        Args:
+            plots_group_id: id of the plots group
+            plots_analysis_id: id of the plots analysis
+
+        Returns:
+            list[str]: List of the possible report types ("name" and "report_type")
+        """
+        resp = self.sess.get(
+            f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/types/"
+        )
+        _check_resp_is_ok(resp, "Couldn't list report types")
+        return resp.json()
+
+    def create_plots_analysis_report_precheck(
+        self,
+        plots_group_id: str,
+        plots_analysis_id: str,
+        report_name: str,
+        plot_ids: List[str],
+        report_type: str,
+        metadata: Optional[dict] = None
+    ) -> str:
+        """
+        Check creation of a report with the given parameters is ok
+
+        If the function fails, the report is not valid
+
+        Args:
+            plots_group_id: id of the plots group 
+            plots_analysis_id: id of the plots analysis
+            report_name: name to give to the report
+            plot_ids: list of the plot ids to select for the report
+            report_type: type of report to generate, as per list_plots_analyses_report_types
+            metadata:  set of key-value pairs which may be included in the report
+
+        Returns:
+            bool: .
+        """
+        upload_id, upload_url = self._make_upload()
+        resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
+        _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
+        data = {
+            "name": report_name,
+            "upload_id": upload_id,
+            "report_type": report_type,
+            "metadata": metadata if metadata is not None else {}
+        }
+        resp = self.sess.post(
+            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/precheck/"),
+            json=data
+        )
+        _check_resp_is_ok(resp, "Failure starting precheck")
+        self._wait_until_operation_completes(resp.json())
+
+    def create_plots_analysis_report(
+        self,
+        plots_group_id: str,
+        plots_analysis_id: str,
+        report_name: str,
+        plot_ids: List[str],
+        report_type: str,
+        metadata: Optional[dict] = None
+    ) -> str:
+        """
+        Creates a report
+
+        Args:
+            plots_group_id: id of the plots group 
+            plots_analysis_id: id of the plots analysis
+            report_name: name to give to the report
+            plot_ids: list of the plot ids to select for the report
+            report_type: type of report to generate, as per list_plots_analyses_report_types
+            metadata:  set of key-value pairs which may be included in the report
+
+        Returns:
+            list[dict]: the metadata about the various file forming the report, including
+            the URL to download them.
+        """
+        upload_id, upload_url = self._make_upload()
+        resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
+        _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
+        data = {
+            "name": report_name,
+            "upload_id": upload_id,
+            "report_type": report_type,
+            "metadata": metadata if metadata is not None else {}
+        }
+        resp = self.sess.post(
+            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/"),
+            json=data
+        )
+        _check_resp_is_ok(resp, "Failure starting analysis precheck")
+        op_result = self._wait_until_operation_completes(resp.json())
+        report_id = op_result["results"]["plots_analysis_report_id"]
+        resp = self.sess.get(
+            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/{report_id}/")
+        )
+        _check_resp_is_ok(resp, "Failure retrieving report")
+        return resp.json()["artifacts"]
