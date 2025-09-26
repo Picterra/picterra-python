@@ -118,6 +118,12 @@ def multipolygon_to_polygon_feature_collection(mp):
         } for p in mp["coordinates"]]
     }
 
+
+def _check_resp_is_ok(resp: requests.Response, msg: str) -> None:
+    if not resp.ok:
+        raise APIError("%s (status %d): %s" % (msg, resp.status_code, resp.text))
+
+
 T = TypeVar("T")
 
 
@@ -144,8 +150,7 @@ class ResultsPage(Generic[T]):
 
     def __init__(self, url: str, fetch: Callable[[str], requests.Response]):
         resp = fetch(url)
-        if not resp.ok:
-            raise APIError(resp.text)
+        _check_resp_is_ok(resp, "Couldn't list report types")
         r: dict[str, Any] = resp.json()
         next_url: str | None = r["next"]
         results: list[T] = r["results"]
