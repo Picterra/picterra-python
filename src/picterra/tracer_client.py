@@ -190,7 +190,7 @@ class TracerClient(BaseAPIClient):
         plot_ids: List[str],
         date_from: datetime.date,
         date_to: datetime.date
-    ) -> str:
+    ) -> dict:
         """
         Check the analysis for a given date over the plot ids of the specified plot group has no errors
 
@@ -198,11 +198,13 @@ class TracerClient(BaseAPIClient):
             plots_group_id: id of the plots group on which we want to run the new analysis
             plots_analysis_name: name to give to the new analysis
             plot_ids: list of the plot ids of the plots group to select for the analysis
-            date_from: start point in time at which the analysis should be evaluated.
+            date_from: start point in time at which the analysis should be evaluated; please note that
+                **the date that make sense are methodology dependent**, so please check the methodology
+                of the plots group beforehand
             date_to: end point in time at which the analysis should be evaluated.
 
         Returns:
-            str: the analysis precheck data URL.
+            dict: the precheck data
         """
         upload_id, upload_url = self._make_upload()
         resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
@@ -216,7 +218,8 @@ class TracerClient(BaseAPIClient):
         resp = self.sess.post(self._full_url(f"plots_groups/{plots_group_id}/analysis/precheck/"), json=data)
         _check_resp_is_ok(resp, "Failure starting analysis precheck")
         op_result = self._wait_until_operation_completes(resp.json())
-        return op_result["results"]["precheck_data_url"]
+        url = op_result["results"]["precheck_data_url"]
+        return requests.get(url).json()
 
     def analyze_plots(
         self,
@@ -234,7 +237,9 @@ class TracerClient(BaseAPIClient):
             plots_group_id: id of the plots group on which we want to run the new analysis
             plots_analysis_name: name to give to the new analysis
             plot_ids: list of the plot ids of the plots group to select for the analysis
-            date_from: start point in time at which the analysis should be evaluated.
+            date_from: start point in time at which the analysis should be evaluated; please note
+                that **the date that make sense are methodology dependent**, so please check the
+                methodology of the plots group beforehand
             date_to: end point in time at which the analysis should be evaluated.
 
         Returns:
@@ -287,3 +292,162 @@ class TracerClient(BaseAPIClient):
         if page_number is not None:
             data["page_number"] = int(page_number)
         return self._return_results_page(f"plots_groups/{plots_group_id}/analysis/", data)
+
+    def list_plots_analysis_reports(
+        self,
+        plots_group_id: str,
+        plots_analysis_id: str,
+    ):
+        """
+        List all the reports belonging to a given plots analysis
+
+        Args:
+            plots_group_id: id of the plots group on which we want to list the analyses
+            plots_analysis_id: id of the plots analysis for which we want to list the reports
+
+        Returns: see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportsList
+        """  # noqa[E501]
+        return self._return_results_page(
+            f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/"
+        )
+
+    def list_plots_analyses_report_types(
+        self,
+        plots_group_id: str,
+        plots_analysis_id: str
+    ):
+        """
+        List all the plots analyses report types the user can use (see create_plots_analysis_report)
+
+        Args:
+            plots_group_id: id of the plots group
+            plots_analysis_id: id of the plots analysis
+
+        Returns:
+            see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportTypesForAnalysis
+        """  # noqa[E501]
+        resp = self.sess.get(
+            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/types/")
+        )
+        _check_resp_is_ok(resp, "Couldn't list report types")
+        return resp.json()
+
+    def create_plots_analysis_report_precheck(
+        self,
+        plots_group_id: str,
+        plots_analysis_id: str,
+        report_name: str,
+        plot_ids: List[str],
+        report_type: str,
+        metadata: Optional[dict] = None
+    ) -> dict:
+        """
+        Check creation of a report with the given parameters is ok
+
+        If the function fails, the report is not valid
+
+        Args:
+            plots_group_id: id of the plots group
+            plots_analysis_id: id of the plots analysis
+            report_name: name to give to the report
+            plot_ids: list of the plot ids to select for the report
+            report_type: type of report to generate, as per list_plots_analyses_report_types
+            metadata:  set of key-value pairs which may be included in the report
+
+        Returns:
+            dict: the precheck data
+        """
+        upload_id, upload_url = self._make_upload()
+        resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
+        _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
+        data = {
+            "name": report_name,
+            "upload_id": upload_id,
+            "report_type": report_type,
+            "metadata": metadata if metadata is not None else {}
+        }
+        resp = self.sess.post(
+            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/precheck/"),
+            json=data
+        )
+        _check_resp_is_ok(resp, "Failure starting precheck")
+        self._wait_until_operation_completes(resp.json())
+        return {"status": "passed"}
+
+    def create_plots_analysis_report(
+        self,
+        plots_group_id: str,
+        plots_analysis_id: str,
+        report_name: str,
+        plot_ids: List[str],
+        report_type: str,
+        metadata: Optional[dict] = None
+    ) -> str:
+        """
+        Creates a report
+
+        Args:
+            plots_group_id: id of the plots group
+            plots_analysis_id: id of the plots analysis
+            report_name: name to give to the report
+            plot_ids: list of the plot ids to select for the report
+            report_type: type of report to generate, as per list_plots_analyses_report_types
+            metadata:  set of key-value pairs which may be included in the report
+
+        Returns:
+            str: the id of the new report
+        """
+        upload_id, upload_url = self._make_upload()
+        resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
+        _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
+        data = {
+            "name": report_name,
+            "upload_id": upload_id,
+            "report_type": report_type,
+            "metadata": metadata if metadata is not None else {}
+        }
+        resp = self.sess.post(
+            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/"),
+            json=data
+        )
+        _check_resp_is_ok(resp, "Failure starting analysis precheck")
+        op_result = self._wait_until_operation_completes(resp.json())
+        report_id = op_result["results"]["plots_analysis_report_id"]
+        return report_id
+
+    def get_plots_analysis(self, plots_group_id: str, plots_analysis_id: str):
+        """
+        Get plots analysis information
+
+        Args:
+            plots_group_id: id of the plots group
+            plots_analysis_id: id of the plots analysis
+
+        Raises:
+            APIError: There was an error while getting the plots analysis information
+
+        Returns:
+            dict: see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/analysis/operation/getAnalysis
+        """
+        resp = self.sess.get(self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/"))
+        _check_resp_is_ok(resp, "Failed to get plots analysis")
+        return resp.json()
+
+    def get_plots_analysis_report(self, plots_group_id: str, plots_analysis_id: str, plots_analysis_report_id: str):
+        """
+        Get plots analysis report information
+
+        Args:
+            plots_group_id: id of the plots group
+            plots_analysis_id: id of the plots analysis
+            plots_analysis_report_id: id of the plots analysis report
+
+        Raises:
+            APIError: There was an error while getting the plots analysis report information
+
+        Returns:
+            dict: see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportForAnalysis
+        """
+        resp = self.sess.get(self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/{plots_analysis_report_id}/"))
+        _check_resp_is_ok(resp, "Failed to get plots analysis report")
+        return resp.json()
