@@ -19,10 +19,18 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from .utils.oauth import OAuthClient, OAuthError
+
 logger = logging.getLogger()
 
 CHUNK_SIZE_BYTES = 8192  # 8 KiB
 
+# ANSI escape codes for colors
+GREEN = "\033[92m"
+RED = "\033[91m"
+RESET = "\033[0m"  # Resets the color to default
+
+CLIENT_ID = "Eya1oJleyYoo35I17w5WWP2oTbTLr89LTJXWBxDs"
 
 # allow injecting an non-existing package name to test the fallback behavior
 # of _get_ua in tests (see test_headers_user_agent_version__fallback)
@@ -205,8 +213,6 @@ class BaseAPIClient:
             "PICTERRA_BASE_URL", "https://app.picterra.ch/"
         )
         api_key = os.environ.get("PICTERRA_API_KEY", None)
-        if not api_key:
-            raise APIError("PICTERRA_API_KEY environment variable is not defined")
         logger.info(
             "Using base_url=%s, api_url=%s; %d max retries, %d backoff and %s timeout.",
             base_url,
@@ -234,7 +240,8 @@ class BaseAPIClient:
         self.sess.mount("https://", adapter)
         self.sess.mount("http://", adapter)
         # Authentication
-        self.sess.headers.update({"X-Api-Key": api_key})
+        if api_key is not None:
+            self.sess.headers.update({"X-Api-Key": api_key})
 
     def _full_url(self, path: str, params: dict[str, Any] | None = None):
         url = urljoin(self.base_url, path)
@@ -295,3 +302,17 @@ class BaseAPIClient:
             self._full_url("operations/%s/" % operation_id),
         )
         return resp.json()["results"]
+
+    def login(self):
+        base_url = os.environ.get(
+            "PICTERRA_BASE_URL", "https://app.picterra.ch/"
+        )
+        base_url = "http://100.81.123.76:8000"  # TODO remove
+        cl = OAuthClient(CLIENT_ID, base_url)
+        try:
+            data = cl.start()
+            print(data)
+            print(f"{GREEN}Logged in at {base_url}.{RESET}")
+        except OAuthError as e:
+            print(f"{RED}Error during login: '{e}'{RESET}")
+            sys.exit(1)

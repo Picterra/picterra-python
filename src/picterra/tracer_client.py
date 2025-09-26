@@ -40,10 +40,6 @@ class TracerClient(BaseAPIClient):
         url = self._full_url("%s/" % resource_endpoint, params=params)
         return ResultsPage(url, self.sess.get)
 
-    def login(self):
-        pass
-        
-
     def list_methodologies(
         self,
         search: Optional[str] = None,
