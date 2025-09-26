@@ -200,6 +200,13 @@ def test_analyse_precheck(monkeypatch):
         "status": "success",
         "results": {"precheck_data_url": "https://precheck_data_url.example.com/"}
     })
+    precheck = {
+        "status": "failed",
+        "errors": {"critical": [], "high": []},
+        "critical_count": 1,
+        "high_count": 1,
+    }
+    responses.get("https://precheck_data_url.example.com/", json=precheck)
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
         with open(tmp.name, "w") as f:
@@ -210,7 +217,7 @@ def test_analyse_precheck(monkeypatch):
         ["uno", "dos"],
         datetime.date.fromisoformat("2023-01-01"),
         datetime.date.fromisoformat("2025-01-01")
-    ) == "https://precheck_data_url.example.com/"
+    ) == precheck
 
 
 @responses.activate
@@ -284,3 +291,173 @@ def test_download_plots_group(monkeypatch):
         client.download_plots_group_to_file("a-group-id", "geojson", f.name)
         assert json.load(f) == polygons_fc
     assert len(responses.calls) == 3
+
+
+@responses.activate
+def test_list_plots_analysis_reports(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    url = plots_analysis_api_url("plots_groups/FOO/analysis/BAR/reports/")
+    # Full list
+    add_mock_paginated_list_response(url, num_results=3)
+    reports = client.list_plots_analysis_reports("FOO", "BAR")
+    assert len(reports) == 3
+    assert reports[0]["name"] == "a_1" and reports[-1]["name"] == "a_3"
+
+
+@responses.activate
+def test_list_plots_analyses_report_types(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    url = plots_analysis_api_url("plots_groups/FOO/analysis/BAR/reports/types/")
+    responses.get(
+        url,
+        json=[
+            {"report_type": "type_1", "name": "a_1"},
+            {"report_type": "type_2", "name": "a_2"},
+            {"report_type": "type_1", "name": "a_3"},
+            {"report_type": "type_3", "name": "a_4"},
+        ],
+    )
+    reports = client.list_plots_analyses_report_types("FOO", "BAR")
+    assert len(reports) == 4
+    assert reports[0]["report_type"] == "type_1" and reports[-1]["name"] == "a_4"
+
+
+@responses.activate
+def test_create_plots_analysis_report_precheck(monkeypatch):
+    _add_api_response(
+        plots_analysis_api_url("upload/file/"),
+        responses.POST,
+        {
+            "upload_id": "an-upload-id",
+            "upload_url": "https://upload.example.com/",
+        },
+    )
+    responses.put("https://upload.example.com/", match=[responses.matchers.json_params_matcher({
+        "plot_ids": ["uno", "dos"],
+    })])
+    _add_api_response(plots_analysis_api_url(
+        "plots_groups/a-group-id/analysis/an-analysis-id/reports/precheck/"),
+        responses.POST,
+        OP_RESP,
+        match=responses.matchers.json_params_matcher({
+            "name": "foobar",
+            "upload_id": "an-upload-id",
+            "report_type": "a-report-type",
+            "metadata": {"foo": "bar"},
+        }),
+    )
+    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
+        "status": "success",
+        "results": {"precheck_data_url": "https://precheck_data_url.example.com/"}
+    })
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    with tempfile.NamedTemporaryFile() as tmp:
+        with open(tmp.name, "w") as f:
+            json.dump({"type": "FeatureCollection", "features": []}, f)
+    assert client.create_plots_analysis_report_precheck(
+        "a-group-id",
+        "an-analysis-id",
+        "foobar",
+        ["uno", "dos"],
+        "a-report-type",
+        {"foo": "bar"}
+    ) == {"status": "passed"}
+
+
+@responses.activate
+def test_create_plots_analysis_report(monkeypatch):
+    _add_api_response(
+        plots_analysis_api_url("upload/file/"),
+        responses.POST,
+        {
+            "upload_id": "an-upload-id",
+            "upload_url": "https://upload.example.com/",
+        },
+    )
+    responses.put("https://upload.example.com/", match=[responses.matchers.json_params_matcher({
+        "plot_ids": ["uno", "dos"],
+    })])
+    _add_api_response(plots_analysis_api_url(
+        "plots_groups/a-group-id/analysis/an-analysis-id/reports/"),
+        responses.POST,
+        OP_RESP,
+        match=responses.matchers.json_params_matcher({
+            "name": "foobar",
+            "upload_id": "an-upload-id",
+            "report_type": "a-report-type",
+            "metadata": {"foo": "bar"},
+        }),
+    )
+    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
+        "status": "success",
+        "results": {"plots_analysis_report_id": "a-report-id"}
+    })
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    with tempfile.NamedTemporaryFile() as tmp:
+        with open(tmp.name, "w") as f:
+            json.dump({"type": "FeatureCollection", "features": []}, f)
+    assert client.create_plots_analysis_report(
+        "a-group-id",
+        "an-analysis-id",
+        "foobar",
+        ["uno", "dos"],
+        "a-report-type",
+        {"foo": "bar"}
+    ) == "a-report-id"
+
+
+@responses.activate
+def test_get_plots_analysis(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    _add_api_response(
+        plots_analysis_api_url("plots_groups/a-plots-group/analysis/an-analysis-id/"),
+        responses.GET,
+        {
+            "id": "an-analysis-id",
+            "name": "My Analysis",
+            "date_from": "2023-06-06",
+            "date_to": "2025-02-08",
+            "url": "https://app.picterra.ch/plots_analysis/plots_groups/136b812e-8d9c-418f-b317-8be5c7c6281d/analysis/cda443d7-5baf-483d-bb5e-fa1190180b0d/"  # noqa[E501]
+        },
+    )
+    plots_analysis = client.get_plots_analysis("a-plots-group", "an-analysis-id")
+    assert plots_analysis["id"] == "an-analysis-id"
+    assert plots_analysis["name"] == "My Analysis"
+
+
+@responses.activate
+def test_get_plots_analysis_report(monkeypatch):
+    _add_api_response(
+        plots_analysis_api_url(
+            "plots_groups/a-group-id/analysis/a-analysis-id/reports/a-report-id/"
+        ),
+        responses.GET,
+        {
+            "id": "a-report-id",
+            "name": "my report",
+            "created_at": "2025-09-29T10:04:08.143098Z",
+            "report_type": "eudr_export",
+            "artifacts": [
+                {
+                    "name": "EUDR Report",
+                    "filename": "2025-09-29-nightly-eudr-export.pdf",
+                    "size_bytes": 71802,
+                    "description": "A PDF report to be used for EUDR",
+                    "content_type": "application/pdf",
+                    "download_url": "http://example.com/report.pdf",
+                },
+                {
+                    "name": "EUDR Traces NT",
+                    "filename": "2025-09-29-nightly-eudr-export.geojson",
+                    "size_bytes": 877,
+                    "description": "A GeoJSON file that can be submitted to the EU Deforestation Due Diligence Registry",
+                    "content_type": "application/geo+json",
+                    "download_url": "http://example.com/traces.geojson",
+                },
+            ],
+        },
+    )
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    report = client.get_plots_analysis_report("a-group-id", "a-analysis-id", "a-report-id")
+    assert report["id"] == "a-report-id"
+    assert report["artifacts"][0]["name"] == "EUDR Report"

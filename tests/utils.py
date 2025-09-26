@@ -52,16 +52,15 @@ def plots_analysis_api_url(path):
     return urljoin(TEST_API_URL, urljoin("public/api/plots_analysis/v1/", path))
 
 
-def add_mock_paginated_list_response(endpoint: str, page: int = 1, search_string: str = None, name_prefix: str = "a"):
+def add_mock_paginated_list_response(endpoint: str, page: int = 1, search_string: str = None, name_prefix: str = "a", num_results: int = 2):
     curr, next = str(page), str(page + 1)
     data1 = {
-        "count": 4,
+        "count": num_results * num_results,
         "next": endpoint + "/?page_number=" + next,
         "previous": None,
-        "page_size": 2,
+        "page_size": num_results,
         "results": [
-            {"id": "1", "name": name_prefix + "_1"},
-            {"id": "2", "name": name_prefix + "_2"},
+            {"id": str(i), "name": name_prefix + "_" + str(i)} for i in range(1, num_results + 1)
         ],
     }
     qs_params = {"page_number": curr}
