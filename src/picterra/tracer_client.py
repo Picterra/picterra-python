@@ -10,19 +10,19 @@ import os.path
 import sys
 
 if sys.version_info >= (3, 8):
-    from typing import Any, Dict, List, Literal, Optional
+    from typing import Any, Dict, List, Literal, Optional, Tuple
 else:
     from typing_extensions import Literal
-    from typing import Dict, List, Any, Optional
+    from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 
-from picterra.base_client import APIError, BaseAPIClient, ResultsPage, _download_to_file
-
-
-def _check_resp_is_ok(resp: requests.Response, msg: str) -> None:
-    if not resp.ok:
-        raise APIError("%s (status %d): %s" % (msg, resp.status_code, resp.text))
+from picterra.base_client import (
+    BaseAPIClient,
+    ResultsPage,
+    _check_resp_is_ok,
+    _download_to_file,
+)
 
 
 class TracerClient(BaseAPIClient):
@@ -39,6 +39,12 @@ class TracerClient(BaseAPIClient):
 
         url = self._full_url("%s/" % resource_endpoint, params=params)
         return ResultsPage(url, self.sess.get)
+
+    def _make_upload(self) -> Tuple[str, str]:
+        resp = self.sess.post(self._full_url("upload/file/"))
+        _check_resp_is_ok(resp, "Failure obtaining an upload")
+        upload_id, upload_url = resp.json()["upload_id"], resp.json()["upload_url"]
+        return upload_id, upload_url
 
     def list_methodologies(
         self,
@@ -123,10 +129,7 @@ class TracerClient(BaseAPIClient):
         """
         files = []
         for filename in plots_geometries_filenames:
-            resp = self.sess.post(self._full_url("upload/file/"))
-            _check_resp_is_ok(resp, "Failure obtaining upload URL and ID")
-            upload_id = resp.json()["upload_id"]
-            upload_url = resp.json()["upload_url"]
+            upload_id, upload_url = self._make_upload()
             with open(filename, "rb") as fh:
                 resp = requests.put(upload_url, data=fh.read())
                 _check_resp_is_ok(resp, "Failure uploading plots file for group")
@@ -201,9 +204,7 @@ class TracerClient(BaseAPIClient):
         Returns:
             str: the analysis precheck data URL.
         """
-        resp = self.sess.post(self._full_url("upload/file/"))
-        _check_resp_is_ok(resp, "Failure obtaining an upload")
-        upload_id, upload_url = resp.json()["upload_id"], resp.json()["upload_url"]
+        upload_id, upload_url = self._make_upload()
         resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
         _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
         data = {
@@ -239,9 +240,7 @@ class TracerClient(BaseAPIClient):
         Returns:
             dict: the analysis metadata.
         """
-        resp = self.sess.post(self._full_url("upload/file/"))
-        _check_resp_is_ok(resp, "Failure obtaining an upload")
-        upload_id, upload_url = resp.json()["upload_id"], resp.json()["upload_url"]
+        upload_id, upload_url = self._make_upload()
         resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
         _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
         data = {
