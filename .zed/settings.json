@@ -1,0 +1,8 @@
+{
+  "format_on_save": "off",
+  "languages": {
+    "Python": {
+      "wrap_guides": [100]
+    }
+  }
+}
