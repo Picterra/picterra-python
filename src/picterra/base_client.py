@@ -12,11 +12,12 @@ if sys.version_info >= (3, 8):
 else:
     from typing_extensions import Literal, TypedDict
 
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 from urllib.parse import urlencode, urljoin
 
 import requests
 from requests.adapters import HTTPAdapter
+from requests.auth import AuthBase
 from urllib3.util.retry import Retry
 
 from .utils.oauth import OAuthClient, OAuthError
@@ -190,32 +191,74 @@ class FeatureCollection(TypedDict):
     features: list[Feature]
 
 
+class AuthInitError(Exception):
+    pass
+
+
+class ApiKeyAuth(AuthBase):
+    def __init__(self):
+        if os.environ.get("PICTERRA_API_KEY", None) is None:
+            raise AuthInitError("PICTERRA_API_KEY environment variable not set")
+
+    def __call__(self, r):
+        r.headers['X-Api-Key'] = os.environ.get("PICTERRA_API_KEY", None)
+        return r
+
+
+class Oauth2Auth(AuthBase):
+    oauth_token: dict
+
+    def __init__(self, base_url: str):
+        base_url = "http://100.81.123.76:8000"  # TODO remove
+        cl = OAuthClient(CLIENT_ID, base_url)
+        try:
+            data = cl.start()
+            self.oauth_token = data
+            print(333, self.oauth_token)
+            print(f"{GREEN}Logged in at {base_url}.{RESET}")
+        except OAuthError as e:
+            raise AuthInitError(f"{RED}Error during login: '{e}'{RESET}")
+
+    def __call__(self, r):
+        r.headers['Authorization'] = "Bearer " + self.oauth_token["access_token"]
+        return r
+
+
 class BaseAPIClient:
     """
     Base class for Picterra API clients.
 
     This is subclassed for the different products we have.
     """
+    base_url: str
+    sess: _RequestsSession
 
     def __init__(
-        self, api_url: str, timeout: int = 30, max_retries: int = 3, backoff_factor: int = 10
+        self, api_url: str, timeout: int = 30, max_retries: int = 3, backoff_factor: int = 10, auth: Literal["apikey", "oauth2"] = "apikey",
     ):
         """
         Args:
             api_url: the api's base url. This is different based on the Picterra product used
                 and is typically defined by implementations of this client
             timeout: number of seconds before the request times out
-            max_retries: max attempts when ecountering gateway issues or throttles; see
+            max_retries: max attempts when encountering gateway issues or throttles; see
                 retry_strategy comment below
             backoff_factor: factor used nin the backoff algorithm; see retry_strategy comment below
+            auth: TODO
         """
         base_url = os.environ.get(
             "PICTERRA_BASE_URL", "https://app.picterra.ch/"
         )
-        api_key = os.environ.get("PICTERRA_API_KEY", None)
+        if auth == "apikey":
+            auth = ApiKeyAuth()
+        elif auth == "oauth2":
+            auth = Oauth2Auth(base_url)
+        else:
+            raise RuntimeError("Invalid authentication method. Must be 'apikey' or 'oauth2'.")
         logger.info(
-            "Using base_url=%s, api_url=%s; %d max retries, %d backoff and %s timeout.",
+            "Using base_url=%s, auth=%s; api_url=%s; %d max retries, %d backoff and %s timeout.",
             base_url,
+            auth,
             api_url,
             max_retries,
             backoff_factor,
@@ -239,9 +282,6 @@ class BaseAPIClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.sess.mount("https://", adapter)
         self.sess.mount("http://", adapter)
-        # Authentication
-        if api_key is not None:
-            self.sess.headers.update({"X-Api-Key": api_key})
 
     def _full_url(self, path: str, params: dict[str, Any] | None = None):
         url = urljoin(self.base_url, path)
@@ -303,16 +343,3 @@ class BaseAPIClient:
         )
         return resp.json()["results"]
 
-    def login(self):
-        base_url = os.environ.get(
-            "PICTERRA_BASE_URL", "https://app.picterra.ch/"
-        )
-        base_url = "http://100.81.123.76:8000"  # TODO remove
-        cl = OAuthClient(CLIENT_ID, base_url)
-        try:
-            data = cl.start()
-            print(data)
-            print(f"{GREEN}Logged in at {base_url}.{RESET}")
-        except OAuthError as e:
-            print(f"{RED}Error during login: '{e}'{RESET}")
-            sys.exit(1)
