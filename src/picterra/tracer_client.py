@@ -324,7 +324,7 @@ class TracerClient(BaseAPIClient):
             list[str]: List of the possible report types ("name" and "report_type")
         """
         resp = self.sess.get(
-            f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/types/"
+            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/types/")
         )
         _check_resp_is_ok(resp, "Couldn't list report types")
         return resp.json()
@@ -344,7 +344,7 @@ class TracerClient(BaseAPIClient):
         If the function fails, the report is not valid
 
         Args:
-            plots_group_id: id of the plots group 
+            plots_group_id: id of the plots group
             plots_analysis_id: id of the plots analysis
             report_name: name to give to the report
             plot_ids: list of the plot ids to select for the report
@@ -383,7 +383,7 @@ class TracerClient(BaseAPIClient):
         Creates a report
 
         Args:
-            plots_group_id: id of the plots group 
+            plots_group_id: id of the plots group
             plots_analysis_id: id of the plots analysis
             report_name: name to give to the report
             plot_ids: list of the plot ids to select for the report
@@ -414,4 +414,4 @@ class TracerClient(BaseAPIClient):
             self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/{report_id}/")
         )
         _check_resp_is_ok(resp, "Failure retrieving report")
-        return resp.json()["artifacts"]
+        return resp.json()
