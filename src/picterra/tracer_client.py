@@ -308,6 +308,30 @@ class TracerClient(BaseAPIClient):
             f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/"
         )
 
+    def get_plots_analysis_report(
+        self,
+        plots_group_id: str,
+        plots_analysis_id: str,
+        report_id: str
+    ):
+        """
+        Get details about a report, including download links for its artifacts
+
+        Args:
+            plots_group_id: id of the plots group to which the report belong
+            plots_analysis_id: id of the plots analysis to which the report belong
+            report_id: id of the report
+
+        Returns:
+            ReportDetail: see
+                https://app-testing.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportForAnalysis
+        """
+        resp = self.sess.get(
+            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/{report_id}/")
+        )
+        _check_resp_is_ok(resp, f"Failed to get report {report_id}")
+        return resp.json()
+
     def list_plots_analyses_report_types(
         self,
         plots_group_id: str,

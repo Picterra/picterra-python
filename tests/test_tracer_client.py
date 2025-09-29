@@ -274,13 +274,41 @@ def test_download_plots_group(monkeypatch):
         "results": {"download_url": "https://a-group-id.example.com/geojson"}
     })
     polygons_fc = multipolygon_to_polygon_feature_collection(make_geojson_multipolygon())
-    responses.add(
+
+
+@responses.activate
+def test_get_plots_analysis_report(monkeypatch):
+    _add_api_response(
+        plots_analysis_api_url(
+            "plots_groups/a-group-id/analysis/a-analysis-id/reports/a-report-id/"
+        ),
         responses.GET,
-        "https://a-group-id.example.com/geojson",
-        body=json.dumps(polygons_fc),
+        {
+            "id": "a-report-id",
+            "name": "my report",
+            "created_at": "2025-09-29T10:04:08.143098Z",
+            "report_type": "eudr_export",
+            "artifacts": [
+                {
+                    "name": "EUDR Report",
+                    "filename": "2025-09-29-nightly-eudr-export.pdf",
+                    "size_bytes": 71802,
+                    "description": "A PDF report to be used for EUDR",
+                    "content_type": "application/pdf",
+                    "download_url": "http://example.com/report.pdf",
+                },
+                {
+                    "name": "EUDR Traces NT",
+                    "filename": "2025-09-29-nightly-eudr-export.geojson",
+                    "size_bytes": 877,
+                    "description": "A GeoJSON file that can be submitted to the EU Deforestation Due Diligence Registry",
+                    "content_type": "application/geo+json",
+                    "download_url": "http://example.com/traces.geojson",
+                },
+            ],
+        },
     )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
-    with tempfile.NamedTemporaryFile() as f:
-        client.download_plots_group_to_file("a-group-id", "geojson", f.name)
-        assert json.load(f) == polygons_fc
-    assert len(responses.calls) == 3
+    report = client.get_plots_analysis_report("a-group-id", "a-analysis-id", "a-report-id")
+    assert report["id"] == "a-report-id"
+    assert report["artifacts"][0]["name"] == "EUDR Report"
