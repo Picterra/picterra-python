@@ -295,15 +295,15 @@ class TracerClient(BaseAPIClient):
 
     def list_plots_analysis_reports(
         self,
-        plots_group_id: str,
         plots_analysis_id: str,
+        plots_group_id: str,
     ):
         """
         List all the reports belonging to a given plots analysis
 
         Args:
-            plots_group_id: id of the plots group on which we want to list the analyses
             plots_analysis_id: id of the plots analysis for which we want to list the reports
+            plots_group_id: id of the plots group on which we want to list the analyses
 
         Returns: see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportsList
         """  # noqa[E501]
@@ -313,15 +313,15 @@ class TracerClient(BaseAPIClient):
 
     def list_plots_analyses_report_types(
         self,
+        plots_analysis_id: str,
         plots_group_id: str,
-        plots_analysis_id: str
     ):
         """
         List all the plots analyses report types the user can use (see create_plots_analysis_report)
 
         Args:
-            plots_group_id: id of the plots group
             plots_analysis_id: id of the plots analysis
+            plots_group_id: id of the plots group
 
         Returns:
             see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportTypesForAnalysis
@@ -334,11 +334,12 @@ class TracerClient(BaseAPIClient):
 
     def create_plots_analysis_report_precheck(
         self,
-        plots_group_id: str,
         plots_analysis_id: str,
         report_name: str,
         plot_ids: List[str],
         report_type: str,
+        plots_group_id: str,
+        /,
         metadata: Optional[dict] = None
     ) -> dict:
         """
@@ -347,11 +348,11 @@ class TracerClient(BaseAPIClient):
         If the function fails, the report is not valid
 
         Args:
-            plots_group_id: id of the plots group
             plots_analysis_id: id of the plots analysis
             report_name: name to give to the report
             plot_ids: list of the plot ids to select for the report
             report_type: type of report to generate, as per list_plots_analyses_report_types
+            plots_group_id: id of the plots group
             metadata:  set of key-value pairs which may be included in the report
 
         Returns:
@@ -376,22 +377,23 @@ class TracerClient(BaseAPIClient):
 
     def create_plots_analysis_report(
         self,
-        plots_group_id: str,
         plots_analysis_id: str,
         report_name: str,
         plot_ids: List[str],
         report_type: str,
+        plots_group_id: str,
+        /,
         metadata: Optional[dict] = None
     ) -> str:
         """
         Creates a report
 
         Args:
-            plots_group_id: id of the plots group
             plots_analysis_id: id of the plots analysis
             report_name: name to give to the report
             plot_ids: list of the plot ids to select for the report
             report_type: type of report to generate, as per list_plots_analyses_report_types
+            plots_group_id: id of the plots group
             metadata:  set of key-value pairs which may be included in the report
 
         Returns:
@@ -415,13 +417,13 @@ class TracerClient(BaseAPIClient):
         report_id = op_result["results"]["plots_analysis_report_id"]
         return report_id
 
-    def get_plots_analysis(self, plots_group_id: str, plots_analysis_id: str):
+    def get_plots_analysis(self, plots_analysis_id: str, plots_group_id: str):
         """
         Get plots analysis information
 
         Args:
-            plots_group_id: id of the plots group
             plots_analysis_id: id of the plots analysis
+            plots_group_id: id of the plots group
 
         Raises:
             APIError: There was an error while getting the plots analysis information
@@ -433,14 +435,14 @@ class TracerClient(BaseAPIClient):
         _check_resp_is_ok(resp, "Failed to get plots analysis")
         return resp.json()
 
-    def get_plots_analysis_report(self, plots_group_id: str, plots_analysis_id: str, plots_analysis_report_id: str):
+    def get_plots_analysis_report(self, plots_analysis_report_id: str, plots_group_id: str, plots_analysis_id: str, ):
         """
         Get plots analysis report information
 
         Args:
+            plots_analysis_report_id: id of the plots analysis report
             plots_group_id: id of the plots group
             plots_analysis_id: id of the plots analysis
-            plots_analysis_report_id: id of the plots analysis report
 
         Raises:
             APIError: There was an error while getting the plots analysis report information
