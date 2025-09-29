@@ -317,7 +317,7 @@ def test_list_plots_analysis_report_types(monkeypatch):
             {"report_type": "type_3", "name": "a_4"},
         ],
     )
-    reports = client.list_plots_analyses_report_types("my-analysis-id", "my-pg-id")
+    reports = client.list_plots_analysis_report_types("my-analysis-id", "my-pg-id")
     assert len(reports) == 4
     assert reports[0]["report_type"] == "type_1" and reports[-1]["name"] == "a_4"
 
