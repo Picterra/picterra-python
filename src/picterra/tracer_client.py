@@ -311,7 +311,7 @@ class TracerClient(BaseAPIClient):
             f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/"
         )
 
-    def list_plots_analyses_report_types(
+    def list_plots_analysis_report_types(
         self,
         plots_analysis_id: str,
         plots_group_id: str,
@@ -339,7 +339,7 @@ class TracerClient(BaseAPIClient):
         plot_ids: List[str],
         report_type: str,
         plots_group_id: str,
-        /,
+        *,
         metadata: Optional[dict] = None
     ) -> dict:
         """
@@ -382,7 +382,7 @@ class TracerClient(BaseAPIClient):
         plot_ids: List[str],
         report_type: str,
         plots_group_id: str,
-        /,
+        *,
         metadata: Optional[dict] = None
     ) -> str:
         """
@@ -392,7 +392,7 @@ class TracerClient(BaseAPIClient):
             plots_analysis_id: id of the plots analysis
             report_name: name to give to the report
             plot_ids: list of the plot ids to select for the report
-            report_type: type of report to generate, as per list_plots_analyses_report_types
+            report_type: type of report to generate, as per list_plots_analysis_report_types
             plots_group_id: id of the plots group
             metadata:  set of key-value pairs which may be included in the report
 
