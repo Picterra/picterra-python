@@ -296,18 +296,18 @@ def test_download_plots_group(monkeypatch):
 @responses.activate
 def test_list_plots_analysis_reports(monkeypatch):
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
-    url = plots_analysis_api_url("plots_groups/FOO/analysis/BAR/reports/")
+    url = plots_analysis_api_url("plots_groups/my-pg-id/analysis/my-analysis-id/reports/")
     # Full list
     add_mock_paginated_list_response(url, num_results=3)
-    reports = client.list_plots_analysis_reports("FOO", "BAR")
+    reports = client.list_plots_analysis_reports("my-analysis-id", "my-pg-id")
     assert len(reports) == 3
     assert reports[0]["name"] == "a_1" and reports[-1]["name"] == "a_3"
 
 
 @responses.activate
-def test_list_plots_analyses_report_types(monkeypatch):
+def test_list_plots_analysis_report_types(monkeypatch):
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
-    url = plots_analysis_api_url("plots_groups/FOO/analysis/BAR/reports/types/")
+    url = plots_analysis_api_url("plots_groups/my-pg-id/analysis/my-analysis-id/reports/types/")
     responses.get(
         url,
         json=[
@@ -317,7 +317,7 @@ def test_list_plots_analyses_report_types(monkeypatch):
             {"report_type": "type_3", "name": "a_4"},
         ],
     )
-    reports = client.list_plots_analyses_report_types("FOO", "BAR")
+    reports = client.list_plots_analyses_report_types("my-analysis-id", "my-pg-id")
     assert len(reports) == 4
     assert reports[0]["report_type"] == "type_1" and reports[-1]["name"] == "a_4"
 
@@ -355,12 +355,12 @@ def test_create_plots_analysis_report_precheck(monkeypatch):
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
     assert client.create_plots_analysis_report_precheck(
-        "a-group-id",
         "an-analysis-id",
         "foobar",
         ["uno", "dos"],
         "a-report-type",
-        {"foo": "bar"}
+        "a-group-id",
+        metadata={"foo": "bar"}
     ) == {"status": "passed"}
 
 
@@ -397,12 +397,12 @@ def test_create_plots_analysis_report(monkeypatch):
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
     assert client.create_plots_analysis_report(
-        "a-group-id",
         "an-analysis-id",
         "foobar",
         ["uno", "dos"],
         "a-report-type",
-        {"foo": "bar"}
+        "a-group-id",
+        metadata={"foo": "bar"}
     ) == "a-report-id"
 
 
@@ -420,7 +420,7 @@ def test_get_plots_analysis(monkeypatch):
             "url": "https://app.picterra.ch/plots_analysis/plots_groups/136b812e-8d9c-418f-b317-8be5c7c6281d/analysis/cda443d7-5baf-483d-bb5e-fa1190180b0d/"  # noqa[E501]
         },
     )
-    plots_analysis = client.get_plots_analysis("a-plots-group", "an-analysis-id")
+    plots_analysis = client.get_plots_analysis("an-analysis-id", "a-plots-group")
     assert plots_analysis["id"] == "an-analysis-id"
     assert plots_analysis["name"] == "My Analysis"
 
@@ -458,6 +458,6 @@ def test_get_plots_analysis_report(monkeypatch):
         },
     )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
-    report = client.get_plots_analysis_report("a-group-id", "a-analysis-id", "a-report-id")
+    report = client.get_plots_analysis_report("a-report-id", "a-group-id", "a-analysis-id")
     assert report["id"] == "a-report-id"
     assert report["artifacts"][0]["name"] == "EUDR Report"
