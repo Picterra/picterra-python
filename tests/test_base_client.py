@@ -124,7 +124,7 @@ def test_results_page():
     )
     page1 = base_client.ResultsPage("http://example.com/page/1", requests.get)
     assert isinstance(page1, base_client.ResultsPage)
-    assert len(page1) == 2
+    assert len(page1) == 2 and page1.previous() is None
     assert page1[0] == "one" and page1[1] == "two"
     assert list(page1)[0] == "one" and list(page1)[1] == "two"
     assert str(page1) == "2 results from http://example.com/page/1"
@@ -133,3 +133,4 @@ def test_results_page():
     assert isinstance(page2, base_client.ResultsPage)
     assert len(page2) == 1 and page2[0] == "three"
     assert page2.next() is None
+    assert list(page2.previous())[0] == "one"
