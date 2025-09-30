@@ -226,7 +226,7 @@ class TracerClient(BaseAPIClient):
         plot_ids: List[str],
         date_from: datetime.date,
         date_to: datetime.date
-    ) -> dict:
+    ) -> str:
         """
         Runs the analysis for a given date over the plot ids of the specified plot group,
         and returns the URL where we can see the analysis in the Picterra platform.
@@ -241,7 +241,7 @@ class TracerClient(BaseAPIClient):
             date_to: end point in time at which the analysis should be evaluated.
 
         Returns:
-            dict: the analysis metadata.
+            dict: the analysis id.
         """
         upload_id, upload_url = self._make_upload()
         resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
@@ -256,12 +256,7 @@ class TracerClient(BaseAPIClient):
         _check_resp_is_ok(resp, "Couldn't start analysis")
         op_result = self._wait_until_operation_completes(resp.json())
         analysis_id = op_result["results"]["analysis_id"]
-        resp = self.sess.get(
-            self._full_url(f"plots_groups/{plots_group_id}/analysis/{analysis_id}/")
-        )
-        _check_resp_is_ok(resp, f"Failure to get analysis {analysis_id}")
-        analysis_data = resp.json()
-        return analysis_data
+        return analysis_id
 
     def list_plots_analyses(
         self,
