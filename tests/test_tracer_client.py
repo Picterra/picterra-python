@@ -422,6 +422,24 @@ def test_create_plots_analysis_report(monkeypatch):
 
 
 @responses.activate
+def test_get_plots_group(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    _add_api_response(
+        plots_analysis_api_url("plots_groups/a-plots-group/"),
+        responses.GET,
+        {
+            "id": "a-plots-group",
+            "name": "My Plots Group",
+            "created_at": "2025-09-29T10:04:08.143098Z",
+            "methodology": "Coffee - EUDR",
+        }
+    )
+    plots_group = client.get_plots_group("a-plots-group")
+    assert plots_group["id"] == "a-plots-group"
+    assert plots_group["name"] == "My Plots Group"
+
+
+@responses.activate
 def test_get_plots_analysis(monkeypatch):
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     _add_api_response(
