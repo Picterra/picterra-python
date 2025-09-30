@@ -260,6 +260,11 @@ def test_list_plots_analyses(monkeypatch):
     add_mock_paginated_list_response(url, 2, "m_2", "spam")
     plots_analyses = client.list_plots_analyses("spam", search="m_2", page_number=2)
     assert plots_analyses[0]["name"] == "spam_1"
+    # Test the include_archived flag
+    add_mock_paginated_list_response(url, include_archived=True, name_prefix="boo")
+    plots_analyses = client.list_plots_analyses("spam", include_archived=True)
+    assert len(plots_analyses) == 2
+    assert plots_analyses[0]["name"] == "boo_1"
 
 
 @responses.activate

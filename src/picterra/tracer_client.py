@@ -159,6 +159,7 @@ class TracerClient(BaseAPIClient):
         self,
         search: Optional[str] = None,
         page_number: Optional[int] = None,
+        include_archived: bool = False,
     ) -> ResultsPage:
         """
         List all the plots group the user can access, see `ResultsPage`
@@ -170,6 +171,7 @@ class TracerClient(BaseAPIClient):
         Args:
             search: The term used to filter by name
             page_number: Optional page (from 1) of the list we want to retrieve
+            include_archived: If true, includes archived plot groups in the results
 
         Returns:
             See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/plots-groups/operation/getPlotsGroupsList
@@ -179,6 +181,8 @@ class TracerClient(BaseAPIClient):
             data["search"] = search.strip()
         if page_number is not None:
             data["page_number"] = int(page_number)
+        if include_archived:
+            data["include_archived"] = include_archived
         return self._return_results_page("plots_groups", data)
 
     def analyze_plots_precheck(
@@ -263,6 +267,7 @@ class TracerClient(BaseAPIClient):
         plots_group_id: str,
         search: Optional[str] = None,
         page_number: Optional[int] = None,
+        include_archived: bool = False,
     ) -> ResultsPage:
         """
         List all the plots analyses the user can access, see `ResultsPage`
@@ -274,11 +279,14 @@ class TracerClient(BaseAPIClient):
             plots_group_id: id of the plots group on which we want to list the analyses
             search: The term used to filter by name
             page_number: Optional page (from 1) of the list we want to retrieve
+            include_archived: Defaults to false. If true, includes archived analyses in the results
 
         Returns:
             See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/analysis/operation/getPlotsAnalysesList
         """
         data: Dict[str, Any] = {}
+        if include_archived:
+            data["include_archived"] = str(include_archived).lower()
         if search is not None:
             data["search"] = search.strip()
         if page_number is not None:
@@ -289,19 +297,30 @@ class TracerClient(BaseAPIClient):
         self,
         plots_analysis_id: str,
         plots_group_id: str,
+        page_number: Optional[int] = None,
+        include_archived: bool = False,
     ) -> ResultsPage:
         """
-        List all the reports belonging to a given plots analysis
+        List all the reports belonging to a given plots analysis, see `ResultsPage`
+            for the pagination access pattern.
 
         Args:
             plots_analysis_id: id of the plots analysis for which we want to list the reports
             plots_group_id: id of the plots group on which we want to list the analyses
+            page_number: Optional page (from 1) of the list we want to retrieve
+            include_archived: Defaults to false. If true, includes archived analysis reports in the
+                              results
 
         Returns:
             See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportsList
         """  # noqa[E501]
+        params: Dict[str, Any] = {}
+        if page_number is not None:
+            params["page_number"] = int(page_number)
+        if include_archived:
+            params["include_archived"] = include_archived
         return self._return_results_page(
-            f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/"
+            f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/", params
         )
 
     def list_plots_analysis_report_types(
