@@ -467,6 +467,23 @@ class TracerClient(BaseAPIClient):
         report_id = op_result["results"]["plots_analysis_report_id"]
         return report_id
 
+    def get_plots_group(self, plots_group_id: str) -> dict:
+        """
+        Get plots group information
+
+        Args:
+            plots_group_id: id of the plots group
+
+        Raises:
+            APIError: There was an error while getting the plots group information
+
+        Returns:
+            dict: see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/plots-groups/operation/getPlotsGroup
+        """
+        resp = self.sess.get(self._full_url("plots_groups/%s/" % plots_group_id))
+        _check_resp_is_ok(resp, "Failed to get plots group")
+        return resp.json()
+
     def get_plots_analysis(self, plots_analysis_id: str, plots_group_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Get plots analysis information
