@@ -153,11 +153,6 @@ def test_analyse_plots(monkeypatch):
         "status": "success",
         "results": {"analysis_id": "an-analysis-id"}
     })
-    _add_api_response(
-        plots_analysis_api_url("plots_groups/a-group-id/analysis/an-analysis-id/"),
-        responses.GET,
-        {"url": "http://analysis.example.com"}
-    )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
         with open(tmp.name, "w") as f:
@@ -168,8 +163,7 @@ def test_analyse_plots(monkeypatch):
         ["uno", "dos"],
         datetime.date.fromisoformat("2023-01-01"),
         datetime.date.fromisoformat("2025-01-01")
-    )["url"] == "http://analysis.example.com"
-
+    ) == "an-analysis-id"
 
 
 @responses.activate
