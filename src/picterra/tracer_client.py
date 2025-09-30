@@ -50,7 +50,7 @@ class TracerClient(BaseAPIClient):
         self,
         search: Optional[str] = None,
         page_number: Optional[int] = None,
-    ):
+    ) -> ResultsPage:
         """
         List all the methodologies the user can access, see `ResultsPage`
             for the pagination access pattern.
@@ -60,8 +60,7 @@ class TracerClient(BaseAPIClient):
             page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
-            ResultsPage: A ResultsPage object that contains a slice of the list
-                of methodologies dictionaries
+            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/plots-groups/operation/getMethodologiesList
 
         Example:
 
@@ -114,7 +113,7 @@ class TracerClient(BaseAPIClient):
         self.update_plots_group_plots(op_result["plots_group_id"], plots_geometries_filenames)
         return op_result["plots_group_id"]
 
-    def update_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: List[str], delete_existing_plots: bool = False) -> Dict[str, Any]:
+    def update_plots_group_plots(self, plots_group_id: str, plots_geometries_filenames: List[str], delete_existing_plots: bool = False):
         """
         Updates the geometries of a given plots group
 
@@ -139,7 +138,7 @@ class TracerClient(BaseAPIClient):
         _check_resp_is_ok(resp, "Failure starting plots group update:")
         return self._wait_until_operation_completes(resp.json())
 
-    def download_plots_group_to_file(self, plots_group_id: str, format: Literal["excel", "geojson"], filename: str):
+    def download_plots_group_to_file(self, plots_group_id: str, format: Literal["excel", "geojson"], filename: str) -> None:
         """
         Downloads a plots group to a local file
 
@@ -160,7 +159,7 @@ class TracerClient(BaseAPIClient):
         self,
         search: Optional[str] = None,
         page_number: Optional[int] = None,
-    ):
+    ) -> ResultsPage:
         """
         List all the plots group the user can access, see `ResultsPage`
             for the pagination access pattern.
@@ -173,8 +172,7 @@ class TracerClient(BaseAPIClient):
             page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
-            ResultsPage: A ResultsPage object that contains a slice of the list
-                of plots group dictionaries
+            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/plots-groups/operation/getPlotsGroupsList
         """
         data: Dict[str, Any] = {}
         if search is not None:
@@ -270,7 +268,7 @@ class TracerClient(BaseAPIClient):
         plots_group_id: str,
         search: Optional[str] = None,
         page_number: Optional[int] = None,
-    ):
+    ) -> ResultsPage:
         """
         List all the plots analyses the user can access, see `ResultsPage`
             for the pagination access pattern.
@@ -283,8 +281,7 @@ class TracerClient(BaseAPIClient):
             page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
-            ResultsPage: A ResultsPage object that contains a slice of the list
-                of plots analyses dictionaries
+            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/analysis/operation/getPlotsAnalysesList
         """
         data: Dict[str, Any] = {}
         if search is not None:
@@ -297,7 +294,7 @@ class TracerClient(BaseAPIClient):
         self,
         plots_analysis_id: str,
         plots_group_id: str,
-    ):
+    ) -> ResultsPage:
         """
         List all the reports belonging to a given plots analysis
 
@@ -305,7 +302,8 @@ class TracerClient(BaseAPIClient):
             plots_analysis_id: id of the plots analysis for which we want to list the reports
             plots_group_id: id of the plots group on which we want to list the analyses
 
-        Returns: see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportsList
+        Returns:
+            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportsList
         """  # noqa[E501]
         return self._return_results_page(
             f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/"
@@ -315,7 +313,7 @@ class TracerClient(BaseAPIClient):
         self,
         plots_analysis_id: str,
         plots_group_id: str,
-    ):
+    ) -> List[Dict[str, Any]]:
         """
         List all the plots analyses report types the user can use (see create_plots_analysis_report)
 
@@ -324,7 +322,7 @@ class TracerClient(BaseAPIClient):
             plots_group_id: id of the plots group
 
         Returns:
-            see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportTypesForAnalysis
+            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportTypesForAnalysis
         """  # noqa[E501]
         resp = self.sess.get(
             self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/types/")
@@ -341,7 +339,7 @@ class TracerClient(BaseAPIClient):
         plots_group_id: str,
         *,
         metadata: Optional[dict] = None
-    ) -> dict:
+    ) -> Dict[str, Any]:
         """
         Check creation of a report with the given parameters is ok
 
@@ -417,7 +415,7 @@ class TracerClient(BaseAPIClient):
         report_id = op_result["results"]["plots_analysis_report_id"]
         return report_id
 
-    def get_plots_analysis(self, plots_analysis_id: str, plots_group_id: str):
+    def get_plots_analysis(self, plots_analysis_id: str, plots_group_id: str) -> Dict[str, Any]:
         """
         Get plots analysis information
 
@@ -435,7 +433,7 @@ class TracerClient(BaseAPIClient):
         _check_resp_is_ok(resp, "Failed to get plots analysis")
         return resp.json()
 
-    def get_plots_analysis_report(self, plots_analysis_report_id: str, plots_group_id: str, plots_analysis_id: str, ):
+    def get_plots_analysis_report(self, plots_analysis_report_id: str, plots_group_id: str, plots_analysis_id: str) -> Dict[str, Any]:
         """
         Get plots analysis report information
 
