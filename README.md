@@ -102,7 +102,9 @@ and verify no errors are output
 
 ## Release process
 
-1. Bump the version number in `setup.py`
+1. Preparatory work:
+   - 1.1 Bump the version number in `setup.py`
+   - 1.2 Update CHANGELOG.md (no need for all commits, just main changes with a tag)
 2. Manually run the [publish to testpypi workflow](https://github.com/Picterra/picterra-python/actions/workflows/python-publish-testpypi.yml)
 3. Check the publication result on [testpypi](https://test.pypi.org/project/picterra/)
 4. Create a release through github
