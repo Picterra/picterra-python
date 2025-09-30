@@ -18,7 +18,7 @@ class OAuthError(Exception):
     pass
 
 
-SCOPE = "scan"
+SCOPE = "scan"  # TODO based on oauth config on platform (needs change)
 
 # potential port range to be used to run local server
 # to handle authorization code callback
@@ -34,13 +34,6 @@ LOCAL_SERVER_MAX_WAIT_S = 60
 # localhost (127.0.0.1) to ensure the callback server is accessible
 # only from the local machine.
 LOCAL_SERVER_ADDRESS = "127.0.0.1"
-
-
-def long_running_function_mp(secs):
-    print(f"Timout is {secs}s")
-    for _ in range(secs):  # Simulate a long running task
-        time.sleep(1)
-        print("Tick")
 
 
 def _generate_pkce_pair():
@@ -133,13 +126,12 @@ class OAuthClient:
     def token_uri(self):
         return urljoin(self.picterra_uri, "o/token/")
 
-    def _get_access_token(self, code: str) -> None:
-        print(f"Getting access token with code {code[:4]} from {self.token_uri}...")
+    def _get_access_token(self, code: str) -> None: 
+        logger.debug(f"Getting access token with code {code[:4]} from {self.token_uri}...")
         resp = requests.post(
             self.token_uri,
             data={
                 "client_id": self._client_id,
-                #"client_secret": "pbkdf2_sha256$870000$V13WjHqsdkeKiEVt1sEzWR$NolL9+bb5Mh7S/YyKxQhDbWZbRZw60w/6xdrOXqjO8Y=",
                 "code": code,
                 "code_verifier": self.pkce_pair[0],
                 "redirect_uri": self.redirect_uri,
@@ -167,7 +159,7 @@ class OAuthClient:
 
     def start(self):
         self._spawn_server()
-        print(f"Login at {self.authorize_uri}")
+        logger.debug(f"Login at {self.authorize_uri}")
         webbrowser.open_new_tab(self.authorize_uri)
         self._wait_for_callback()
         # self.local_server.shutdown()
@@ -175,10 +167,6 @@ class OAuthClient:
             "token": self._access_token,
             "lifetime_s": self._lifetime_s,
         }
-
-    def stop(self, error_message: str) -> None:
-        #self.local_server.shutdown()
-        raise OAuthError(f"Error after login: {error_message}.")
 
     def process_callback(self, callback_url: str) -> None:
         """
@@ -190,7 +178,7 @@ class OAuthClient:
         - Save the token in configuration
         Any error during this process will raise a OAuthError
         """
-        print(f"Getting token from {callback_url[:7]}...")
+        logger.debug(f"Getting token from {callback_url[:7]}...")
         authorization_code = self._get_code(callback_url)
         self._get_access_token(authorization_code)
 
@@ -204,7 +192,7 @@ class OAuthClient:
                 )
                 self.local_server.timeout = LOCAL_SERVER_MAX_WAIT_S
                 self._port = port
-                print("Started local server on port %d" % port)
+                logger.debug("Started local server on port %d" % port)
                 break
             except OSError:
                 continue
@@ -220,10 +208,9 @@ class OAuthClient:
         """
         assert self.local_server is not None
         try:
-            print("Waiting for callback...")
+            logger.debug("Waiting for callback...")
             start_time = time.time()
             while self._handler_wrapper.complete is False:
-                print(449580593854096)
                 # Wait for callback on localserver including an authorization code
                 # any matching request will get processed by the request handler and
                 # the `process_callback` function
@@ -232,7 +219,7 @@ class OAuthClient:
                     raise OAuthError("Timeout waiting for callback.")
             if self._handler_wrapper.error_message is not None:
                 raise OAuthError(self._handler_wrapper.error_message)
-            print("Callback received.")
+            logger.debug("Callback received.")
         except KeyboardInterrupt:
             raise OAuthError("User stopped login process.")
         if self._handler_wrapper.error_message is not None:
@@ -273,33 +260,17 @@ class RequestHandlerWrapper:
                 if parsed_url.path == "/":
                     error_string = _get_error_param(parsed_url)
                     if error_string is not None:
-                        print(455676778676)
                         self_._end_request(200)
-                        # self.oauth_client.local_server.shutdown()
                         self.error_message = error_string
                     else:
                         try:
-                            print(4354456)
                             self.oauth_client.process_callback(callback_url)
-                            print(32222)
                             self_._end_request(200)
                         except Exception as error:
-                            print(77777, error)
                             self.error_message = str(error)
                             self_._end_request(400)
-                        # else:
-                        #     self_._end_request(  # TODO ???
-                        #         301,
-                        #         urljoin(
-                        #             self.oauth_client.dashboard_url, "authenticated"
-                        #         ),
-                        #     )
-                    print(9999999999999999)
-                    # indicate to the server to stop
                     self.complete = True
-                    #self_._end_request(200)
                 else:
-                    print(657889)
                     self_._end_request(404)
 
             def _end_request(self_, status_code: int) -> None:

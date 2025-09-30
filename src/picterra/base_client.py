@@ -73,6 +73,7 @@ class _RequestsSession(requests.Session):
 
     def __init__(self, *args, **kwargs):
         self.timeout = kwargs.pop("timeout")
+        #self.auth = kwargs.pop("auth")
         super().__init__(*args, **kwargs)
         self.headers.update(
             {
@@ -82,6 +83,7 @@ class _RequestsSession(requests.Session):
 
     def request(self, *args, **kwargs):
         kwargs.setdefault("timeout", self.timeout)
+        #kwargs.setdefault("auth", self.auth)
         return super().request(*args, **kwargs)
 
 
@@ -196,12 +198,15 @@ class AuthInitError(Exception):
 
 
 class ApiKeyAuth(AuthBase):
+    api_key: str
+
     def __init__(self):
         if os.environ.get("PICTERRA_API_KEY", None) is None:
             raise AuthInitError("PICTERRA_API_KEY environment variable not set")
+        self.api_key = os.environ.get("PICTERRA_API_KEY", None)
 
     def __call__(self, r):
-        r.headers['X-Api-Key'] = os.environ.get("PICTERRA_API_KEY", None)
+        r.headers['X-Api-Key'] = self.api_key
         return r
 
 
@@ -209,18 +214,16 @@ class Oauth2Auth(AuthBase):
     oauth_token: dict
 
     def __init__(self, base_url: str):
-        base_url = "http://100.81.123.76:8000"  # TODO remove
         cl = OAuthClient(CLIENT_ID, base_url)
         try:
             data = cl.start()
             self.oauth_token = data
-            print(333, self.oauth_token)
             print(f"{GREEN}Logged in at {base_url}.{RESET}")
         except OAuthError as e:
-            raise AuthInitError(f"{RED}Error during login: '{e}'{RESET}")
+            raise SystemExit(f"{RED}Error during login: '{e}'{RESET}")
 
     def __call__(self, r):
-        r.headers['Authorization'] = "Bearer " + self.oauth_token["access_token"]
+        r.headers['Authorization'] = "Bearer " + self.oauth_token["token"]
         return r
 
 
@@ -250,9 +253,9 @@ class BaseAPIClient:
             "PICTERRA_BASE_URL", "https://app.picterra.ch/"
         )
         if auth == "apikey":
-            auth = ApiKeyAuth()
+            auth_class = ApiKeyAuth()
         elif auth == "oauth2":
-            auth = Oauth2Auth(base_url)
+            auth_class = Oauth2Auth(base_url)
         else:
             raise RuntimeError("Invalid authentication method. Must be 'apikey' or 'oauth2'.")
         logger.info(
@@ -268,6 +271,7 @@ class BaseAPIClient:
         # Create the session with a default timeout (30 sec), that we can then
         # override on a per-endpoint basis (will be disabled for file uploads and downloads)
         self.sess = _RequestsSession(timeout=timeout)
+        self.sess.auth = auth_class
         # Retry: we set the HTTP codes for our throttle (429) plus possible gateway problems (50*),
         # and for polling methods (GET), as non-idempotent ones should be addressed via idempotency
         # key mechanism; given the algorithm is {<backoff_factor> * (2 **<retries-1>}, and we
