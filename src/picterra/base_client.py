@@ -147,21 +147,31 @@ class ResultsPage(Generic[T]):
 
     You can also get a specific page passing the page number to the ``list_XX`` function
     """
+    _fetch: Callable[[str], requests.Response]
+    _next_url: str | None
+    _prev_url: str | None
+    _results: list[T]
+    _url: str
 
     def __init__(self, url: str, fetch: Callable[[str], requests.Response]):
         resp = fetch(url)
         _check_resp_is_ok(resp, "Failed to get page")
         r: dict[str, Any] = resp.json()
         next_url: str | None = r["next"]
+        prev_url: str | None = r["previous"]
         results: list[T] = r["results"]
 
         self._fetch = fetch
         self._next_url = next_url
+        self._prev_url = prev_url
         self._results = results
         self._url = url
 
     def next(self):
         return ResultsPage(self._next_url, self._fetch) if self._next_url else None
+
+    def previous(self):
+        return ResultsPage(self._prev_url, self._fetch) if self._prev_url else None
 
     def __len__(self) -> int:
         return len(self._results)
