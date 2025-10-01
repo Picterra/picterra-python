@@ -17,6 +17,7 @@ from urllib.parse import urlencode, urljoin
 
 import requests
 from requests.adapters import HTTPAdapter
+from requests.auth import AuthBase
 from urllib3.util.retry import Retry
 
 logger = logging.getLogger()
@@ -197,6 +198,20 @@ class FeatureCollection(TypedDict):
     features: list[Feature]
 
 
+class ApiKeyAuth(AuthBase):
+    api_key: str
+
+    def __init__(self):
+        api_key = os.environ.get("PICTERRA_API_KEY", None)
+        if api_key is None:
+            raise APIError("PICTERRA_API_KEY environment variable is not defined")
+        self.api_key = api_key
+
+    def __call__(self, r):
+        r.headers['X-Api-Key'] = self.api_key
+        return r
+
+
 class BaseAPIClient:
     """
     Base class for Picterra API clients.
@@ -212,16 +227,13 @@ class BaseAPIClient:
             api_url: the api's base url. This is different based on the Picterra product used
                 and is typically defined by implementations of this client
             timeout: number of seconds before the request times out
-            max_retries: max attempts when ecountering gateway issues or throttles; see
+            max_retries: max attempts when encountering gateway issues or throttles; see
                 retry_strategy comment below
             backoff_factor: factor used nin the backoff algorithm; see retry_strategy comment below
         """
         base_url = os.environ.get(
             "PICTERRA_BASE_URL", "https://app.picterra.ch/"
         )
-        api_key = os.environ.get("PICTERRA_API_KEY", None)
-        if not api_key:
-            raise APIError("PICTERRA_API_KEY environment variable is not defined")
         logger.info(
             "Using base_url=%s, api_url=%s; %d max retries, %d backoff and %s timeout.",
             base_url,
@@ -231,9 +243,10 @@ class BaseAPIClient:
             timeout,
         )
         self.base_url = urljoin(base_url, api_url)
-        # Create the session with a default timeout (30 sec), that we can then
+        # Create the session with a default timeout (30 sec) and auth, that we can then
         # override on a per-endpoint basis (will be disabled for file uploads and downloads)
         self.sess = _RequestsSession(timeout=timeout)
+        self.sess.auth = ApiKeyAuth()  # Authentication
         # Retry: we set the HTTP codes for our throttle (429) plus possible gateway problems (50*),
         # and for polling methods (GET), as non-idempotent ones should be addressed via idempotency
         # key mechanism; given the algorithm is {<backoff_factor> * (2 **<retries-1>}, and we
@@ -248,8 +261,6 @@ class BaseAPIClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.sess.mount("https://", adapter)
         self.sess.mount("http://", adapter)
-        # Authentication
-        self.sess.headers.update({"X-Api-Key": api_key})
 
     def _full_url(self, path: str, params: dict[str, Any] | None = None):
         url = urljoin(self.base_url, path)
