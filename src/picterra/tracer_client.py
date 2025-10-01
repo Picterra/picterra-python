@@ -8,6 +8,7 @@ import datetime
 import json
 import os.path
 import sys
+import warnings
 
 if sys.version_info >= (3, 8):
     from typing import Any, Dict, List, Literal, Optional, Tuple
@@ -296,7 +297,7 @@ class TracerClient(BaseAPIClient):
     def list_plots_analysis_reports(
         self,
         plots_analysis_id: str,
-        plots_group_id: str,
+        plots_group_id: Optional[str] = None,
         page_number: Optional[int] = None,
         include_archived: bool = False,
     ) -> ResultsPage:
@@ -306,40 +307,50 @@ class TracerClient(BaseAPIClient):
 
         Args:
             plots_analysis_id: id of the plots analysis for which we want to list the reports
-            plots_group_id: id of the plots group on which we want to list the analyses
             page_number: Optional page (from 1) of the list we want to retrieve
             include_archived: Defaults to false. If true, includes archived analysis reports in the
                               results
 
+        Deprecated arguments:
+            plots_group_id: ignored, do not provide it
+
         Returns:
             See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportsList
         """  # noqa[E501]
+        if plots_group_id is not None:
+            warnings.warn("Passing plots_group_id is not needed anymore, remove it", DeprecationWarning)
+
         params: Dict[str, Any] = {}
         if page_number is not None:
             params["page_number"] = int(page_number)
         if include_archived:
             params["include_archived"] = include_archived
         return self._return_results_page(
-            f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/", params
+            f"plots_analyses/{plots_analysis_id}/reports/", params
         )
 
     def list_plots_analysis_report_types(
         self,
         plots_analysis_id: str,
-        plots_group_id: str,
+        plots_group_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         List all the plots analyses report types the user can use (see create_plots_analysis_report)
 
         Args:
             plots_analysis_id: id of the plots analysis
-            plots_group_id: id of the plots group
+
+        Deprecated arguments:
+            plots_group_id: ignored, do not provide it
 
         Returns:
             See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportTypesForAnalysis
         """  # noqa[E501]
+        if plots_group_id is not None:
+            warnings.warn("Passing plots_group_id is not needed anymore, remove it", DeprecationWarning)
+
         resp = self.sess.get(
-            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/types/")
+            self._full_url(f"plots_analyses/{plots_analysis_id}/reports/types/")
         )
         _check_resp_is_ok(resp, "Couldn't list report types")
         return resp.json()
@@ -350,7 +361,7 @@ class TracerClient(BaseAPIClient):
         report_name: str,
         plot_ids: List[str],
         report_type: str,
-        plots_group_id: str,
+        plots_group_id: Optional[str] = None,
         *,
         metadata: Optional[dict] = None
     ) -> Dict[str, Any]:
@@ -364,12 +375,17 @@ class TracerClient(BaseAPIClient):
             report_name: name to give to the report
             plot_ids: list of the plot ids to select for the report
             report_type: type of report to generate, as per list_plots_analyses_report_types
-            plots_group_id: id of the plots group
             metadata:  set of key-value pairs which may be included in the report
+
+        Deprecated arguments:
+            plots_group_id: ignored, do not provide it
 
         Returns:
             dict: the precheck data
         """
+        if plots_group_id is not None:
+            warnings.warn("Passing plots_group_id is not needed anymore, remove it", DeprecationWarning)
+
         upload_id, upload_url = self._make_upload()
         resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
         _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
@@ -380,7 +396,7 @@ class TracerClient(BaseAPIClient):
             "metadata": metadata if metadata is not None else {}
         }
         resp = self.sess.post(
-            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/precheck/"),
+            self._full_url(f"plots_analyses/{plots_analysis_id}/reports/precheck/"),
             json=data
         )
         _check_resp_is_ok(resp, "Failure starting precheck")
@@ -393,7 +409,7 @@ class TracerClient(BaseAPIClient):
         report_name: str,
         plot_ids: List[str],
         report_type: str,
-        plots_group_id: str,
+        plots_group_id: Optional[str] = None,
         *,
         metadata: Optional[dict] = None
     ) -> str:
@@ -405,12 +421,17 @@ class TracerClient(BaseAPIClient):
             report_name: name to give to the report
             plot_ids: list of the plot ids to select for the report
             report_type: type of report to generate, as per list_plots_analysis_report_types
-            plots_group_id: id of the plots group
             metadata:  set of key-value pairs which may be included in the report
+
+        Deprecated arguments:
+            plots_group_id: ignored, do not provide it
 
         Returns:
             str: the id of the new report
         """
+        if plots_group_id is not None:
+            warnings.warn("Passing plots_group_id is not needed anymore, remove it", DeprecationWarning)
+
         upload_id, upload_url = self._make_upload()
         resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
         _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
@@ -421,7 +442,7 @@ class TracerClient(BaseAPIClient):
             "metadata": metadata if metadata is not None else {}
         }
         resp = self.sess.post(
-            self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/"),
+            self._full_url(f"plots_analyses/{plots_analysis_id}/reports/"),
             json=data
         )
         _check_resp_is_ok(resp, "Failure starting analysis precheck")
@@ -429,32 +450,36 @@ class TracerClient(BaseAPIClient):
         report_id = op_result["results"]["plots_analysis_report_id"]
         return report_id
 
-    def get_plots_analysis(self, plots_analysis_id: str, plots_group_id: str) -> Dict[str, Any]:
+    def get_plots_analysis(self, plots_analysis_id: str, plots_group_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Get plots analysis information
 
         Args:
             plots_analysis_id: id of the plots analysis
-            plots_group_id: id of the plots group
 
-        Raises:
-            APIError: There was an error while getting the plots analysis information
+        Deprecated arguments:
+            plots_group_id: ignored, do not provide it
 
         Returns:
             dict: see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/analysis/operation/getAnalysis
         """
-        resp = self.sess.get(self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/"))
+        if plots_group_id is not None:
+            warnings.warn("Passing plots_group_id is not needed anymore, remove it", DeprecationWarning)
+
+        resp = self.sess.get(self._full_url(f"plots_analyses/{plots_analysis_id}/"))
         _check_resp_is_ok(resp, "Failed to get plots analysis")
         return resp.json()
 
-    def get_plots_analysis_report(self, plots_analysis_report_id: str, plots_group_id: str, plots_analysis_id: str) -> Dict[str, Any]:
+    def get_plots_analysis_report(self, plots_analysis_report_id: str, plots_group_id: Optional[str] = None, plots_analysis_id: Optional[str] = None)  -> Dict[str, Any]:
         """
         Get plots analysis report information
 
         Args:
             plots_analysis_report_id: id of the plots analysis report
-            plots_group_id: id of the plots group
-            plots_analysis_id: id of the plots analysis
+
+        Deprecated arguments:
+            plots_group_id: ignored, do not provide it
+            plots_analysis_id: ignored, do not provide it
 
         Raises:
             APIError: There was an error while getting the plots analysis report information
@@ -462,6 +487,9 @@ class TracerClient(BaseAPIClient):
         Returns:
             dict: see https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportForAnalysis
         """
-        resp = self.sess.get(self._full_url(f"plots_groups/{plots_group_id}/analysis/{plots_analysis_id}/reports/{plots_analysis_report_id}/"))
+        if plots_group_id is not None or plots_analysis_id is not None:
+            warnings.warn("Passing plots_group_id/plots_analysis_id is not needed anymore, remove it", DeprecationWarning)
+
+        resp = self.sess.get(self._full_url(f"plots_analysis_reports/{plots_analysis_report_id}/"))
         _check_resp_is_ok(resp, "Failed to get plots analysis report")
         return resp.json()
