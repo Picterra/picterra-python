@@ -51,3 +51,12 @@ jobs:
         cd docs
         python -m pip install -r requirements.txt
         make html
+  guidelines:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: check commits format
+      run: |
+        scripts/check_commit_titles.sh ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }}
