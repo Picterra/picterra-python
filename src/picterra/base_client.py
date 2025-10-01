@@ -121,7 +121,7 @@ def multipolygon_to_polygon_feature_collection(mp):
 
 def _check_resp_is_ok(resp: requests.Response, msg: str) -> None:
     if not resp.ok:
-        raise APIError("%s (status %d): %s" % (msg, resp.status_code, resp.text))
+        raise APIError("%s (url %s, status %d): %s" % (msg, resp.url, resp.status_code, resp.text))
 
 
 T = TypeVar("T")
