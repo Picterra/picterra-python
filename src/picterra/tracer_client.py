@@ -167,6 +167,7 @@ class TracerClient(BaseAPIClient):
         search: Optional[str] = None,
         page_number: Optional[int] = None,
         include_archived: bool = False,
+        methodology: Optional[str] = None
     ) -> ResultsPage:
         """
         List all the plots group the user can access, see `ResultsPage`
@@ -179,6 +180,7 @@ class TracerClient(BaseAPIClient):
             search: The term used to filter by name
             page_number: Optional page (from 1) of the list we want to retrieve
             include_archived: If true, includes archived plot groups in the results
+            methodology: If not None, filters the groups by the methodology (eg "Coffee - EUDR")
 
         Returns:
             See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/plots-groups/operation/getPlotsGroupsList
@@ -190,6 +192,8 @@ class TracerClient(BaseAPIClient):
             data["page_number"] = int(page_number)
         if include_archived:
             data["include_archived"] = include_archived
+        if methodology is not None:
+            data["methodology"] = methodology
         return self._return_results_page("plots_groups", data)
 
     def analyze_plots_precheck(
@@ -304,6 +308,8 @@ class TracerClient(BaseAPIClient):
         plots_group_id: Optional[str] = None,
         page_number: Optional[int] = None,
         include_archived: bool = False,
+        search: Optional[str] = None,
+        report_type: Optional[str] = None,
     ) -> ResultsPage:
         """
         List all the reports belonging to a given plots analysis, see `ResultsPage`
@@ -314,6 +320,9 @@ class TracerClient(BaseAPIClient):
             page_number: Optional page (from 1) of the list we want to retrieve
             include_archived: Defaults to false. If true, includes archived analysis reports in the
                               results
+            search: Optional term to search report types by name
+            report_type: Optional type of report to restrict the list by, use list_plots_analysis_report_types
+                to know which the available report types are
 
         Deprecated arguments:
             plots_group_id: ignored, do not provide it
@@ -329,6 +338,10 @@ class TracerClient(BaseAPIClient):
             params["page_number"] = int(page_number)
         if include_archived:
             params["include_archived"] = include_archived
+        if search is not None:
+            params["search"] = search.strip()
+        if report_type is not None:
+            params["report_type"] = report_type
         return self._return_results_page(
             f"plots_analyses/{plots_analysis_id}/reports/", params
         )
@@ -337,12 +350,14 @@ class TracerClient(BaseAPIClient):
         self,
         plots_analysis_id: str,
         plots_group_id: Optional[str] = None,
+        search: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         List all the plots analyses report types the user can use (see create_plots_analysis_report)
 
         Args:
             plots_analysis_id: id of the plots analysis
+            search: optional term to search report types by name, if any
 
         Deprecated arguments:
             plots_group_id: ignored, do not provide it
@@ -353,8 +368,12 @@ class TracerClient(BaseAPIClient):
         if plots_group_id is not None:
             warnings.warn("Passing plots_group_id is not needed anymore, remove it", DeprecationWarning)
 
+        params: Dict[str, Any] = {}
+        if search is not None:
+            params["search"] = search.strip()
         resp = self.sess.get(
-            self._full_url(f"plots_analyses/{plots_analysis_id}/reports/types/")
+            self._full_url(f"plots_analyses/{plots_analysis_id}/reports/types/"),
+            params=params
         )
         _check_resp_is_ok(resp, "Couldn't list report types")
         return resp.json()

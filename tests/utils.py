@@ -53,7 +53,15 @@ def plots_analysis_api_url(path):
     return urljoin(TEST_API_URL, urljoin("public/api/plots_analysis/v1/", path))
 
 
-def add_mock_paginated_list_response(endpoint: str, page: int = 1, search_string: str = None, name_prefix: str = "a", num_results: int = 2, include_archived: Optional[bool] = None):
+def add_mock_paginated_list_response(
+    endpoint: str,
+    page: int = 1,
+    search_string: str = None,
+    name_prefix: str = "a",
+    num_results: int = 2,
+    include_archived: Optional[bool] = None,
+    qs: Optional[dict] = None
+):
     curr, next = str(page), str(page + 1)
     data1 = {
         "count": num_results * num_results,
@@ -67,11 +75,12 @@ def add_mock_paginated_list_response(endpoint: str, page: int = 1, search_string
     qs_params = {"page_number": curr}
     if search_string:
         qs_params["search"] = search_string
+    if qs is not None:
+        qs_params.update(qs)
     if include_archived is not None:
         qs_params["include_archived"] = str(include_archived).lower()
     _add_api_response(
-        endpoint + "?page_number=" + curr + (("&search=" + search_string) if search_string else "") + (
-            "&include_archived=" + str(include_archived).lower() if include_archived is not None else ""),
+        endpoint,
         match=responses.matchers.query_param_matcher(qs_params),
         json=data1,
     )

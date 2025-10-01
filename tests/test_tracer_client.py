@@ -244,6 +244,10 @@ def test_list_plots_groups(monkeypatch):
     add_mock_paginated_list_response(url, 2, "m_2", "spam")
     plots_groups = client.list_plots_groups(search="m_2", page_number=2)
     assert plots_groups[0]["name"] == "spam_1"
+    # Filter list
+    add_mock_paginated_list_response(url, qs={"methodology": "cocoa"})
+    plots_groups = client.list_plots_groups(methodology="cocoa")
+    assert plots_groups[0]["name"] == "a_1"
 
 
 @responses.activate
@@ -301,13 +305,17 @@ def test_list_plots_analysis_reports(monkeypatch):
     reports = client.list_plots_analysis_reports("my-analysis-id")
     assert len(reports) == 3
     assert reports[0]["name"] == "a_1" and reports[-1]["name"] == "a_3"
+    # test search and filter
+    add_mock_paginated_list_response(url, qs={"report_type": "type_1", "search": "spam"})
+    reports = client.list_plots_analysis_reports("my-analysis-id", search="spam", report_type="type_1")
+    assert len(reports) == 2
 
 
 @responses.activate
 def test_list_plots_analysis_report_types(monkeypatch):
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     url = plots_analysis_api_url("plots_analyses/my-analysis-id/reports/types/")
-    responses.get(
+    _add_api_response(
         url,
         json=[
             {"report_type": "type_1", "name": "a_1"},
@@ -319,6 +327,16 @@ def test_list_plots_analysis_report_types(monkeypatch):
     reports = client.list_plots_analysis_report_types("my-analysis-id")
     assert len(reports) == 4
     assert reports[0]["report_type"] == "type_1" and reports[-1]["name"] == "a_4"
+    _add_api_response(
+        url,
+        json=[
+            {"report_type": "type_1", "name": "a_1"},
+            {"report_type": "type_2", "name": "a_2"},
+        ],
+        match=responses.matchers.query_param_matcher({"search": "spam"})
+    )
+    reports = client.list_plots_analysis_report_types("my-analysis-id", search="spam")
+    assert len(reports) == 2
 
 
 @responses.activate
