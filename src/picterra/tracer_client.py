@@ -47,6 +47,12 @@ class TracerClient(BaseAPIClient):
         upload_id, upload_url = resp.json()["upload_id"], resp.json()["upload_url"]
         return upload_id, upload_url
 
+    def _upload_plot_ids(self, plot_ids: List[str]) -> str:
+        upload_id, upload_url = self._make_upload()
+        resp = requests.put(upload_url, json={"plot_ids": plot_ids})
+        _check_resp_is_ok(resp, "Failure uploading plots file")
+        return upload_id
+
     def list_methodologies(
         self,
         search: Optional[str] = None,
@@ -246,11 +252,9 @@ class TracerClient(BaseAPIClient):
             date_to: end point in time at which the analysis should be evaluated.
 
         Returns:
-            dict: the analysis id.
+            str: the analysis id.
         """
-        upload_id, upload_url = self._make_upload()
-        resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
-        _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
+        upload_id = self._upload_plot_ids(plot_ids)
         data = {
             "analysis_name": plots_analysis_name,
             "upload_id": upload_id,
@@ -385,10 +389,7 @@ class TracerClient(BaseAPIClient):
         """
         if plots_group_id is not None:
             warnings.warn("Passing plots_group_id is not needed anymore, remove it", DeprecationWarning)
-
-        upload_id, upload_url = self._make_upload()
-        resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
-        _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
+        upload_id = self._upload_plot_ids(plot_ids)
         data = {
             "name": report_name,
             "upload_id": upload_id,
@@ -431,10 +432,7 @@ class TracerClient(BaseAPIClient):
         """
         if plots_group_id is not None:
             warnings.warn("Passing plots_group_id is not needed anymore, remove it", DeprecationWarning)
-
-        upload_id, upload_url = self._make_upload()
-        resp = requests.put(upload_url, data=json.dumps({"plot_ids": plot_ids}))
-        _check_resp_is_ok(resp, "Failure uploading plots file for analysis")
+        upload_id = self._upload_plot_ids(plot_ids)
         data = {
             "name": report_name,
             "upload_id": upload_id,
