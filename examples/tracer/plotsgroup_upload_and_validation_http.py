@@ -19,7 +19,7 @@ import requests
 # You should change these to supply your own details
 ####
 PICTERRA_API_KEY = "PUT-YOUR-KEY-HERE"
-METHODOLOGY_NAME = "eudr_coffee"
+METHODOLOGY_NAME = "coffee"
 PLOTS_GROUP_NAME = "My plots group"
 # You can specify multiple files in this list, they will be combined into a single plots group
 FILES_TO_UPLOAD = ["plots.geojson"]
@@ -85,7 +85,7 @@ def post_to_api(endpoint: str, data: dict):
 # (defined in the INPUT variables section above)
 print(f"Listing methodologies and finding methodology ID for {METHODOLOGY_NAME}...")
 results = get_from_api(f"/methodologies/?search={METHODOLOGY_NAME}")["results"]
-assert len(results) == 1, f"Cannot determine methodology ID. Found more than one methodology when searching for {METHODOLOGY_NAME}"
+assert len(results) == 1, f"Cannot determine methodology ID when searching for {METHODOLOGY_NAME}"
 methodology_id = results[0]["id"]
 
 
@@ -114,7 +114,7 @@ for filename in FILES_TO_UPLOAD:
 # Start the operation to parse and merge the plots (set overwrite to True to replace all
 # existing plots)
 poll_details = post_to_api(
-    "/plots_groups/{plots_group_id}/upload/commit/",
+    f"/plots_groups/{plots_group_id}/upload/commit/",
     data={"files": files, "overwrite": False}
 )
 wait_for_operation_to_complete(poll_details)
@@ -133,7 +133,7 @@ plot_ids = { "plot_ids": [p["properties"]["plot_id"] for p in plots["features"]]
 with open("plot_ids.json", "w") as f:
     json.dump(plot_ids, f)
 
-# Precheck and run analysis
+# Precheck to check conformity
 print(f"Analysis precheck...")
 ## Upload the file containing the ids of plots to analyse
 upload = post_to_api("/upload/file/", data={})
@@ -149,10 +149,13 @@ poll_details = post_to_api(f"/plots_groups/{plots_group_id}/analysis/precheck/",
     "upload_id": upload["upload_id"]
 })
 completed_operation_response = wait_for_operation_to_complete(poll_details)
-precheck_result = completed_operation_response["results"]["result"]
+precheck_result_url = completed_operation_response["results"]["precheck_data_url"]
+resp = requests.get(precheck_result_url)
+resp.raise_for_status()
+precheck_result = resp.json()['status']
 assert precheck_result in ["passed", "failed"], f"Unable to determine conformity from unknown precheck result {precheck_result}"
 conform = False
-if completed_operation_response["results"]["result"] == "passed":
+if precheck_result == "passed":
     conform = True
 
 if conform:
