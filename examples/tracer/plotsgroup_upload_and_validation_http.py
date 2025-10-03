@@ -62,7 +62,8 @@ def wait_for_operation_to_complete(poll_details):
         current_status = resp.json()["status"]
         if current_status not in ("failed", "success"):
             print(
-                f"Operation status: {current_status}. Waiting {poll_details['poll_interval']} seconds...")
+                f"Operation status: {current_status}. Waiting {poll_details['poll_interval']} seconds..."
+            )
             time.sleep(poll_details["poll_interval"])
         else:
             print(f"Operation status: {current_status}.")
@@ -169,7 +170,9 @@ with NamedTemporaryFile(suffix="json") as plot_ids_file:
     print(f"Analysis precheck...")
     ## Upload the file containing the ids of plots to analyse
     upload = post_to_api("/upload/file/", data={})
-    with open(plot_ids_file.name) as f:  # a JSON file as an object with one "plot_ids" array
+    with open(
+        plot_ids_file.name
+    ) as f:  # a JSON file as an object with one "plot_ids" array
         data = json.load(f)
     requests.put(upload["upload_url"], json=data)
 
@@ -203,8 +206,15 @@ else:
         f.write("plot_id,messages\n")
         for plot in plots["features"]:
             # ignore diagnostics of type "warning" and "info" which do not impact conformity
-            diagnostic_messages = [f"\"{p["severity"]}:{p["message"]}\"" for p in plot["diagnostics"] if p["severity"] in ["critical", "high"]]
+            diagnostic_messages = [
+                f'"{p["severity"]}:{p["message"]}"'
+                for p in plot["diagnostics"]
+                if p["severity"] in ["critical", "high"]
+            ]
             if len(diagnostic_messages) > 0:
-                f.write(f"{plot['properties']['plot_id']},{",".join(diagnostic_messages)}\n")
-    print("Plots group has diagnostics which need addressing before analysis, results in diagnostics.csv")
-
+                f.write(
+                    f"{plot['properties']['plot_id']},{",".join(diagnostic_messages)}\n"
+                )
+    print(
+        "Plots group has diagnostics which need addressing before analysis, results in diagnostics.csv"
+    )

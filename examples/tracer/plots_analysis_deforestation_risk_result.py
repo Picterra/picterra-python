@@ -37,6 +37,7 @@ ANALYSIS_DATE = datetime.date.today().isoformat()
 ROOT_URL = "https://app.picterra.ch/public/api/plots_analysis/v1"
 AUTH_HEADERS = {"x-api-key": PICTERRA_API_KEY}
 
+
 ####
 # Helper functions
 #
@@ -120,21 +121,27 @@ poll_details = post_to_api(
 completed_operation_response = wait_for_operation_to_complete(poll_details)
 analysis_id = completed_operation_response["results"]["analysis_id"]
 
-analysis_detail = get_from_api(f"/plots_groups/{PLOTS_GROUP_ID}/analysis/{analysis_id}/")
+analysis_detail = get_from_api(
+    f"/plots_groups/{PLOTS_GROUP_ID}/analysis/{analysis_id}/"
+)
 print(f"Analysis done. Browse url:\n{analysis_detail['url']}")
 
 # List reports and get the eudr_global report
 print("Listing reports...")
-report_list = get_from_api(f"/plots_groups/{PLOTS_GROUP_ID}/analysis/{analysis_id}/reports/")
+report_list = get_from_api(
+    f"/plots_groups/{PLOTS_GROUP_ID}/analysis/{analysis_id}/reports/"
+)
 report_id = None
 for result in report_list["results"]:
     print(f"{result['name']}\t{result['report_type']}\t{result['id']}")
-    if result['report_type'] == 'eudr_global':
+    if result["report_type"] == "eudr_global":
         report_id = result["id"]
 
 # Download the report's details
 # Get report details including download URLs
-report = get_from_api(f"/plots_groups/{PLOTS_GROUP_ID}/analysis/{analysis_id}/reports/{report_id}/")
+report = get_from_api(
+    f"/plots_groups/{PLOTS_GROUP_ID}/analysis/{analysis_id}/reports/{report_id}/"
+)
 print(f"Downloading geojson format report")
 for artifact in report["artifacts"]:
     # only download the geojson report
@@ -148,7 +155,7 @@ with open("analysis_details.json", "r") as f:
     for section in analysis["aggregate_stats"]["sections"]:
         if section["title"] == "Deforestation":
             for datum in section["data"]:
-                results[datum['name']] = results[datum['value']]
+                results[datum["name"]] = results[datum["value"]]
     if results["High"] > 0:
         print("Overall risk is High")
         high_risk = True
