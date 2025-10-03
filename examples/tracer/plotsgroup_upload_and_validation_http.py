@@ -21,6 +21,8 @@ import requests
 PICTERRA_API_KEY = "PUT-YOUR-KEY-HERE"
 METHODOLOGY_NAME = "coffee"
 PLOTS_GROUP_NAME = "My plots group"
+# You can ask picterra support for your organization ID
+ORGANIZATION_ID = "PUT-YOUR-ORGANIZATION-ID-HERE"
 # You can specify multiple files in this list, they will be combined into a single plots group
 FILES_TO_UPLOAD = ["plots.geojson"]
 # The beginning of the analysis period in this example is always the EUDR cut-off date 2020-12-31
@@ -75,9 +77,10 @@ def post_to_api(endpoint: str, data: dict):
 #
 # 1. Find the methodology ID for the methodology name provided in the input variables
 # 2. Create a new plots group with the plots group name provided in the input variables
-# 3. Upload the provided plot geometries files and ingest them to the plots group
-# 4. Retrieve the ingested plots group in geojson format and generate a list of plot ids from it
-# 5. Run an analysis precheck for the generated list of plot ids (from step 4) and report on the
+# 3. Set permissions to share the plots group with the whole organization
+# 4. Upload the provided plot geometries files and ingest them to the plots group
+# 5. Retrieve the ingested plots group in geojson format and generate a list of plot ids from it
+# 6. Run an analysis precheck for the generated list of plot ids (from step 4) and report on the
 #    conformity with methodology rules
 ####
 
@@ -97,6 +100,19 @@ poll_details = post_to_api(f"/plots_groups/", data={
 })
 completed_operation_response = wait_for_operation_to_complete(poll_details)
 plots_group_id = completed_operation_response["results"]["plots_group_id"]
+
+# Share the plots group with the organization
+print(f"Sharing plots group with the organization...")
+new_permission = {
+      "grantee": {
+        "type": "organization",
+        "id": ORGANIZATION_ID
+      },
+      "role": "modify"
+    }
+permissions = get_from_api(f"permissions/plots_group/{plots_group_id}/")
+permissions["permissions"].append(new_permission)
+post_to_api(f"permissions/plots_group/{plots_group_id}/", data=permissions)
 
 # Upload and commit plots data
 print("Uploading plots...")
