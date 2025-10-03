@@ -10,6 +10,7 @@ import json
 import os
 import time
 import urllib.request
+from tempfile import NamedTemporaryFile
 
 import requests
 
@@ -59,7 +60,12 @@ def wait_for_operation_to_complete(poll_details):
         )
         resp.raise_for_status()
         current_status = resp.json()["status"]
-        time.sleep(poll_details["poll_interval"])
+        if current_status not in ("failed", "success"):
+            print(
+                f"Operation status: {current_status}. Waiting {poll_details['poll_interval']} seconds...")
+            time.sleep(poll_details["poll_interval"])
+        else:
+            print(f"Operation status: {current_status}.")
     assert current_status == "success", (
         "Operation failed: " + resp.json()["errors"]["message"]
     )
@@ -149,21 +155,23 @@ poll_details = post_to_api(
 completed_operation_response = wait_for_operation_to_complete(poll_details)
 download_url = completed_operation_response["results"]["download_url"]
 # Download the results file
-urllib.request.urlretrieve(download_url, "export.geojson")
-# Extract plot ids from that file
-with open("export.geojson", "r") as f:
-    plots = json.load(f)
+with NamedTemporaryFile(suffix="geojson") as export_geojson:
+    urllib.request.urlretrieve(download_url, export_geojson.name)
+    # Extract plot ids from that file
+    with open(export_geojson.name, "r") as f:
+        plots = json.load(f)
 plot_ids = {"plot_ids": [p["properties"]["plot_id"] for p in plots["features"]]}
-with open("plot_ids.json", "w") as f:
-    json.dump(plot_ids, f)
+with NamedTemporaryFile(suffix="json") as plot_ids_file:
+    with open(plot_ids_file.name, "w") as f:
+        json.dump(plot_ids, f)
 
-# Precheck to check conformity
-print(f"Analysis precheck...")
-## Upload the file containing the ids of plots to analyse
-upload = post_to_api("/upload/file/", data={})
-with open("plot_ids.json") as f:  # a JSON file as an object with one "plot_ids" array
-    data = json.load(f)
-requests.put(upload["upload_url"], json=data)
+    # Precheck to check conformity
+    print(f"Analysis precheck...")
+    ## Upload the file containing the ids of plots to analyse
+    upload = post_to_api("/upload/file/", data={})
+    with open(plot_ids_file.name) as f:  # a JSON file as an object with one "plot_ids" array
+        data = json.load(f)
+    requests.put(upload["upload_url"], json=data)
 
 # Precheck the plots to get whether they conform to the methodology rules
 poll_details = post_to_api(
@@ -182,7 +190,7 @@ resp.raise_for_status()
 precheck_result = resp.json()["status"]
 assert precheck_result in [
     "passed",
-    "failed",
+    "non-conforming",
 ], f"Unable to determine conformity from unknown precheck result {precheck_result}"
 conform = False
 if precheck_result == "passed":
@@ -191,4 +199,12 @@ if precheck_result == "passed":
 if conform:
     print("Plots group conforms and is ready for analysis")
 else:
-    print("Plots group has diagnostics which need addressing before analysis")
+    with open("diagnostics.csv", "w") as f:
+        f.write("plot_id,messages\n")
+        for plot in plots["features"]:
+            # ignore diagnostics of type "warning" and "info" which do not impact conformity
+            diagnostic_messages = [f"\"{p["severity"]}:{p["message"]}\"" for p in plot["diagnostics"] if p["severity"] in ["critical", "high"]]
+            if len(diagnostic_messages) > 0:
+                f.write(f"{plot['properties']['plot_id']},{",".join(diagnostic_messages)}\n")
+    print("Plots group has diagnostics which need addressing before analysis, results in diagnostics.csv")
+
