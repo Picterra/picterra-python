@@ -44,7 +44,7 @@ class ForgeClient(BaseAPIClient):
         folder_id: str | None = None,
         captured_at: str | None = None,
         identity_key: str | None = None,
-        multispectral: bool = False,
+        multispectral: bool = True,
         cloud_coverage: int | None = None,
         user_tag: str | None = None,
     ) -> str:
