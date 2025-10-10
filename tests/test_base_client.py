@@ -78,6 +78,15 @@ def test_timeout(monkeypatch):
 
 
 @responses.activate
+def test_headers_api_key(monkeypatch):
+    _add_api_response(detector_api_url("detectors/"), responses.POST, json={"id": "foobar"})
+    client = _client(monkeypatch)
+    client.create_detector()
+    assert len(responses.calls) == 1
+    assert responses.calls[0].request.headers["X-Api-Key"] == "1234"
+
+
+@responses.activate
 def test_headers_user_agent_version(monkeypatch):
     _add_api_response(detector_api_url("detectors/"), responses.POST, json={"id": "foobar"})
     client = _client(monkeypatch)
