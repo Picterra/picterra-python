@@ -70,7 +70,7 @@ class TracerClient(BaseAPIClient):
             page_number: Optional page (from 1) of the list we want to retrieve
 
         Returns:
-            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/plots-groups/operation/getMethodologiesList
+            dict: See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/plots-groups/operation/getMethodologiesList
 
         Example:
 
@@ -201,7 +201,7 @@ class TracerClient(BaseAPIClient):
             methodology: If not None, filters the groups by the methodology (eg "Coffee - EUDR")
 
         Returns:
-            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/plots-groups/operation/getPlotsGroupsList
+            dict: See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/plots-groups/operation/getPlotsGroupsList
         """
         data: Dict[str, Any] = {}
         if search is not None:
@@ -314,7 +314,7 @@ class TracerClient(BaseAPIClient):
             include_archived: Defaults to false. If true, includes archived analyses in the results
 
         Returns:
-            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/analysis/operation/getPlotsAnalysesList
+            dict: See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/analysis/operation/getPlotsAnalysesList
         """
         data: Dict[str, Any] = {}
         if include_archived:
@@ -353,7 +353,7 @@ class TracerClient(BaseAPIClient):
             plots_group_id: ignored, do not provide it
 
         Returns:
-            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportsList
+            dict: See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportsList
         """  # noqa[E501]
         if plots_group_id is not None:
             warnings.warn(
@@ -391,7 +391,7 @@ class TracerClient(BaseAPIClient):
             plots_group_id: ignored, do not provide it
 
         Returns:
-            See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportTypesForAnalysis
+            dict: See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/reports/operation/getReportTypesForAnalysis
         """  # noqa[E501]
         if plots_group_id is not None:
             warnings.warn(
