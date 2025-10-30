@@ -4,3 +4,5 @@ printf "==== Running flake8\n"
 python -m flake8
 printf "==== Running mypy\n"
 mypy src examples
+printf "==== Running black\n"
+black --check --diff src

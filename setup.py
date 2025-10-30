@@ -10,9 +10,9 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 
 if sys.version_info >= (3, 8):
-    lint_deps = ["flake8", "mypy==1.8.0", "types-requests"]
+    lint_deps = ["flake8", "mypy==1.8.0", "types-requests", "black"]
 else:
-    lint_deps = ["flake8", "mypy==1.4.1", "types-requests"]
+    lint_deps = ["flake8", "mypy==1.4.1", "types-requests", "black"]
 test_deps = ["pytest==7.1", "responses==0.22", "httpretty"]
 
 setup(
