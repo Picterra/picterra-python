@@ -675,9 +675,51 @@ def test_get_raster(monkeypatch):
     """Test the raster information"""
     RASTER_ID = "foobar"
     client = _client(monkeypatch)
-    _add_api_response(detector_api_url("rasters/%s/" % RASTER_ID), json={}, status=201)
-    client.get_raster(RASTER_ID)
-    assert len(responses.calls) == 1
+    data = {
+        "id": "123e4567-e89b-12d3-a456-426655440000",
+        "name": "my first orthomosaic",
+        "captured_at": "2013-01-29T12:34:56.000000Z",
+        "folder_id": "63530b2e-a315-424a-b4e4-75997a877475",
+        "identity_key": "cd4e4567-c66b-16r2-ba16-126655440088",
+        "type": "wms",
+        "status": "string",
+        "multispectral": True,
+        "tms_url": "https://tms.picterra.ch/67u6hy7695567976/{z}/{x}/{y}",
+        "tiles_max_zoom": 12,
+        "tiles_min_zoom": 12,
+        "footprint": {"type": "Polygon", "coordinates": [[]], "bbox": [0, 0, 0, 0]},
+    }
+    _add_api_response(detector_api_url("rasters/%s/" % RASTER_ID), json=data)
+    assert client.get_raster(RASTER_ID) == data and len(responses.calls) == 1
+
+
+@responses.activate
+def test_get_detector(monkeypatch):
+    """Test the detector information"""
+    DETECTOR_ID = "foobar"
+    client = _client(monkeypatch)
+    data = {
+        "id": "123e4567-e89b-12d3-a456-426655440000",
+        "name": "my first detector",
+        "is_runnable": True,
+        "classes": [
+            {
+                "name": "Feeder ships",
+                "color": "#0000FF",
+                "id": "03bff680-6fb0-45b3-b490-b513beb0d512",
+            }
+        ],
+        "configuration": {
+            "detection_type": "count",
+            "output_type": "polygon",
+            "training_steps": 1200,
+            "backbone": "resnet18",
+            "tile_size": 256,
+            "background_sample_ratio": 1,
+        },
+    }
+    _add_api_response(detector_api_url("detectors/%s/" % DETECTOR_ID), json=data)
+    assert client.get_detector(DETECTOR_ID) == data and len(responses.calls) == 1
 
 
 @responses.activate
