@@ -26,6 +26,8 @@ from picterra.base_client import (
     _download_to_file,
 )
 
+GrantKind = Literal["plots_group", "plots_analysis", "methodology"]
+
 
 class TracerClient(BaseAPIClient):
     def __init__(self, **kwargs):
@@ -575,4 +577,46 @@ class TracerClient(BaseAPIClient):
             self._full_url(f"plots_analysis_reports/{plots_analysis_report_id}/")
         )
         _check_resp_is_ok(resp, "Failed to get plots analysis report")
+        return resp.json()
+
+    def get_authorization_grants(self, kind: GrantKind, resource_id: str):
+        """
+        **beta** function. Get the authorization grants for a given resource.
+
+        Args:
+            kind: The kind of resource to get the grants for
+            resource_id: The ID of the resource
+
+        Returns:
+            dict: A dictionary containing the authorization grants for the resource.
+                  See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/authorization/operation/getGrants
+        """
+        resp = self.sess.get(
+            self._full_url("authorization/grants/%s/%s/" % (kind, resource_id))
+        )
+        _check_resp_is_ok(resp, "Failed to get grants for %s %s" % (kind, resource_id))
+        return resp.json()
+
+    def set_authorization_grants(
+        self,
+        kind: GrantKind,
+        resource_id: str,
+        grants_data: dict,
+    ):
+        """
+        **beta** function. Set the authorization grants for a given resource.
+
+        Args:
+            kind: The kind of resource to set the grants for
+            resource_id: The ID of the resource
+            grants: See https://app.picterra.ch/public/apidocs/plots_analysis/v1/#tag/authorization/operation/setGrants.
+
+        Returns:
+            dict: The updated authorization grants for the resource.
+        """
+        resp = self.sess.post(
+            self._full_url("authorization/grants/%s/%s/" % (kind, resource_id)),
+            json=grants_data,
+        )
+        _check_resp_is_ok(resp, "Failed to set grants for %s %s" % (kind, resource_id))
         return resp.json()
