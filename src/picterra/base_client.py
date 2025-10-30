@@ -28,28 +28,35 @@ CHUNK_SIZE_BYTES = 8192  # 8 KiB
 # allow injecting an non-existing package name to test the fallback behavior
 # of _get_ua in tests (see test_headers_user_agent_version__fallback)
 def _get_distr_name():
-    return 'picterra'
+    return "picterra"
 
 
 def _get_ua():
     import platform
+
     pkg = _get_distr_name()
     if sys.version_info >= (3, 8):
         from importlib.metadata import PackageNotFoundError, version
+
         try:
             ver = version(pkg)
         except PackageNotFoundError:
-            ver = 'no_version'
+            ver = "no_version"
     else:
         import pkg_resources  # type: ignore[import]
+
         try:
             ver = pkg_resources.require(pkg)[0].version
         except pkg_resources.DistributionNotFound:
-            ver = 'no_version'
+            ver = "no_version"
     o_s = " ".join([os.name, platform.system(), platform.release()])
     v_info = sys.version_info
     py = "Python " + str(v_info.major) + "." + str(v_info.minor)
-    return "picterra-python/%s (%s %s)" % (ver, py, o_s,)
+    return "picterra-python/%s (%s %s)" % (
+        ver,
+        py,
+        o_s,
+    )
 
 
 class APIError(Exception):
@@ -67,9 +74,7 @@ class _RequestsSession(requests.Session):
         self.timeout = kwargs.pop("timeout")
         super().__init__(*args, **kwargs)
         self.headers.update(
-            {
-                "User-Agent": "%s - %s" % (_get_ua(), self.headers["User-Agent"])
-            }
+            {"User-Agent": "%s - %s" % (_get_ua(), self.headers["User-Agent"])}
         )
 
     def request(self, *args, **kwargs):
@@ -109,20 +114,22 @@ def _upload_file_to_blobstore(upload_url: str, filename: str):
 def multipolygon_to_polygon_feature_collection(mp):
     return {
         "type": "FeatureCollection",
-        "features": [{
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": p
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {"type": "Polygon", "coordinates": p},
             }
-        } for p in mp["coordinates"]]
+            for p in mp["coordinates"]
+        ],
     }
 
 
 def _check_resp_is_ok(resp: requests.Response, msg: str) -> None:
     if not resp.ok:
-        raise APIError("%s (url %s, status %d): %s" % (msg, resp.url, resp.status_code, resp.text))
+        raise APIError(
+            "%s (url %s, status %d): %s" % (msg, resp.url, resp.status_code, resp.text)
+        )
 
 
 T = TypeVar("T")
@@ -148,6 +155,7 @@ class ResultsPage(Generic[T]):
 
     You can also get a specific page passing the page number to the ``list_XX`` function
     """
+
     _fetch: Callable[[str], requests.Response]
     _next_url: str | None
     _prev_url: str | None
@@ -208,7 +216,7 @@ class ApiKeyAuth(AuthBase):
         self.api_key = api_key
 
     def __call__(self, r):
-        r.headers['X-Api-Key'] = self.api_key
+        r.headers["X-Api-Key"] = self.api_key
         return r
 
 
@@ -220,7 +228,11 @@ class BaseAPIClient:
     """
 
     def __init__(
-        self, api_url: str, timeout: int = 30, max_retries: int = 3, backoff_factor: int = 10
+        self,
+        api_url: str,
+        timeout: int = 30,
+        max_retries: int = 3,
+        backoff_factor: int = 10,
     ):
         """
         Args:
@@ -231,9 +243,7 @@ class BaseAPIClient:
                 retry_strategy comment below
             backoff_factor: factor used nin the backoff algorithm; see retry_strategy comment below
         """
-        base_url = os.environ.get(
-            "PICTERRA_BASE_URL", "https://app.picterra.ch/"
-        )
+        base_url = os.environ.get("PICTERRA_BASE_URL", "https://app.picterra.ch/")
         logger.info(
             "Using base_url=%s, api_url=%s; %d max retries, %d backoff and %s timeout.",
             base_url,

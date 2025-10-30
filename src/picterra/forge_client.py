@@ -4,6 +4,7 @@ Handles interfacing with the API documented at https://app.picterra.ch/public/ap
 Note that Forge is separate from Tracer and so an API key which is valid for
 one may encounter permissions issues if used with the other
 """
+
 from __future__ import annotations
 
 import json
@@ -602,16 +603,14 @@ class ForgeClient(BaseAPIClient):
         for class_result in results["by_class"]:
             with tempfile.NamedTemporaryFile() as f:
                 self.download_vector_layer_to_file(
-                    class_result["result"]["vector_layer_id"], f.name)
+                    class_result["result"]["vector_layer_id"], f.name
+                )
                 with open(f.name) as fr:
                     vl_polygon_fc: FeatureCollection = json.load(fr)
                 mp_feature: Feature = {
                     "type": "Feature",
                     "properties": {"class_name": class_result["class"]["name"]},
-                    "geometry": {
-                        "type": "MultiPolygon",
-                        "coordinates": []
-                    }
+                    "geometry": {"type": "MultiPolygon", "coordinates": []},
                 }
                 for poly_feat in vl_polygon_fc["features"]:
                     mp_feature["geometry"]["coordinates"].append(
@@ -845,7 +844,9 @@ class ForgeClient(BaseAPIClient):
             vector_layer_id: The id of the vector layer to download
             filename: existing file to save the vector layer in, as a feature collection of polygons
         """
-        resp = self.sess.post(self._full_url("vector_layers/%s/download/" % vector_layer_id))
+        resp = self.sess.post(
+            self._full_url("vector_layers/%s/download/" % vector_layer_id)
+        )
         if not resp.ok:
             raise APIError(resp.text)
         op = self._wait_until_operation_completes(resp.json())
@@ -997,7 +998,6 @@ class ForgeClient(BaseAPIClient):
             params["page_number"] = page_number
         url = "detectors/%s/training_rasters/" % detector_id
         return self._return_results_page(url, params)
-
 
     def create_folder(self, name: str) -> str:
         """
