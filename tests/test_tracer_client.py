@@ -494,3 +494,38 @@ def test_get_plots_analysis_report(monkeypatch):
     report = client.get_plots_analysis_report("a-report-id")
     assert report["id"] == "a-report-id"
     assert report["artifacts"][0]["name"] == "EUDR Report"
+
+
+@responses.activate
+def test_get_authorization_grants(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    data = {
+        "grants": [
+            {"grantee": {"type": "user", "id": "1"}, "role": "viewer"},
+            {"grantee": {"type": "organization", "id": "2"}, "role": "editor"},
+        ]
+    }
+    _add_api_response(
+        plots_analysis_api_url("authorization/grants/plots_group/a-plots-group-id/"),
+        responses.GET,
+        data,
+    )
+    grants = client.get_authorization_grants("plots_group", "a-plots-group-id")
+    assert grants == data and len(responses.calls) == 1
+
+
+@responses.activate
+def test_set_authorization_grants(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    new_grants = [
+        {"grantee": {"type": "user", "id": "1"}, "role": "viewer"},
+        {"grantee": {"type": "organization", "id": "2"}, "role": "editor"},
+    ]
+    _add_api_response(
+        plots_analysis_api_url("authorization/grants/plots_group/a-plots-group-id/"),
+        responses.POST,
+        {"grants": new_grants},
+        match=responses.matchers.json_params_matcher({"grants": new_grants}),
+    )
+    grants = client.set_authorization_grants("plots_group", "a-plots-group-id", {"grants": new_grants})
+    assert grants == {"grants": new_grants} and len(responses.calls) == 1
