@@ -1180,3 +1180,16 @@ def test_folder_creation(monkeypatch):
     client = _client(monkeypatch)
     add_mock_folder_creation_response("folder-id", "folder-name")
     assert client.create_folder("folder-name") == "folder-id"
+
+
+@responses.activate
+def test_get_user_info(monkeypatch):
+    client = _client(monkeypatch)
+    data = {
+        "organization_id": "user-id",
+        "user_id": "user-id",
+        "organization_name": "organization-name",
+    }
+    _add_api_response(detector_api_url("users/me/"), json=data)
+    assert client.get_user_info() == data
+    assert len(responses.calls) == 1

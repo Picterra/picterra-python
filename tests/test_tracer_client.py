@@ -529,3 +529,16 @@ def test_set_authorization_grants(monkeypatch):
     )
     grants = client.set_authorization_grants("plots_group", "a-plots-group-id", {"grants": new_grants})
     assert grants == {"grants": new_grants} and len(responses.calls) == 1
+
+
+@responses.activate
+def test_get_user_info(monkeypatch):
+    client: TracerClient = _client(monkeypatch, platform="plots_analysis")
+    data = {
+        "organization_id": "user-id",
+        "user_id": "user-id",
+        "organization_name": "organization-name",
+    }
+    _add_api_response(plots_analysis_api_url("users/me/"), json=data)
+    assert client.get_user_info() == data
+    assert len(responses.calls) == 1
