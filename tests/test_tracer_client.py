@@ -18,7 +18,10 @@ from tests.utils import (
 
 
 def make_geojson_polygon(base=1):
-    return {"type": "Polygon", "coordinates": [[[0, 0], [base, 0], [base, base], [0, base], [0, 0]]]}
+    return {
+        "type": "Polygon",
+        "coordinates": [[[0, 0], [base, 0], [base, base], [0, base], [0, 0]]],
+    }
 
 
 def make_geojson_multipolygon(npolygons=1):
@@ -26,6 +29,7 @@ def make_geojson_multipolygon(npolygons=1):
     for i in range(npolygons):
         coords.append(make_geojson_polygon(i + 1)["coordinates"])
     return {"type": "MultiPolygon", "coordinates": coords}
+
 
 def test_plots_analysis_platform_client_base_url(monkeypatch):
     """
@@ -51,40 +55,48 @@ def test_create_plots_group(monkeypatch):
         plots_analysis_api_url("plots_groups/"),
         responses.POST,
         OP_RESP,
-        match=responses.matchers.json_params_matcher({
-            "name": "name of my plot group",
-            "methodology_id": "eudr-cocoa-id",
-            "custom_columns_values": {"foo": "bar"}
-        }),
+        match=responses.matchers.json_params_matcher(
+            {
+                "name": "name of my plot group",
+                "methodology_id": "eudr-cocoa-id",
+                "custom_columns_values": {"foo": "bar"},
+            }
+        ),
     )
-    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "status": "success",
-        "results": {"plots_group_id": "a-plots-group"}
-    })
+    _add_api_response(
+        plots_analysis_api_url(f"operations/{OPERATION_ID}/"),
+        responses.GET,
+        {"status": "success", "results": {"plots_group_id": "a-plots-group"}},
+    )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
-        _add_api_response(plots_analysis_api_url(
-            "plots_groups/a-plots-group/upload/commit/"),
+        _add_api_response(
+            plots_analysis_api_url("plots_groups/a-plots-group/upload/commit/"),
             responses.POST,
             OP_RESP,
-            match=responses.matchers.json_params_matcher({
-                "files": [
-                    {
-                        "upload_id": "an-upload",
-                        "filename": os.path.basename(tmp.name),
-                    }
-                ],
-                "overwrite": False,
-            }),
+            match=responses.matchers.json_params_matcher(
+                {
+                    "files": [
+                        {
+                            "upload_id": "an-upload",
+                            "filename": os.path.basename(tmp.name),
+                        }
+                    ],
+                    "overwrite": False,
+                }
+            ),
         )
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
-        assert client.create_plots_group(
-            "name of my plot group",
-            "eudr-cocoa-id",
-            [tmp.name],
-            {"foo": "bar"},
-        ) == "a-plots-group"
+        assert (
+            client.create_plots_group(
+                "name of my plot group",
+                "eudr-cocoa-id",
+                [tmp.name],
+                {"foo": "bar"},
+            )
+            == "a-plots-group"
+        )
 
 
 @responses.activate
@@ -98,27 +110,33 @@ def test_update_plots_group_plots(monkeypatch):
         },
     )
     responses.put("https://upload.example.com/")
-    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "status": "success",
-        "results": {
-            "plots_group_id": "group-id",
-        }
-    })
+    _add_api_response(
+        plots_analysis_api_url(f"operations/{OPERATION_ID}/"),
+        responses.GET,
+        {
+            "status": "success",
+            "results": {
+                "plots_group_id": "group-id",
+            },
+        },
+    )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
-        _add_api_response(plots_analysis_api_url(
-            "plots_groups/group-id/upload/commit/"),
+        _add_api_response(
+            plots_analysis_api_url("plots_groups/group-id/upload/commit/"),
             responses.POST,
             OP_RESP,
-            match=responses.matchers.json_params_matcher({
-                "files": [
-                    {
-                        "filename": os.path.basename(tmp.name),
-                        "upload_id": "an-upload",
-                    }
-                ],
-                "overwrite": False,
-            }),
+            match=responses.matchers.json_params_matcher(
+                {
+                    "files": [
+                        {
+                            "filename": os.path.basename(tmp.name),
+                            "upload_id": "an-upload",
+                        }
+                    ],
+                    "overwrite": False,
+                }
+            ),
         )
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
@@ -135,35 +153,48 @@ def test_analyse_plots(monkeypatch):
             "upload_url": "https://upload.example.com/",
         },
     )
-    responses.put("https://upload.example.com/", match=[responses.matchers.json_params_matcher({
-        "plot_ids": ["uno", "dos"],
-    })])
-    _add_api_response(plots_analysis_api_url(
-        "plots_groups/a-group-id/analysis/"),
+    responses.put(
+        "https://upload.example.com/",
+        match=[
+            responses.matchers.json_params_matcher(
+                {
+                    "plot_ids": ["uno", "dos"],
+                }
+            )
+        ],
+    )
+    _add_api_response(
+        plots_analysis_api_url("plots_groups/a-group-id/analysis/"),
         responses.POST,
         OP_RESP,
-        match=responses.matchers.json_params_matcher({
-            "analysis_name": "foobar",
-            "upload_id": "an-upload-id",
-            "date_from": "2023-01-01",
-            "date_to": "2025-01-01",
-        }),
+        match=responses.matchers.json_params_matcher(
+            {
+                "analysis_name": "foobar",
+                "upload_id": "an-upload-id",
+                "date_from": "2023-01-01",
+                "date_to": "2025-01-01",
+            }
+        ),
     )
-    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "status": "success",
-        "results": {"analysis_id": "an-analysis-id"}
-    })
+    _add_api_response(
+        plots_analysis_api_url(f"operations/{OPERATION_ID}/"),
+        responses.GET,
+        {"status": "success", "results": {"analysis_id": "an-analysis-id"}},
+    )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
-    assert client.analyze_plots(
-        "a-group-id",
-        "foobar",
-        ["uno", "dos"],
-        datetime.date.fromisoformat("2023-01-01"),
-        datetime.date.fromisoformat("2025-01-01")
-    ) == "an-analysis-id"
+    assert (
+        client.analyze_plots(
+            "a-group-id",
+            "foobar",
+            ["uno", "dos"],
+            datetime.date.fromisoformat("2023-01-01"),
+            datetime.date.fromisoformat("2025-01-01"),
+        )
+        == "an-analysis-id"
+    )
 
 
 @responses.activate
@@ -176,24 +207,37 @@ def test_analyse_precheck(monkeypatch):
             "upload_url": "https://upload.example.com/",
         },
     )
-    responses.put("https://upload.example.com/", match=[responses.matchers.json_params_matcher({
-        "plot_ids": ["uno", "dos"],
-    })])
-    _add_api_response(plots_analysis_api_url(
-        "plots_groups/a-group-id/analysis/precheck/"),
+    responses.put(
+        "https://upload.example.com/",
+        match=[
+            responses.matchers.json_params_matcher(
+                {
+                    "plot_ids": ["uno", "dos"],
+                }
+            )
+        ],
+    )
+    _add_api_response(
+        plots_analysis_api_url("plots_groups/a-group-id/analysis/precheck/"),
         responses.POST,
         OP_RESP,
-        match=responses.matchers.json_params_matcher({
-            "analysis_name": "foobar",
-            "upload_id": "an-upload-id",
-            "date_from": "2023-01-01",
-            "date_to": "2025-01-01",
-        }),
+        match=responses.matchers.json_params_matcher(
+            {
+                "analysis_name": "foobar",
+                "upload_id": "an-upload-id",
+                "date_from": "2023-01-01",
+                "date_to": "2025-01-01",
+            }
+        ),
     )
-    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "status": "success",
-        "results": {"precheck_data_url": "https://precheck_data_url.example.com/"}
-    })
+    _add_api_response(
+        plots_analysis_api_url(f"operations/{OPERATION_ID}/"),
+        responses.GET,
+        {
+            "status": "success",
+            "results": {"precheck_data_url": "https://precheck_data_url.example.com/"},
+        },
+    )
     precheck = {
         "status": "failed",
         "errors": {"critical": [], "high": []},
@@ -205,13 +249,16 @@ def test_analyse_precheck(monkeypatch):
     with tempfile.NamedTemporaryFile() as tmp:
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
-    assert client.analyze_plots_precheck(
-        "a-group-id",
-        "foobar",
-        ["uno", "dos"],
-        datetime.date.fromisoformat("2023-01-01"),
-        datetime.date.fromisoformat("2025-01-01")
-    ) == precheck
+    assert (
+        client.analyze_plots_precheck(
+            "a-group-id",
+            "foobar",
+            ["uno", "dos"],
+            datetime.date.fromisoformat("2023-01-01"),
+            datetime.date.fromisoformat("2025-01-01"),
+        )
+        == precheck
+    )
 
 
 @responses.activate
@@ -273,17 +320,23 @@ def test_list_plots_analyses(monkeypatch):
 
 @responses.activate
 def test_download_plots_group(monkeypatch):
-    _add_api_response(plots_analysis_api_url(
-        "plots_groups/a-group-id/export/"),
+    _add_api_response(
+        plots_analysis_api_url("plots_groups/a-group-id/export/"),
         responses.POST,
         OP_RESP,
         match=responses.matchers.json_params_matcher({"format": "geojson"}),
     )
-    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "status": "success",
-        "results": {"download_url": "https://a-group-id.example.com/geojson"}
-    })
-    polygons_fc = multipolygon_to_polygon_feature_collection(make_geojson_multipolygon())
+    _add_api_response(
+        plots_analysis_api_url(f"operations/{OPERATION_ID}/"),
+        responses.GET,
+        {
+            "status": "success",
+            "results": {"download_url": "https://a-group-id.example.com/geojson"},
+        },
+    )
+    polygons_fc = multipolygon_to_polygon_feature_collection(
+        make_geojson_multipolygon()
+    )
     responses.add(
         responses.GET,
         "https://a-group-id.example.com/geojson",
@@ -306,8 +359,12 @@ def test_list_plots_analysis_reports(monkeypatch):
     assert len(reports) == 3
     assert reports[0]["name"] == "a_1" and reports[-1]["name"] == "a_3"
     # test search and filter
-    add_mock_paginated_list_response(url, qs={"report_type": "type_1", "search": "spam"})
-    reports = client.list_plots_analysis_reports("my-analysis-id", search="spam", report_type="type_1")
+    add_mock_paginated_list_response(
+        url, qs={"report_type": "type_1", "search": "spam"}
+    )
+    reports = client.list_plots_analysis_reports(
+        "my-analysis-id", search="spam", report_type="type_1"
+    )
     assert len(reports) == 2
 
 
@@ -333,7 +390,7 @@ def test_list_plots_analysis_report_types(monkeypatch):
             {"report_type": "type_1", "name": "a_1"},
             {"report_type": "type_2", "name": "a_2"},
         ],
-        match=responses.matchers.query_param_matcher({"search": "spam"})
+        match=responses.matchers.query_param_matcher({"search": "spam"}),
     )
     reports = client.list_plots_analysis_report_types("my-analysis-id", search="spam")
     assert len(reports) == 2
@@ -349,24 +406,37 @@ def test_create_plots_analysis_report_precheck(monkeypatch):
             "upload_url": "https://upload.example.com/",
         },
     )
-    responses.put("https://upload.example.com/", match=[responses.matchers.json_params_matcher({
-        "plot_ids": ["uno", "dos"],
-    })])
-    _add_api_response(plots_analysis_api_url(
-        "plots_analyses/an-analysis-id/reports/precheck/"),
+    responses.put(
+        "https://upload.example.com/",
+        match=[
+            responses.matchers.json_params_matcher(
+                {
+                    "plot_ids": ["uno", "dos"],
+                }
+            )
+        ],
+    )
+    _add_api_response(
+        plots_analysis_api_url("plots_analyses/an-analysis-id/reports/precheck/"),
         responses.POST,
         OP_RESP,
-        match=responses.matchers.json_params_matcher({
-            "name": "foobar",
-            "upload_id": "an-upload-id",
-            "report_type": "a-report-type",
-            "metadata": {"foo": "bar"},
-        }),
+        match=responses.matchers.json_params_matcher(
+            {
+                "name": "foobar",
+                "upload_id": "an-upload-id",
+                "report_type": "a-report-type",
+                "metadata": {"foo": "bar"},
+            }
+        ),
     )
-    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "status": "success",
-        "results": {"precheck_data_url": "https://precheck_data_url.example.com/"}
-    })
+    _add_api_response(
+        plots_analysis_api_url(f"operations/{OPERATION_ID}/"),
+        responses.GET,
+        {
+            "status": "success",
+            "results": {"precheck_data_url": "https://precheck_data_url.example.com/"},
+        },
+    )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
         with open(tmp.name, "w") as f:
@@ -376,7 +446,7 @@ def test_create_plots_analysis_report_precheck(monkeypatch):
         "foobar",
         ["uno", "dos"],
         "a-report-type",
-        metadata={"foo": "bar"}
+        metadata={"foo": "bar"},
     ) == {"status": "passed"}
 
 
@@ -390,35 +460,48 @@ def test_create_plots_analysis_report(monkeypatch):
             "upload_url": "https://upload.example.com/",
         },
     )
-    responses.put("https://upload.example.com/", match=[responses.matchers.json_params_matcher({
-        "plot_ids": ["uno", "dos"],
-    })])
-    _add_api_response(plots_analysis_api_url(
-        "plots_analyses/an-analysis-id/reports/"),
+    responses.put(
+        "https://upload.example.com/",
+        match=[
+            responses.matchers.json_params_matcher(
+                {
+                    "plot_ids": ["uno", "dos"],
+                }
+            )
+        ],
+    )
+    _add_api_response(
+        plots_analysis_api_url("plots_analyses/an-analysis-id/reports/"),
         responses.POST,
         OP_RESP,
-        match=responses.matchers.json_params_matcher({
-            "name": "foobar",
-            "upload_id": "an-upload-id",
-            "report_type": "a-report-type",
-            "metadata": {"foo": "bar"},
-        }),
+        match=responses.matchers.json_params_matcher(
+            {
+                "name": "foobar",
+                "upload_id": "an-upload-id",
+                "report_type": "a-report-type",
+                "metadata": {"foo": "bar"},
+            }
+        ),
     )
-    _add_api_response(plots_analysis_api_url(f"operations/{OPERATION_ID}/"), responses.GET, {
-        "status": "success",
-        "results": {"plots_analysis_report_id": "a-report-id"}
-    })
+    _add_api_response(
+        plots_analysis_api_url(f"operations/{OPERATION_ID}/"),
+        responses.GET,
+        {"status": "success", "results": {"plots_analysis_report_id": "a-report-id"}},
+    )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
     with tempfile.NamedTemporaryFile() as tmp:
         with open(tmp.name, "w") as f:
             json.dump({"type": "FeatureCollection", "features": []}, f)
-    assert client.create_plots_analysis_report(
-        "an-analysis-id",
-        "foobar",
-        ["uno", "dos"],
-        "a-report-type",
-        metadata={"foo": "bar"}
-    ) == "a-report-id"
+    assert (
+        client.create_plots_analysis_report(
+            "an-analysis-id",
+            "foobar",
+            ["uno", "dos"],
+            "a-report-type",
+            metadata={"foo": "bar"},
+        )
+        == "a-report-id"
+    )
 
 
 @responses.activate
@@ -432,7 +515,7 @@ def test_get_plots_group(monkeypatch):
             "name": "My Plots Group",
             "created_at": "2025-09-29T10:04:08.143098Z",
             "methodology": "Coffee - EUDR",
-        }
+        },
     )
     plots_group = client.get_plots_group("a-plots-group")
     assert plots_group["id"] == "a-plots-group"
@@ -450,7 +533,7 @@ def test_get_plots_analysis(monkeypatch):
             "name": "My Analysis",
             "date_from": "2023-06-06",
             "date_to": "2025-02-08",
-            "url": "https://app.picterra.ch/plots_analysis/plots_groups/136b812e-8d9c-418f-b317-8be5c7c6281d/analysis/cda443d7-5baf-483d-bb5e-fa1190180b0d/"  # noqa[E501]
+            "url": "https://app.picterra.ch/plots_analysis/plots_groups/136b812e-8d9c-418f-b317-8be5c7c6281d/analysis/cda443d7-5baf-483d-bb5e-fa1190180b0d/",  # noqa[E501]
         },
     )
     plots_analysis = client.get_plots_analysis("an-analysis-id")
@@ -461,9 +544,7 @@ def test_get_plots_analysis(monkeypatch):
 @responses.activate
 def test_get_plots_analysis_report(monkeypatch):
     _add_api_response(
-        plots_analysis_api_url(
-            "plots_analysis_reports/a-report-id/"
-        ),
+        plots_analysis_api_url("plots_analysis_reports/a-report-id/"),
         responses.GET,
         {
             "id": "a-report-id",
@@ -527,7 +608,9 @@ def test_set_authorization_grants(monkeypatch):
         {"grants": new_grants},
         match=responses.matchers.json_params_matcher({"grants": new_grants}),
     )
-    grants = client.set_authorization_grants("plots_group", "a-plots-group-id", {"grants": new_grants})
+    grants = client.set_authorization_grants(
+        "plots_group", "a-plots-group-id", {"grants": new_grants}
+    )
     assert grants == {"grants": new_grants} and len(responses.calls) == 1
 
 
