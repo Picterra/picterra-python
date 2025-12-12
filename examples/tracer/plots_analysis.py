@@ -13,7 +13,7 @@ analysis_id = client.analyze_plots(
     "New analysis",
     ["plotid_1", "plotid_2", "plotid_3"],
     datetime.date.fromisoformat("2022-01-01"),
-    datetime.date.fromisoformat("2024-01-01")
+    datetime.date.fromisoformat("2024-01-01"),
 )
 url = client.get_plots_analysis(analysis_id, plots_group_id)["url"]
 
