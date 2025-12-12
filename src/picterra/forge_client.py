@@ -38,6 +38,17 @@ class ForgeClient(BaseAPIClient):
     def __init__(self, **kwargs):
         super().__init__("public/api/v2/", **kwargs)
 
+    def get_user_info(self) -> dict:
+        """
+        Get information about the current user
+
+        This endpoint is in alpha stage and may change without warning.
+        """
+        resp = self.sess.get(self._full_url("users/me/"))
+        if not resp.ok:
+            raise APIError(resp.text)
+        return resp.json()
+
     def upload_raster(
         self,
         filename: str,

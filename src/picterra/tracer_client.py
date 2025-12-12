@@ -56,6 +56,16 @@ class TracerClient(BaseAPIClient):
         _check_resp_is_ok(resp, "Failure uploading plots file")
         return upload_id
 
+    def get_user_info(self) -> dict:
+        """
+        Get information about the current user
+
+        This endpoint is in alpha stage and may change without warning.
+        """
+        resp = self.sess.get(self._full_url("users/me/"))
+        _check_resp_is_ok(resp, "Failed to get user info")
+        return resp.json()
+
     def list_methodologies(
         self,
         search: Optional[str] = None,
