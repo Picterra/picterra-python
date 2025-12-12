@@ -65,7 +65,9 @@ def test_timeout(monkeypatch):
         time.sleep(2)
         return [200, response_headers, json.dumps([])]
 
-    httpretty.register_uri(httpretty.GET, detector_api_url("rasters/"), body=request_callback)
+    httpretty.register_uri(
+        httpretty.GET, detector_api_url("rasters/"), body=request_callback
+    )
     timeout = 1
     client = _client(monkeypatch, timeout=timeout)
     with pytest.raises(requests.exceptions.ConnectionError) as e:
@@ -79,7 +81,9 @@ def test_timeout(monkeypatch):
 
 @responses.activate
 def test_headers_api_key(monkeypatch):
-    _add_api_response(detector_api_url("detectors/"), responses.POST, json={"id": "foobar"})
+    _add_api_response(
+        detector_api_url("detectors/"), responses.POST, json={"id": "foobar"}
+    )
     client = _client(monkeypatch)
     client.create_detector()
     assert len(responses.calls) == 1
@@ -88,7 +92,9 @@ def test_headers_api_key(monkeypatch):
 
 @responses.activate
 def test_headers_user_agent_version(monkeypatch):
-    _add_api_response(detector_api_url("detectors/"), responses.POST, json={"id": "foobar"})
+    _add_api_response(
+        detector_api_url("detectors/"), responses.POST, json={"id": "foobar"}
+    )
     client = _client(monkeypatch)
     client.create_detector()
     assert len(responses.calls) == 1
@@ -99,8 +105,12 @@ def test_headers_user_agent_version(monkeypatch):
 
 @responses.activate
 def test_headers_user_agent_version__fallback(monkeypatch):
-    _add_api_response(detector_api_url("detectors/"), responses.POST, json={"id": "foobar"},)
-    monkeypatch.setattr(base_client, '_get_distr_name', lambda: 'foobar')
+    _add_api_response(
+        detector_api_url("detectors/"),
+        responses.POST,
+        json={"id": "foobar"},
+    )
+    monkeypatch.setattr(base_client, "_get_distr_name", lambda: "foobar")
     client = _client(monkeypatch)
     client.create_detector()
     assert len(responses.calls) == 1
@@ -126,7 +136,9 @@ def test_results_page():
         method=responses.GET,
         url="http://example.com/page/2",
         json={
-            "count": 1, "next": None, "previous": "http://example.com/page/1",
+            "count": 1,
+            "next": None,
+            "previous": "http://example.com/page/1",
             "results": ["three"],
         },
         status=200,

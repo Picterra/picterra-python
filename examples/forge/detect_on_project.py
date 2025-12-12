@@ -1,6 +1,7 @@
 """
 Demonstrate running a detector on all images within a project
 """
+
 from picterra import APIClient
 
 # Set the PICTERRA_API_KEY environment variable to define your API key

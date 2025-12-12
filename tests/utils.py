@@ -60,7 +60,7 @@ def add_mock_paginated_list_response(
     name_prefix: str = "a",
     num_results: int = 2,
     include_archived: Optional[bool] = None,
-    qs: Optional[dict] = None
+    qs: Optional[dict] = None,
 ):
     curr, next = str(page), str(page + 1)
     data1 = {
@@ -69,7 +69,8 @@ def add_mock_paginated_list_response(
         "previous": None,
         "page_size": num_results,
         "results": [
-            {"id": str(i), "name": name_prefix + "_" + str(i)} for i in range(1, num_results + 1)
+            {"id": str(i), "name": name_prefix + "_" + str(i)}
+            for i in range(1, num_results + 1)
         ],
     }
     qs_params = {"page_number": curr}

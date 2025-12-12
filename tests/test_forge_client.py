@@ -79,7 +79,9 @@ def add_mock_rasters_in_folder_list_response(folder_id):
     }
     qs = {"folder": folder_id, "page_number": "1"}
     _add_api_response(
-        detector_api_url("rasters/"), json=data, match=responses.matchers.query_param_matcher(qs)
+        detector_api_url("rasters/"),
+        json=data,
+        match=responses.matchers.query_param_matcher(qs),
     )
 
 
@@ -110,7 +112,9 @@ def add_mock_rasters_in_filtered_list_response(
     if has_layers is not None:
         qs["has_vector_layers"] = bool(has_layers)
     _add_api_response(
-        detector_api_url("rasters/"), match=responses.matchers.query_param_matcher(qs), json=data
+        detector_api_url("rasters/"),
+        match=responses.matchers.query_param_matcher(qs),
+        json=data,
     )
 
 
@@ -186,21 +190,32 @@ def add_mock_detectors_list_response(string=None, tag=None, shared=None):
 
 def add_mock_detector_creation_response(**kwargs):
     match = responses.json_params_matcher({"configuration": kwargs}) if kwargs else None
-    _add_api_response(detector_api_url("detectors/"), responses.POST, json={"id": "foobar"}, match=match)
+    _add_api_response(
+        detector_api_url("detectors/"),
+        responses.POST,
+        json={"id": "foobar"},
+        match=match,
+    )
 
 
 def add_mock_detector_edit_response(d_id, **kwargs):
     match = responses.json_params_matcher({"configuration": kwargs}) if kwargs else None
-    _add_api_response(detector_api_url("detectors/%s/" % d_id), responses.PUT, status=204, match=match)
+    _add_api_response(
+        detector_api_url("detectors/%s/" % d_id), responses.PUT, status=204, match=match
+    )
 
 
 def add_mock_detector_train_responses(detector_id):
-    _add_api_response(detector_api_url("detectors/%s/train/" % detector_id), responses.POST, OP_RESP)
+    _add_api_response(
+        detector_api_url("detectors/%s/train/" % detector_id), responses.POST, OP_RESP
+    )
 
 
 def add_mock_run_dataset_recommendation_responses(detector_id):
     _add_api_response(
-        detector_api_url("detectors/%s/dataset_recommendation/" % detector_id), responses.POST, OP_RESP
+        detector_api_url("detectors/%s/dataset_recommendation/" % detector_id),
+        responses.POST,
+        OP_RESP,
     )
 
 
@@ -287,7 +302,9 @@ def add_mock_raster_upload_responses(identity_key, multispectral, cloud_coverage
     # Storage PUT
     responses.add(responses.PUT, "http://storage.example.com", status=200)
     # Commit
-    _add_api_response(detector_api_url("rasters/%s/commit/" % raster_id), responses.POST, OP_RESP)
+    _add_api_response(
+        detector_api_url("rasters/%s/commit/" % raster_id), responses.POST, OP_RESP
+    )
     # Status, first check
     data = {"id": raster_id, "name": "raster1", "status": "processing"}
     _add_api_response(detector_api_url("rasters/%s/" % raster_id), json=data)
@@ -302,13 +319,17 @@ def add_mock_detection_areas_upload_responses(raster_id):
     # Upload initiation
     data = {"upload_url": "http://storage.example.com", "upload_id": upload_id}
     _add_api_response(
-        detector_api_url("rasters/%s/detection_areas/upload/file/" % raster_id), responses.POST, data
+        detector_api_url("rasters/%s/detection_areas/upload/file/" % raster_id),
+        responses.POST,
+        data,
     )
     # Storage PUT
     responses.add(responses.PUT, "http://storage.example.com", status=200)
     # Commit
     _add_api_response(
-        detector_api_url("rasters/%s/detection_areas/upload/%s/commit/" % (raster_id, upload_id)),
+        detector_api_url(
+            "rasters/%s/detection_areas/upload/%s/commit/" % (raster_id, upload_id)
+        ),
         responses.POST,
         OP_RESP,
         status=200,
@@ -316,12 +337,18 @@ def add_mock_detection_areas_upload_responses(raster_id):
     # Status, first check
     data = {"status": "processing"}
     _add_api_response(
-        detector_api_url("rasters/%s/detection_areas/upload/%s/" % (raster_id, upload_id)), json=data
+        detector_api_url(
+            "rasters/%s/detection_areas/upload/%s/" % (raster_id, upload_id)
+        ),
+        json=data,
     )
     # Status, second check
     data = {"status": "ready"}
     _add_api_response(
-        detector_api_url("rasters/%s/detection_areas/upload/%s/" % (raster_id, upload_id)), json=data
+        detector_api_url(
+            "rasters/%s/detection_areas/upload/%s/" % (raster_id, upload_id)
+        ),
+        json=data,
     )
 
 
@@ -390,7 +417,9 @@ def add_mock_vector_layer_download_responses(layer_id, polygons_num):
     }
     add_mock_operations_responses("success", results=results)
     url = results["download_url"]
-    polygons_fc = multipolygon_to_polygon_feature_collection(make_geojson_multipolygon(polygons_num))
+    polygons_fc = multipolygon_to_polygon_feature_collection(
+        make_geojson_multipolygon(polygons_num)
+    )
     assert len(polygons_fc["features"]) == polygons_num
     responses.add(
         responses.GET,
@@ -399,13 +428,19 @@ def add_mock_vector_layer_download_responses(layer_id, polygons_num):
     )
     return polygons_fc
 
+
 def add_mock_folder_creation_response(id, name):
     match = responses.matchers.json_params_matcher({"name": name})
-    _add_api_response(detector_api_url("folders/"), responses.POST, json={"id": id}, match=match)
+    _add_api_response(
+        detector_api_url("folders/"), responses.POST, json={"id": id}, match=match
+    )
 
 
 def make_geojson_polygon(base=1):
-    return {"type": "Polygon", "coordinates": [[[0, 0], [base, 0], [base, base], [0, base], [0, 0]]]}
+    return {
+        "type": "Polygon",
+        "coordinates": [[[0, 0], [base, 0], [base, base], [0, base], [0, 0]]],
+    }
 
 
 def make_geojson_multipolygon(npolygons=1):
@@ -424,9 +459,10 @@ def add_mock_download_result_response(op_id, num_classes):
                     "class": {"name": f"class_{i + 1}"},
                     "result": {
                         "url": f"http://storage.example.com/result_for_class_{i + 1}.geojson",
-                        "vector_layer_id": f"layer_{i + 1}"
+                        "vector_layer_id": f"layer_{i + 1}",
                     },
-                } for i in range(num_classes)
+                }
+                for i in range(num_classes)
             ],
         },
     }
@@ -479,7 +515,9 @@ def add_mock_delete_raster_response(raster_id):
 
 
 def add_mock_delete_detectionarea_response(raster_id):
-    _add_api_response(detector_api_url("rasters/%s/detection_areas/" % raster_id), responses.DELETE)
+    _add_api_response(
+        detector_api_url("rasters/%s/detection_areas/" % raster_id), responses.DELETE
+    )
 
 
 def add_mock_delete_detector_response(detector_id):
@@ -487,7 +525,9 @@ def add_mock_delete_detector_response(detector_id):
 
 
 def add_mock_delete_vector_layer_response(layer_id):
-    _add_api_response(detector_api_url("vector_layers/%s/" % layer_id), responses.DELETE)
+    _add_api_response(
+        detector_api_url("vector_layers/%s/" % layer_id), responses.DELETE
+    )
 
 
 def add_mock_edit_vector_layer_response(layer_id, **kwargs):
@@ -536,7 +576,9 @@ def add_mock_marker_creation_response(marker_id, raster_id, detector_id, coords,
         "text": text,
     }
     match = responses.matchers.json_params_matcher(body)
-    _add_api_response(detector_api_url(url), responses.POST, json={"id": marker_id}, match=match)
+    _add_api_response(
+        detector_api_url(url), responses.POST, json={"id": marker_id}, match=match
+    )
 
 
 def add_mock_folder_detector_response(folder_id: str):
@@ -598,27 +640,30 @@ def test_multipolygon_to_polygon_feature_collection():
         "type": "MultiPolygon",
         "coordinates": [
             [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]],
-            [[[1, 1], [1, 2], [2, 2], [2, 1], [1, 1]]]
-        ]
+            [[[1, 1], [1, 2], [2, 2], [2, 1], [1, 1]]],
+        ],
     }
     fc = multipolygon_to_polygon_feature_collection(mp)
     assert fc == {
         "type": "FeatureCollection",
-        "features": [{
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]]
-            }
-        },  {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [[[1, 1], [1, 2], [2, 2], [2, 1], [1, 1]]]
-            }
-        }]
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]],
+                },
+            },
+            {
+                "type": "Feature",
+                "properties": {},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [[[1, 1], [1, 2], [2, 2], [2, 1], [1, 1]]],
+                },
+            },
+        ],
     }
 
 
@@ -953,7 +998,9 @@ def test_download_result_to_feature_collection(monkeypatch):
         assert len(feat1["geometry"]["coordinates"]) == 10
         assert isinstance(feat1["geometry"]["coordinates"][0][0][0][0], (int, float))
         feat2 = fc["features"][(class_1_index + 1) % 2]
-        assert feat2["type"] == "Feature" and feat2["geometry"]["type"] == "MultiPolygon"
+        assert (
+            feat2["type"] == "Feature" and feat2["geometry"]["type"] == "MultiPolygon"
+        )
         assert feat2["properties"]["class_name"] == "class_2"
         assert len(feat2["geometry"]["coordinates"]) == 20
         assert isinstance(feat2["geometry"]["coordinates"][0][0][0][0], (int, float))
@@ -1060,7 +1107,9 @@ def test_download_vector_layer_to_file(monkeypatch):
     assert fc["type"] == "FeatureCollection"
     assert fc == polygons_fc and len(fc["features"]) == 2
     assert fc["features"][0]["geometry"]["type"] == "Polygon"
-    assert isinstance(fc["features"][1]["geometry"]["coordinates"][0][0][0], (int, float))
+    assert isinstance(
+        fc["features"][1]["geometry"]["coordinates"][0][0][0], (int, float)
+    )
     assert len(responses.calls) == 3  # POST /download, GET /operations, GET url
 
 
