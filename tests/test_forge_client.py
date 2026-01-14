@@ -1242,3 +1242,40 @@ def test_get_user_info(monkeypatch):
     _add_api_response(detector_api_url("users/me/"), json=data)
     assert client.get_user_info() == data
     assert len(responses.calls) == 1
+
+
+@responses.activate
+def test_get_authorization_grants(monkeypatch):
+    client = _client(monkeypatch)
+    data = {
+        "grants": [
+            {"grantee": {"type": "user", "id": "1"}, "role": "viewer"},
+            {"grantee": {"type": "organization", "id": "2"}, "role": "editor"},
+        ]
+    }
+    _add_api_response(
+        detector_api_url("authorization/grants/detector/a-detector-id/"),
+        responses.GET,
+        data,
+    )
+    grants = client.get_authorization_grants("detector", "a-detector-id")
+    assert grants == data and len(responses.calls) == 1
+
+
+@responses.activate
+def test_set_authorization_grants(monkeypatch):
+    client = _client(monkeypatch)
+    new_grants = [
+        {"grantee": {"type": "user", "id": "1"}, "role": "viewer"},
+        {"grantee": {"type": "organization", "id": "2"}, "role": "editor"},
+    ]
+    _add_api_response(
+        detector_api_url("authorization/grants/detector/a-detector-id/"),
+        responses.POST,
+        {"grants": new_grants},
+        match=responses.matchers.json_params_matcher({"grants": new_grants}),
+    )
+    grants = client.set_authorization_grants(
+        "detector", "a-detector-id", {"grants": new_grants}
+    )
+    assert grants == {"grants": new_grants} and len(responses.calls) == 1
