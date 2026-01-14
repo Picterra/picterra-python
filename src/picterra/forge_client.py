@@ -21,6 +21,7 @@ else:
 from typing import Any
 
 import requests
+from typing_extensions import TypeAlias
 
 from picterra.base_client import (
     APIError,
@@ -32,6 +33,9 @@ from picterra.base_client import (
 )
 
 logger = logging.getLogger()
+
+
+GrantKind: TypeAlias = Literal["folder", "detector"]
 
 
 class ForgeClient(BaseAPIClient):
@@ -1027,3 +1031,47 @@ class ForgeClient(BaseAPIClient):
         if not resp.status_code == 201:
             raise APIError(resp.text)
         return resp.json()["id"]
+
+    def get_authorization_grants(self, kind: GrantKind, resource_id: str):
+        """
+        **beta** function. Get the authorization grants for a given resource.
+
+        Args:
+            kind: The kind of resource to get the grants for
+            resource_id: The ID of the resource
+
+        Returns:
+            dict: A dictionary containing the authorization grants for the resource.
+                  See https://app.picterra.ch/public/apidocs/v2#tag/authorization/operation/getGrants
+        """
+        resp = self.sess.get(
+            self._full_url("authorization/grants/%s/%s/" % (kind, resource_id))
+        )
+        if not resp.status_code == 200:
+            raise APIError(resp.text)
+        return resp.json()
+
+    def set_authorization_grants(
+        self,
+        kind: GrantKind,
+        resource_id: str,
+        grants_data: dict,
+    ):
+        """
+        **beta** function. Set the authorization grants for a given resource.
+
+        Args:
+            kind: The kind of resource to set the grants for
+            resource_id: The ID of the resource
+            grants: See https://app.picterra.ch/public/apidocs/v2#tag/authorization/operation/setGrants
+
+        Returns:
+            dict: The updated authorization grants for the resource.
+        """
+        resp = self.sess.post(
+            self._full_url("authorization/grants/%s/%s/" % (kind, resource_id)),
+            json=grants_data,
+        )
+        if not resp.status_code == 201:
+            raise APIError(resp.text)
+        return resp.json()
