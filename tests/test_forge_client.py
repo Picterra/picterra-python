@@ -1167,30 +1167,6 @@ def test_list_raster_vector_layers(monkeypatch):
 
 
 @responses.activate
-def test_run_advanced_tool(monkeypatch):
-    _add_api_response(
-        detector_api_url("advanced_tools/foobar/run/"),
-        responses.POST,
-        json=OP_RESP,
-        match=responses.matchers.json_params_matcher(
-            {
-                "inputs": {"foo": "bar"},
-                "outputs": {"spam": [1, 2], "bar": {"foo": None, "bar": 4}},
-            }
-        ),
-    )
-    add_mock_operations_responses("success")
-    client = _client(monkeypatch)
-    assert (
-        client.run_advanced_tool(
-            "foobar", {"foo": "bar"}, {"spam": [1, 2], "bar": {"foo": None, "bar": 4}}
-        )["type"]
-        == "mock_operation_type"
-    )
-    assert len(responses.calls) == 2
-
-
-@responses.activate
 def test_import_raster_from_remote_source(monkeypatch):
     body = {
         "method": "streaming",
