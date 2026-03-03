@@ -746,30 +746,6 @@ class ForgeClient(BaseAPIClient):
             raise APIError(resp.text)
         return self._wait_until_operation_completes(resp.json())
 
-    def run_advanced_tool(
-        self, tool_id: str, inputs: dict[str, Any], outputs: dict[str, Any]
-    ):
-        """
-        This is an experimental feature
-
-        Runs a tool and waits for its execution, returning the finished operation metadata
-
-        Args:
-            tool_id: The id of the tool to run
-            inputs: tool inputs
-            outputs: tool outputs
-
-        Raises:
-            APIError: There was an error while launching and executing the tool
-        """
-        resp = self.sess.post(
-            self._full_url("advanced_tools/%s/run/" % tool_id),
-            json={"inputs": inputs, "outputs": outputs},
-        )
-        if not resp.ok:
-            raise APIError(resp.text)
-        return self._wait_until_operation_completes(resp.json())
-
     def upload_vector_layer(
         self,
         raster_id: str,
