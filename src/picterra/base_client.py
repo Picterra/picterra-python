@@ -95,8 +95,28 @@ def _download_to_file(url: str, filename: str):
 
 
 def _upload_file_to_blobstore(upload_url: str, filename: str):
+    """Uploads a file to a blobstore URL
+
+    Note that since the common upload pattern is:
+        1. get upload URL, POST
+        2. upload file to URL (this function), PUT
+        3. commit upload, POST
+        4. wait for operation to complete, GET
+    and we retry if throttled only on GETs, we add two pauses before and after this
+    function so that we avoid incurring in the rate limit in the POST-PUT-POST sequence.
+
+    Args:
+        upload_url: The pre-signed URL to upload the file to.
+        filename: The local path to the file to upload.
+
+    Raises:
+        ValueError: If the provided filename does not exist or is not a file.
+        APIError: If the upload to the blobstore fails.
+
+    """
     if not (os.path.exists(filename) and os.path.isfile(filename)):
         raise ValueError("Invalid file: " + filename)
+    time.sleep(2)
     with open(
         filename, "rb"
     ) as f:  # binary recommended by requests stream upload (see link below)
@@ -109,6 +129,7 @@ def _upload_file_to_blobstore(upload_url: str, filename: str):
     if not resp.ok:
         logger.error("Error when uploading to blobstore %s" % upload_url)
         raise APIError(resp.text)
+    time.sleep(2)
 
 
 def multipolygon_to_polygon_feature_collection(mp):
