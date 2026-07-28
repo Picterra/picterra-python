@@ -182,9 +182,6 @@ def test_analyse_plots(monkeypatch):
         {"status": "success", "results": {"analysis_id": "an-analysis-id"}},
     )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
-    with tempfile.NamedTemporaryFile() as tmp:
-        with open(tmp.name, "w") as f:
-            json.dump({"type": "FeatureCollection", "features": []}, f)
     assert (
         client.analyze_plots(
             "a-group-id",
@@ -246,9 +243,6 @@ def test_analyse_precheck(monkeypatch):
     }
     responses.get("https://precheck_data_url.example.com/", json=precheck)
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
-    with tempfile.NamedTemporaryFile() as tmp:
-        with open(tmp.name, "w") as f:
-            json.dump({"type": "FeatureCollection", "features": []}, f)
     assert (
         client.analyze_plots_precheck(
             "a-group-id",
@@ -438,9 +432,6 @@ def test_create_plots_analysis_report_precheck(monkeypatch):
         },
     )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
-    with tempfile.NamedTemporaryFile() as tmp:
-        with open(tmp.name, "w") as f:
-            json.dump({"type": "FeatureCollection", "features": []}, f)
     assert client.create_plots_analysis_report_precheck(
         "an-analysis-id",
         "foobar",
@@ -489,9 +480,6 @@ def test_create_plots_analysis_report(monkeypatch):
         {"status": "success", "results": {"plots_analysis_report_id": "a-report-id"}},
     )
     client: TracerClient = _client(monkeypatch, platform="plots_analysis")
-    with tempfile.NamedTemporaryFile() as tmp:
-        with open(tmp.name, "w") as f:
-            json.dump({"type": "FeatureCollection", "features": []}, f)
     assert (
         client.create_plots_analysis_report(
             "an-analysis-id",
