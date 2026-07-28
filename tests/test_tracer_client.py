@@ -3,6 +3,7 @@ import json
 import os
 import tempfile
 
+import pytest
 import responses
 
 from picterra import TracerClient
@@ -143,8 +144,9 @@ def test_update_plots_group_plots(monkeypatch):
         client.update_plots_group_plots("group-id", [tmp.name])
 
 
+@pytest.mark.parametrize("tag_name", [None, "v0"])
 @responses.activate
-def test_analyse_plots(monkeypatch):
+def test_analyse_plots(monkeypatch, tag_name):
     _add_api_response(
         plots_analysis_api_url("upload/file/"),
         responses.POST,
@@ -163,18 +165,19 @@ def test_analyse_plots(monkeypatch):
             )
         ],
     )
+    expected_params = {
+        "analysis_name": "foobar",
+        "upload_id": "an-upload-id",
+        "date_from": "2023-01-01",
+        "date_to": "2025-01-01",
+    }
+    if tag_name is not None:
+        expected_params.update({ "tag_name": tag_name })
     _add_api_response(
         plots_analysis_api_url("plots_groups/a-group-id/analysis/"),
         responses.POST,
         OP_RESP,
-        match=responses.matchers.json_params_matcher(
-            {
-                "analysis_name": "foobar",
-                "upload_id": "an-upload-id",
-                "date_from": "2023-01-01",
-                "date_to": "2025-01-01",
-            }
-        ),
+        match=responses.matchers.json_params_matcher(expected_params),
     )
     _add_api_response(
         plots_analysis_api_url(f"operations/{OPERATION_ID}/"),
@@ -189,6 +192,7 @@ def test_analyse_plots(monkeypatch):
             ["uno", "dos"],
             datetime.date.fromisoformat("2023-01-01"),
             datetime.date.fromisoformat("2025-01-01"),
+            tag_name=tag_name,
         )
         == "an-analysis-id"
     )

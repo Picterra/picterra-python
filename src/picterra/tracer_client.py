@@ -272,6 +272,7 @@ class TracerClient(BaseAPIClient):
         plot_ids: List[str],
         date_from: datetime.date,
         date_to: datetime.date,
+        tag_name: Optional[str] = None,
     ) -> str:
         """
         Runs the analysis for a given date over the plot ids of the specified plot group,
@@ -285,6 +286,7 @@ class TracerClient(BaseAPIClient):
                 that **the date that make sense are methodology dependent**, so please check the
                 methodology of the plots group beforehand
             date_to: end point in time at which the analysis should be evaluated.
+            tag_name: name of the methodology version to run
 
         Returns:
             str: the analysis id.
@@ -296,6 +298,8 @@ class TracerClient(BaseAPIClient):
             "date_from": date_from.isoformat(),
             "date_to": date_to.isoformat(),
         }
+        if tag_name is not None:
+            data.update({"tag_name": tag_name})
         resp = self.sess.post(
             self._full_url(f"plots_groups/{plots_group_id}/analysis/"), json=data
         )
